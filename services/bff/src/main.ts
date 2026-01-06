@@ -12,9 +12,18 @@ async function bootstrap() {
 
   // CORS 설정
   app.enableCors({
-    origin: '*',
+    origin: true, // 모든 origin 허용 (동적으로 설정)
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+    ],
     credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // 전역 예외 필터 적용

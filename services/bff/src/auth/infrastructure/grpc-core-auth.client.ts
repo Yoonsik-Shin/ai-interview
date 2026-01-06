@@ -1,6 +1,5 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ClientGrpc } from '@nestjs/microservices';
-import { Inject } from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject } from '@nestjs/common';
+import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 /**

@@ -5,7 +5,7 @@ package interview;
 
 // Java 코드 생성 옵션
 option java_multiple_files = true;
-option java_package = "com.example.core.grpc"; // 생성될 클래스들의 패키지 경로
+option java_package = "me.unbrdn.core.grpc"; // 생성될 클래스들의 패키지 경로
 option java_outer_classname = "InterviewProto";
 
 // === 서비스 정의 (인터페이스) ===

@@ -1,7 +1,6 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ClientGrpc } from '@nestjs/microservices';
-import { Inject } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
+import { Injectable, OnModuleInit, Inject } from '@nestjs/common';
+import type { ClientGrpc } from '@nestjs/microservices';
+import { firstValueFrom, type Observable } from 'rxjs';
 
 interface ResumeServiceGrpc {
   uploadResume(data: {
@@ -10,7 +9,7 @@ interface ResumeServiceGrpc {
     fileData: Buffer;
     fileName: string;
     contentType: string;
-  }): any;
+  }): Observable<{ resumeId: number }>;
 }
 
 /**
@@ -47,7 +46,7 @@ export class ResumesService implements OnModuleInit {
         fileName,
         contentType,
       }),
-    );
+    ) as { resumeId: number };
 
     return {
       resumeId: Number(response.resumeId),

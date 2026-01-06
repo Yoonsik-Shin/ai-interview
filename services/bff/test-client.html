@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI 면접관 - 실시간 면접 테스트</title>
+    <title>AI 면접 솔루션 - 통합 테스트 클라이언트</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
       * {
@@ -19,41 +19,148 @@
           sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
         padding: 20px;
       }
 
       .container {
+        max-width: 1200px;
+        margin: 0 auto;
         background: white;
         border-radius: 20px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        width: 100%;
-        max-width: 800px;
-        height: 90vh;
-        max-height: 700px;
-        display: flex;
-        flex-direction: column;
         overflow: hidden;
       }
 
       .header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 25px 30px;
+        padding: 30px;
         text-align: center;
       }
 
       .header h1 {
-        font-size: 28px;
+        font-size: 32px;
         font-weight: 600;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
       }
 
       .header .subtitle {
         font-size: 14px;
         opacity: 0.9;
+      }
+
+      .tabs {
+        display: flex;
+        background: #f5f5f5;
+        border-bottom: 2px solid #e0e0e0;
+      }
+
+      .tab {
+        flex: 1;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        font-weight: 600;
+        color: #666;
+        transition: all 0.3s;
+        border-bottom: 3px solid transparent;
+      }
+
+      .tab:hover {
+        background: #eeeeee;
+      }
+
+      .tab.active {
+        color: #667eea;
+        border-bottom-color: #667eea;
+        background: white;
+      }
+
+      .tab-content {
+        display: none;
+        padding: 30px;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.3s;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+      }
+
+      .response-box {
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
       }
 
       .status {
@@ -63,55 +170,85 @@
         font-size: 12px;
         font-weight: 500;
         margin-left: 10px;
-        background: rgba(255, 255, 255, 0.2);
       }
 
-      .status.connected {
-        background: rgba(76, 175, 80, 0.3);
+      .status.success {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
       }
 
-      .status.disconnected {
-        background: rgba(244, 67, 54, 0.3);
+      .status.error {
+        background: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+      }
+
+      .status.info {
+        background: rgba(33, 150, 243, 0.2);
+        color: #2196f3;
+      }
+
+      .token-display {
+        margin-top: 15px;
+        padding: 15px;
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        font-size: 12px;
+        word-break: break-all;
+      }
+
+      .file-input-wrapper {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+      }
+
+      .file-input-wrapper input[type='file'] {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .file-input-label {
+        display: block;
+        padding: 12px 16px;
+        border: 2px dashed #e0e0e0;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .file-input-label:hover {
+        border-color: #667eea;
+        background: #f8f9ff;
+      }
+
+      .file-name {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #666;
       }
 
       .chat-container {
-        flex: 1;
+        margin-top: 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        height: 400px;
         display: flex;
         flex-direction: column;
-        padding: 25px;
         overflow: hidden;
       }
 
       #chat-box {
         flex: 1;
-        border: 2px solid #e0e0e0;
-        border-radius: 12px;
         padding: 20px;
-        margin-bottom: 20px;
         overflow-y: auto;
         background: #fafafa;
-        font-size: 15px;
+        font-size: 14px;
         line-height: 1.6;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-      }
-
-      #chat-box::-webkit-scrollbar {
-        width: 8px;
-      }
-
-      #chat-box::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-      }
-
-      #chat-box::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 10px;
-      }
-
-      #chat-box::-webkit-scrollbar-thumb:hover {
-        background: #555;
       }
 
       .message {
@@ -146,66 +283,20 @@
         border: 1px solid #e0e0e0;
       }
 
-      .message-label {
-        font-size: 12px;
-        font-weight: 600;
-        margin-bottom: 6px;
-        opacity: 0.8;
-      }
-
-      .input-container {
+      .chat-input-container {
         display: flex;
         gap: 12px;
-        align-items: center;
+        padding: 15px;
+        border-top: 2px solid #e0e0e0;
+        background: white;
       }
 
-      #user-input {
+      .chat-input-container input {
         flex: 1;
-        padding: 16px 20px;
+        padding: 12px 16px;
         border: 2px solid #e0e0e0;
-        border-radius: 25px;
-        font-size: 15px;
-        outline: none;
-        transition: all 0.3s ease;
-        font-family: inherit;
-      }
-
-      #user-input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      }
-
-      #user-input::placeholder {
-        color: #999;
-      }
-
-      #send-btn {
-        padding: 16px 32px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 25px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        white-space: nowrap;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-      }
-
-      #send-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-      }
-
-      #send-btn:active {
-        transform: translateY(0);
-      }
-
-      #send-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
+        border-radius: 8px;
+        font-size: 14px;
       }
 
       .typing-indicator {
@@ -223,312 +314,594 @@
       .typing-indicator.active {
         display: block;
       }
-
-      .typing-indicator::after {
-        content: '...';
-        animation: dots 1.5s steps(4, end) infinite;
-      }
-
-      @keyframes dots {
-        0%,
-        20% {
-          content: '.';
-        }
-        40% {
-          content: '..';
-        }
-        60%,
-        100% {
-          content: '...';
-        }
-      }
-
-      @media (max-width: 600px) {
-        .container {
-          height: 100vh;
-          max-height: 100vh;
-          border-radius: 0;
-        }
-
-        .header h1 {
-          font-size: 22px;
-        }
-
-        .chat-container {
-          padding: 15px;
-        }
-
-        .message.user {
-          margin-left: 10%;
-        }
-
-        .message.interviewer {
-          margin-right: 10%;
-        }
-
-        #send-btn {
-          padding: 16px 24px;
-          font-size: 14px;
-        }
-      }
     </style>
   </head>
   <body>
     <div class="container">
       <div class="header">
-        <h1>
-          🤖 AI 면접관
-          <span class="status disconnected" id="status">연결 중...</span>
-        </h1>
+        <h1>🤖 AI 면접 솔루션 - 통합 테스트 클라이언트</h1>
         <div class="subtitle">
-          실시간 AI 면접 시뮬레이션 (GPT-3.5)
-          <span id="env-badge" style="display: inline-block; margin-left: 10px; padding: 4px 8px; background: rgba(255,255,255,0.2); border-radius: 12px; font-size: 11px;"></span>
+          Auth, Resume, Interview, Socket.io 기능 테스트
+          <span
+            id="env-badge"
+            style="
+              display: inline-block;
+              margin-left: 10px;
+              padding: 4px 8px;
+              background: rgba(255, 255, 255, 0.2);
+              border-radius: 12px;
+              font-size: 11px;
+            "
+          ></span>
         </div>
       </div>
 
-      <div class="chat-container">
-        <div id="chat-box"></div>
-        <div class="typing-indicator" id="typing-indicator">
-          면접관이 답변을 작성 중입니다
-        </div>
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('auth')">🔐 인증</div>
+        <div class="tab" onclick="switchTab('resume')">📄 이력서</div>
+        <div class="tab" onclick="switchTab('interview')">💼 면접</div>
+        <div class="tab" onclick="switchTab('socket')">💬 실시간 면접</div>
+      </div>
 
-        <div class="input-container">
+      <!-- Auth Tab -->
+      <div id="auth-tab" class="tab-content active">
+        <h2>인증 테스트</h2>
+        <div class="form-group">
+          <label>이메일</label>
+          <input type="email" id="auth-email" placeholder="test@example.com" />
+        </div>
+        <div class="form-group">
+          <label>비밀번호</label>
+          <input type="password" id="auth-password" placeholder="password123" />
+        </div>
+        <div class="form-group">
+          <label>닉네임 (회원가입용)</label>
+          <input type="text" id="auth-nickname" placeholder="홍길동" />
+        </div>
+        <div style="display: flex; gap: 10px">
+          <button class="btn" onclick="testRegister()">회원가입</button>
+          <button class="btn" onclick="testLogin()">로그인</button>
+          <button class="btn btn-secondary" onclick="testRefreshToken()">
+            토큰 갱신
+          </button>
+        </div>
+        <div
+          id="auth-response"
+          class="response-box"
+          style="display: none"
+        ></div>
+        <div id="auth-token" class="token-display" style="display: none"></div>
+      </div>
+
+      <!-- Resume Tab -->
+      <div id="resume-tab" class="tab-content">
+        <h2>이력서 업로드 테스트</h2>
+        <div class="form-group">
+          <label>제목</label>
+          <input type="text" id="resume-title" placeholder="내 이력서" />
+        </div>
+        <div class="form-group">
+          <label>파일 선택</label>
+          <div class="file-input-wrapper">
+            <input type="file" id="resume-file" accept=".pdf,.doc,.docx" />
+            <div class="file-input-label">
+              📎 파일을 선택하거나 드래그하세요 (PDF, DOC, DOCX)
+            </div>
+          </div>
+          <div id="resume-file-name" class="file-name"></div>
+        </div>
+        <button class="btn" onclick="testUploadResume()">이력서 업로드</button>
+        <div
+          id="resume-response"
+          class="response-box"
+          style="display: none"
+        ></div>
+      </div>
+
+      <!-- Interview Tab -->
+      <div id="interview-tab" class="tab-content">
+        <h2>면접 생성 테스트</h2>
+        <div class="form-group">
+          <label>이력서 ID</label>
+          <input
+            type="number"
+            id="interview-resume-id"
+            placeholder="1"
+            value="1"
+          />
+        </div>
+        <div class="form-group">
+          <label>도메인</label>
           <input
             type="text"
-            id="user-input"
-            placeholder="답변을 입력하세요 (예: 자바의 GC에 대해 설명해보세요)"
-            autocomplete="off"
+            id="interview-domain"
+            placeholder="백엔드"
+            value="백엔드"
           />
-          <button id="send-btn" onclick="sendAnswer()">전송</button>
+        </div>
+        <div class="form-group">
+          <label>면접 유형</label>
+          <select id="interview-type">
+            <option value="TEXT_CHAT">텍스트 채팅</option>
+            <option value="VIDEO_CALL">영상 통화</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>면접관 페르소나</label>
+          <select id="interview-persona">
+            <option value="PRESSURE">압박 면접</option>
+            <option value="COMFORTABLE">편안한 면접</option>
+            <option value="RANDOM">랜덤</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>면접관 수</label>
+          <input
+            type="number"
+            id="interview-count"
+            placeholder="1"
+            value="1"
+            min="1"
+          />
+        </div>
+        <div class="form-group">
+          <label>목표 시간 (분)</label>
+          <input
+            type="number"
+            id="interview-duration"
+            placeholder="30"
+            value="30"
+            min="1"
+          />
+        </div>
+        <div class="form-group">
+          <label>자기소개</label>
+          <textarea
+            id="interview-intro"
+            rows="3"
+            placeholder="안녕하세요. 백엔드 개발자입니다."
+          ></textarea>
+        </div>
+        <button class="btn" onclick="testCreateInterview()">면접 생성</button>
+        <div
+          id="interview-response"
+          class="response-box"
+          style="display: none"
+        ></div>
+      </div>
+
+      <!-- Socket Tab -->
+      <div id="socket-tab" class="tab-content">
+        <h2>실시간 면접 테스트</h2>
+        <div class="chat-container">
+          <div id="chat-box"></div>
+          <div class="typing-indicator" id="typing-indicator">
+            면접관이 답변을 작성 중입니다
+          </div>
+          <div class="chat-input-container">
+            <input
+              type="text"
+              id="socket-input"
+              placeholder="답변을 입력하세요..."
+              onkeypress="if (event.key === 'Enter') sendSocketMessage();"
+            />
+            <button class="btn" onclick="sendSocketMessage()">전송</button>
+          </div>
+        </div>
+        <div style="margin-top: 15px">
+          <button class="btn btn-secondary" onclick="connectSocket()">
+            연결
+          </button>
+          <button class="btn btn-secondary" onclick="disconnectSocket()">
+            연결 끊기
+          </button>
+          <span id="socket-status" class="status info" style="margin-left: 10px"
+            >연결 안됨</span
+          >
         </div>
       </div>
     </div>
 
     <script>
-      // Socket.io 서버 URL 결정
-      // 로컬 개발 환경: Socket 서비스를 포트 4000으로 직접 연결
-      // 배포 환경: Ingress를 통해 /socket.io 경로로 라우팅
-      const getSocketUrl = () => {
-        // URL 파라미터로 환경 강제 지정 (예: ?env=local 또는 ?env=prod)
+      // API Base URL
+      const getApiBaseUrl = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const forcedEnv = urlParams.get('env');
-        
-        if (forcedEnv === 'local') {
-          const hostname = window.location.hostname || 'localhost';
-          const protocol = window.location.protocol;
-          console.log('[강제 설정] 로컬 개발 환경으로 설정되었습니다.');
-          return `${protocol}//${hostname}:4000`;
-        }
-        
-        if (forcedEnv === 'prod' || forcedEnv === 'production') {
-          console.log('[강제 설정] 배포 환경으로 설정되었습니다.');
-          return window.location.origin;
+
+        // 직접 접근 모드 (포트 3000으로 직접 연결)
+        if (forcedEnv === 'direct' || forcedEnv === 'dev') {
+          return 'http://localhost:3000';
         }
 
-        // 자동 환경 감지
+        // 현재 페이지의 origin 사용 (CORS 문제 방지)
+        // BFF 서비스에서 제공되는 경우: http://localhost 또는 https://localhost
+        // 로컬 파일로 열린 경우: http://127.0.0.1:5500 -> http://localhost로 변환
         const hostname = window.location.hostname;
         const protocol = window.location.protocol;
-        const port = window.location.port;
-        const isLocalhost = hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '';
+        const isLocalhost =
+          hostname === '127.0.0.1' ||
+          hostname === 'localhost' ||
+          hostname === '';
 
-        // 로컬 개발 환경 판단
-        // 1. localhost/127.0.0.1이고
-        // 2. 포트가 있거나 (개발 서버), 포트가 없거나 (file:// 프로토콜)
-        // 3. 일반적인 개발 서버 포트 범위 (3000-9999) 또는 포트 없음
-        const isDevPort = !port || (parseInt(port) >= 3000 && parseInt(port) <= 9999);
-        
-        if (isLocalhost && isDevPort) {
-          // 로컬 개발 환경: Socket 서비스를 포트 4000으로 직접 연결
-          console.log('[자동 감지] 로컬 개발 환경 - Socket 서비스에 직접 연결합니다.');
-          return `${protocol}//${hostname}:4000`;
+        if (isLocalhost) {
+          // 127.0.0.1에서 접근해도 localhost로 통일하여 CORS 문제 방지
+          return protocol === 'https:'
+            ? 'https://localhost'
+            : 'http://localhost';
         }
 
-        // 배포 환경: 현재 origin 사용 (Ingress를 통해 라우팅)
-        console.log('[자동 감지] 배포 환경 - Ingress를 통해 Socket 서비스에 연결합니다.');
         return window.location.origin;
       };
 
-      const socketUrl = getSocketUrl();
-      const isLocalEnv = socketUrl.includes(':4000');
-      
+      const API_BASE_URL = getApiBaseUrl();
+      let accessToken = localStorage.getItem('accessToken') || '';
+      let socket = null;
+
       // 환경 배지 업데이트
       const envBadge = document.getElementById('env-badge');
       if (envBadge) {
-        if (isLocalEnv) {
-          envBadge.textContent = '🔧 로컬 개발 환경';
-          envBadge.style.background = 'rgba(255, 193, 7, 0.3)';
-        } else {
-          envBadge.textContent = '🚀 배포 환경';
-          envBadge.style.background = 'rgba(76, 175, 80, 0.3)';
-        }
-      }
-      
-      console.log('Socket.IO 서버 연결 URL:', socketUrl);
-      console.log('환경:', isLocalEnv ? '로컬 개발 환경' : '배포 환경');
-
-      const socket = io(socketUrl, {
-        path: '/socket.io',
-        transports: ['polling', 'websocket'],
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
-        timeout: 20000,
-      });
-
-      const chatBox = document.getElementById('chat-box');
-      const userInput = document.getElementById('user-input');
-      const sendBtn = document.getElementById('send-btn');
-      const status = document.getElementById('status');
-      const typingIndicator = document.getElementById('typing-indicator');
-
-      // 연결 상태 업데이트
-      socket.on('connect', () => {
-        console.log('Socket connected:', socket.id);
-        status.textContent = '연결됨';
-        status.className = 'status connected';
-        addSystemMessage('서버에 연결되었습니다. 면접을 시작하세요!');
-      });
-
-      socket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
-        status.textContent = '연결 끊김';
-        status.className = 'status disconnected';
-        if (reason === 'io server disconnect') {
-          addSystemMessage('서버에서 연결을 종료했습니다.');
-        } else {
-          addSystemMessage('서버 연결이 끊어졌습니다. 재연결 시도 중...');
-        }
-      });
-
-      socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-        status.textContent = '연결 실패';
-        status.className = 'status disconnected';
-        addSystemMessage(
-          '서버 연결에 실패했습니다: ' + (error.message || error),
-        );
-      });
-
-      socket.on('reconnect', (attemptNumber) => {
-        console.log('Socket reconnected after', attemptNumber, 'attempts');
-        status.textContent = '재연결됨';
-        status.className = 'status connected';
-        addSystemMessage('서버에 재연결되었습니다.');
-      });
-
-      socket.on('reconnect_error', (error) => {
-        console.error('Socket reconnection error:', error);
-        status.textContent = '재연결 실패';
-        status.className = 'status disconnected';
-      });
-
-      socket.on('reconnect_failed', () => {
-        console.error('Socket reconnection failed');
-        status.textContent = '연결 실패';
-        status.className = 'status disconnected';
-        addSystemMessage(
-          '서버 재연결에 실패했습니다. 페이지를 새로고침하세요.',
-        );
-      });
-
-      // Enter 키로 전송
-      userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendAnswer();
-        }
-      });
-
-      // 답변 전송 함수
-      function sendAnswer() {
-        const answer = userInput.value.trim();
-        if (!answer || sendBtn.disabled) return;
-
-        // 입력창 비우기 및 비활성화
-        userInput.value = '';
-        sendBtn.disabled = true;
-        typingIndicator.classList.add('active');
-
-        // 사용자 메시지 표시
-        addMessage('user', answer);
-
-        // 서버로 전송
-        socket.emit('send_answer', { answer: answer });
+        const isLocal = API_BASE_URL.includes('localhost');
+        envBadge.textContent = isLocal ? '🔧 로컬' : '🚀 배포';
+        envBadge.style.background = isLocal
+          ? 'rgba(255, 193, 7, 0.3)'
+          : 'rgba(76, 175, 80, 0.3)';
       }
 
-      // 스트림 청크 수신
-      socket.on('stream_chunk', (text) => {
-        typingIndicator.classList.remove('active');
+      // Tab 전환
+      function switchTab(tabName) {
+        document
+          .querySelectorAll('.tab')
+          .forEach((tab) => tab.classList.remove('active'));
+        document
+          .querySelectorAll('.tab-content')
+          .forEach((content) => content.classList.remove('active'));
 
-        // 마지막 면접관 메시지 찾기 또는 새로 생성
-        let lastMsg = chatBox.lastElementChild;
-        if (
-          !lastMsg ||
-          !lastMsg.classList.contains('message') ||
-          !lastMsg.classList.contains('interviewer')
-        ) {
-          addMessage('interviewer', '');
-          lastMsg = chatBox.lastElementChild;
+        event.target.classList.add('active');
+        document.getElementById(`${tabName}-tab`).classList.add('active');
+      }
+
+      // API 호출 헬퍼
+      async function apiCall(endpoint, options = {}) {
+        const url = `${API_BASE_URL}${endpoint}`;
+        const headers = {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        };
+
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
-        // 텍스트 추가
-        const content = lastMsg.querySelector('.message-content');
-        if (content) {
-          content.textContent += text;
-          chatBox.scrollTop = chatBox.scrollHeight;
+        try {
+          const response = await fetch(url, {
+            ...options,
+            headers,
+          });
+
+          const data = await response.json();
+          return { ok: response.ok, status: response.status, data };
+        } catch (error) {
+          return { ok: false, error: error.message };
         }
-      });
+      }
 
-      // 스트림 종료
-      socket.on('stream_end', () => {
-        typingIndicator.classList.remove('active');
-        sendBtn.disabled = false;
-        userInput.focus();
-      });
+      // Auth 테스트
+      async function testRegister() {
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-password').value;
+        const nickname = document.getElementById('auth-nickname').value;
 
-      // 에러 처리
-      socket.on('error', (error) => {
-        typingIndicator.classList.remove('active');
-        sendBtn.disabled = false;
-        addSystemMessage('오류가 발생했습니다: ' + error);
-      });
+        if (!email || !password || !nickname) {
+          alert('모든 필드를 입력해주세요.');
+          return;
+        }
 
-      // 메시지 추가 함수
-      function addMessage(type, text) {
+        const result = await apiCall('/api/v1/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ email, password, nickname }),
+        });
+
+        const responseBox = document.getElementById('auth-response');
+        const tokenBox = document.getElementById('auth-token');
+
+        responseBox.style.display = 'block';
+        responseBox.textContent = JSON.stringify(result, null, 2);
+        responseBox.className =
+          'response-box ' + (result.ok ? 'status success' : 'status error');
+
+        if (result.ok && result.data.accessToken) {
+          accessToken = result.data.accessToken;
+          localStorage.setItem('accessToken', accessToken);
+          tokenBox.style.display = 'block';
+          tokenBox.textContent = `Access Token: ${accessToken.substring(0, 50)}...`;
+        }
+      }
+
+      async function testLogin() {
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-password').value;
+
+        if (!email || !password) {
+          alert('이메일과 비밀번호를 입력해주세요.');
+          return;
+        }
+
+        const result = await apiCall('/api/v1/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+        });
+
+        const responseBox = document.getElementById('auth-response');
+        const tokenBox = document.getElementById('auth-token');
+
+        responseBox.style.display = 'block';
+        responseBox.textContent = JSON.stringify(result, null, 2);
+        responseBox.className =
+          'response-box ' + (result.ok ? 'status success' : 'status error');
+
+        if (result.ok && result.data.accessToken) {
+          accessToken = result.data.accessToken;
+          localStorage.setItem('accessToken', accessToken);
+          tokenBox.style.display = 'block';
+          tokenBox.textContent = `Access Token: ${accessToken.substring(0, 50)}...`;
+        }
+      }
+
+      async function testRefreshToken() {
+        const refreshToken = prompt('Refresh Token을 입력하세요:');
+        if (!refreshToken) return;
+
+        const result = await apiCall('/api/v1/auth/refresh', {
+          method: 'POST',
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        const responseBox = document.getElementById('auth-response');
+        const tokenBox = document.getElementById('auth-token');
+
+        responseBox.style.display = 'block';
+        responseBox.textContent = JSON.stringify(result, null, 2);
+        responseBox.className =
+          'response-box ' + (result.ok ? 'status success' : 'status error');
+
+        if (result.ok && result.data.accessToken) {
+          accessToken = result.data.accessToken;
+          localStorage.setItem('accessToken', accessToken);
+          tokenBox.style.display = 'block';
+          tokenBox.textContent = `Access Token: ${accessToken.substring(0, 50)}...`;
+        }
+      }
+
+      // Resume 테스트
+      document
+        .getElementById('resume-file')
+        .addEventListener('change', function (e) {
+          const fileName = e.target.files[0]?.name || '';
+          document.getElementById('resume-file-name').textContent = fileName
+            ? `선택된 파일: ${fileName}`
+            : '';
+        });
+
+      async function testUploadResume() {
+        const fileInput = document.getElementById('resume-file');
+        const title =
+          document.getElementById('resume-title').value ||
+          fileInput.files[0]?.name ||
+          '이력서';
+
+        if (!fileInput.files[0]) {
+          alert('파일을 선택해주세요.');
+          return;
+        }
+
+        if (!accessToken) {
+          alert('먼저 로그인해주세요.');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('title', title);
+
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/api/v1/resumes/upload`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+              body: formData,
+            },
+          );
+
+          const data = await response.json();
+          const result = { ok: response.ok, status: response.status, data };
+
+          const responseBox = document.getElementById('resume-response');
+          responseBox.style.display = 'block';
+          responseBox.textContent = JSON.stringify(result, null, 2);
+          responseBox.className =
+            'response-box ' + (result.ok ? 'status success' : 'status error');
+        } catch (error) {
+          const responseBox = document.getElementById('resume-response');
+          responseBox.style.display = 'block';
+          responseBox.textContent = JSON.stringify(
+            { ok: false, error: error.message },
+            null,
+            2,
+          );
+          responseBox.className = 'response-box status error';
+        }
+      }
+
+      // Interview 테스트
+      async function testCreateInterview() {
+        const resumeId = parseInt(
+          document.getElementById('interview-resume-id').value,
+        );
+        const domain = document.getElementById('interview-domain').value;
+        const type = document.getElementById('interview-type').value;
+        const persona = document.getElementById('interview-persona').value;
+        const interviewerCount = parseInt(
+          document.getElementById('interview-count').value,
+        );
+        const targetDurationMinutes = parseInt(
+          document.getElementById('interview-duration').value,
+        );
+        const selfIntroduction =
+          document.getElementById('interview-intro').value;
+
+        if (!resumeId || !domain) {
+          alert('이력서 ID와 도메인을 입력해주세요.');
+          return;
+        }
+
+        const result = await apiCall('/api/v1/interviews', {
+          method: 'POST',
+          body: JSON.stringify({
+            resumeId,
+            domain,
+            type,
+            persona,
+            interviewerCount,
+            targetDurationMinutes,
+            selfIntroduction,
+          }),
+        });
+
+        const responseBox = document.getElementById('interview-response');
+        responseBox.style.display = 'block';
+        responseBox.textContent = JSON.stringify(result, null, 2);
+        responseBox.className =
+          'response-box ' + (result.ok ? 'status success' : 'status error');
+      }
+
+      // Socket 테스트
+      function getSocketUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const forcedEnv = urlParams.get('env');
+
+        // 직접 접근 모드 (포트 4000으로 직접 연결)
+        if (forcedEnv === 'direct' || forcedEnv === 'dev') {
+          return 'http://localhost:4000';
+        }
+
+        // Ingress를 통한 접근 (기본값)
+        // Socket.io는 /socket.io 경로로 라우팅됨
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        const isLocalhost =
+          hostname === '127.0.0.1' ||
+          hostname === 'localhost' ||
+          hostname === '';
+
+        if (isLocalhost) {
+          // Ingress는 80/443 포트 사용
+          // CORS 문제 방지를 위해 항상 localhost 사용 (127.0.0.1도 localhost로 변환)
+          // HTTP로 접근해도 HTTPS로 리다이렉트되므로, 가능하면 HTTPS 사용 권장
+          // 하지만 CORS preflight 문제를 피하기 위해 현재 프로토콜 유지
+          const currentProtocol = window.location.protocol;
+          return currentProtocol === 'https:'
+            ? 'https://localhost'
+            : 'http://localhost';
+        }
+
+        return window.location.origin;
+      }
+
+      function connectSocket() {
+        if (socket && socket.connected) {
+          alert('이미 연결되어 있습니다.');
+          return;
+        }
+
+        const socketUrl = getSocketUrl();
+        socket = io(socketUrl, {
+          path: '/socket.io',
+          transports: ['polling', 'websocket'],
+          reconnection: true,
+        });
+
+        socket.on('connect', () => {
+          document.getElementById('socket-status').textContent = '연결됨';
+          document.getElementById('socket-status').className = 'status success';
+          addChatMessage('system', '서버에 연결되었습니다.');
+        });
+
+        socket.on('disconnect', () => {
+          document.getElementById('socket-status').textContent = '연결 끊김';
+          document.getElementById('socket-status').className = 'status error';
+          addChatMessage('system', '서버 연결이 끊어졌습니다.');
+        });
+
+        socket.on('stream_chunk', (text) => {
+          document
+            .getElementById('typing-indicator')
+            .classList.remove('active');
+          let lastMsg = document.getElementById('chat-box').lastElementChild;
+          if (!lastMsg || !lastMsg.classList.contains('interviewer')) {
+            addChatMessage('interviewer', '');
+            lastMsg = document.getElementById('chat-box').lastElementChild;
+          }
+          lastMsg.textContent += text;
+          document.getElementById('chat-box').scrollTop =
+            document.getElementById('chat-box').scrollHeight;
+        });
+
+        socket.on('stream_end', () => {
+          document
+            .getElementById('typing-indicator')
+            .classList.remove('active');
+        });
+
+        socket.on('error', (error) => {
+          addChatMessage('system', `오류: ${error}`);
+        });
+      }
+
+      function disconnectSocket() {
+        if (socket) {
+          socket.disconnect();
+          socket = null;
+          document.getElementById('socket-status').textContent = '연결 안됨';
+          document.getElementById('socket-status').className = 'status info';
+        }
+      }
+
+      function sendSocketMessage() {
+        if (!socket || !socket.connected) {
+          alert('먼저 연결해주세요.');
+          return;
+        }
+
+        const input = document.getElementById('socket-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        addChatMessage('user', message);
+        input.value = '';
+
+        document.getElementById('typing-indicator').classList.add('active');
+        socket.emit('send_answer', { answer: message });
+      }
+
+      function addChatMessage(type, text) {
+        const chatBox = document.getElementById('chat-box');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
-
-        const label = document.createElement('div');
-        label.className = 'message-label';
-        label.textContent = type === 'user' ? '[나]' : '[면접관]';
-
-        const content = document.createElement('div');
-        content.className = 'message-content';
-        content.textContent = text;
-
-        messageDiv.appendChild(label);
-        messageDiv.appendChild(content);
-        chatBox.appendChild(messageDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }
-
-      // 시스템 메시지 추가
-      function addSystemMessage(text) {
-        const messageDiv = document.createElement('div');
-        messageDiv.style.cssText =
-          'text-align: center; color: #999; font-size: 13px; padding: 8px; font-style: italic;';
         messageDiv.textContent = text;
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
       }
 
-      // 초기 안내 메시지
+      // 페이지 로드 시 토큰 복원
       window.addEventListener('load', () => {
-        setTimeout(() => {
-          addSystemMessage(
-            'AI 면접관이 준비되었습니다. 아래에 답변을 입력하고 전송 버튼을 누르세요.',
-          );
-        }, 500);
+        if (accessToken) {
+          document.getElementById('auth-token').style.display = 'block';
+          document.getElementById('auth-token').textContent =
+            `Access Token: ${accessToken.substring(0, 50)}...`;
+        }
       });
     </script>
   </body>
