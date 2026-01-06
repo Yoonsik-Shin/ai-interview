@@ -56,4 +56,3 @@ spec:
       targetPort: 9308
       protocol: TCP
 
-

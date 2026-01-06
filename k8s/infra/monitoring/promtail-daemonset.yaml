@@ -78,4 +78,3 @@ spec:
           hostPath:
             path: /var/lib/docker/containers
 
-
