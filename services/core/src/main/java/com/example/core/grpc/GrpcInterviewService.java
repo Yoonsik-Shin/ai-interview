@@ -1,6 +1,6 @@
-package com.example.core_java.grpc;
+package com.example.core.grpc;
 
-import com.example.core_java.service.InterviewService;
+import com.example.core.service.InterviewService;
 
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;

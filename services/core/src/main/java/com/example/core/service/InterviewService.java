@@ -1,20 +1,20 @@
-package com.example.core_java.service;
+package com.example.core.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.core_java.domain.entity.Interviews;
-import com.example.core_java.domain.entity.Resumes;
-import com.example.core_java.domain.entity.Users;
-import com.example.core_java.domain.enums.InterviewPersona;
-import com.example.core_java.domain.enums.InterviewStatus;
-import com.example.core_java.domain.enums.InterviewType;
-import com.example.core_java.domain.repository.InterviewRepository;
-import com.example.core_java.domain.repository.ResumesRepository;
-import com.example.core_java.domain.repository.UsersRepository;
-import com.example.core_java.grpc.CreateInterviewRequest;
-import com.example.core_java.grpc.InterviewPersonaProto;
-import com.example.core_java.grpc.InterviewTypeProto;
+import com.example.core.domain.entity.Interviews;
+import com.example.core.domain.entity.Resumes;
+import com.example.core.domain.entity.Users;
+import com.example.core.domain.enums.InterviewPersona;
+import com.example.core.domain.enums.InterviewStatus;
+import com.example.core.domain.enums.InterviewType;
+import com.example.core.domain.repository.InterviewRepository;
+import com.example.core.domain.repository.ResumesRepository;
+import com.example.core.domain.repository.UsersRepository;
+import com.example.core.grpc.CreateInterviewRequest;
+import com.example.core.grpc.InterviewPersonaProto;
+import com.example.core.grpc.InterviewTypeProto;
 
 import lombok.RequiredArgsConstructor;
 

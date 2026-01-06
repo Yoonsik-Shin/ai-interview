@@ -1,10 +1,10 @@
-package com.example.core_java.domain.entity;
+package com.example.core.domain.entity;
 
 import java.time.LocalDateTime;
 
-import com.example.core_java.domain.enums.InterviewPersona;
-import com.example.core_java.domain.enums.InterviewStatus;
-import com.example.core_java.domain.enums.InterviewType;
+import com.example.core.domain.enums.InterviewPersona;
+import com.example.core.domain.enums.InterviewStatus;
+import com.example.core.domain.enums.InterviewType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

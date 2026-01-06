@@ -1,12 +1,12 @@
-package com.example.core_java.service;
+package com.example.core.service;
 
 import java.util.Map;
 
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
-import com.example.core_java.domain.entity.InterviewHistory;
-import com.example.core_java.domain.repository.InterviewHistoryRepository;
+import com.example.core.domain.entity.InterviewHistory;
+import com.example.core.domain.repository.InterviewHistoryRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -19,7 +19,7 @@ public class KafkaConsumerService {
   private final InterviewHistoryRepository interviewHistoryRepository;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  @KafkaListener(topics = "interview-result", groupId = "core-java-group-v2")
+  @KafkaListener(topics = "interview-result", groupId = "core-group-v2")
   public void listen(String message) {
     try {
       System.out.println("💾 [DB Save Start] " + message);

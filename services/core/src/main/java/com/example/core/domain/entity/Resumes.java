@@ -1,4 +1,4 @@
-package com.example.core_java.domain.entity;
+package com.example.core.domain.entity;
 
 import java.time.LocalDateTime;
 

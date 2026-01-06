@@ -1,11 +1,11 @@
-package com.example.core_java.domain.repository;
+package com.example.core.domain.repository;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.example.core_java.domain.entity.InterviewQnA;
+import com.example.core.domain.entity.InterviewQnA;
 
 public interface InterviewQnARepository extends JpaRepository<InterviewQnA, Long> {
 

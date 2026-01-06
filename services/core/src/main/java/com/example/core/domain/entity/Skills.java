@@ -1,11 +1,11 @@
-package com.example.core_java.domain.entity;
+package com.example.core.domain.entity;
 
 import java.time.LocalDateTime;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.example.core_java.domain.enums.SkillCategory;
+import com.example.core.domain.enums.SkillCategory;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

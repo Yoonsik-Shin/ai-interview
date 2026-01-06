@@ -1,10 +1,10 @@
-package com.example.core_java.domain.repository;
+package com.example.core.domain.repository;
 
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.example.core_java.domain.entity.InterviewReports;
+import com.example.core.domain.entity.InterviewReports;
 
 public interface InterviewReportsRepository extends JpaRepository<InterviewReports, Long> {
 
