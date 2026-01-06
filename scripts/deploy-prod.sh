@@ -177,10 +177,7 @@ else
     echo "⚠️  Socket 서비스 준비 시간 초과. 계속 진행합니다."
 fi
 
-# 6. Kafka UI 배포
-echo "🎨 Kafka UI 배포 중..."
-kubectl apply -f k8s/infra/kafka/kafka-ui-deployment-prod.yaml
-kubectl apply -f k8s/infra/kafka/kafka-ui-service.yaml
+# 6. Kafka UI는 local에서만 사용 (prod에서는 제외)
 
 # 6. Cert-Manager 설치 확인 및 설치
 echo "🔍 Cert-Manager 설치 확인 중..."

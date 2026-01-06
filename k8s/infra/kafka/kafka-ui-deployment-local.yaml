@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: kafka-ui
-          image: provectuslabs/kafka-ui:latest
+          image: docker.io/provectuslabs/kafka-ui:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -29,8 +29,6 @@ spec:
               value: kafka:29092
             - name: KAFKA_CLUSTERS_0_NAME
               value: local
-            - name: KAFKA_CLUSTERS_0_ZOOKEEPER
-              value: zookeeper:2181
             - name: SERVER_SERVLET_CONTEXT_PATH
               value: "/admin"
           resources:

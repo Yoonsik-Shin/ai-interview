@@ -58,7 +58,7 @@ kubectl apply -f k8s/apps/socket/service.yaml
 # 3. Kafka UI 배포
 echo "🎨 Kafka UI 배포 중..."
 kubectl apply -f k8s/infra/kafka/kafka-ui-deployment-local.yaml
-kubectl apply -f k8s/infra/kafka/kafka-ui-service.yaml
+kubectl apply -f k8s/infra/kafka/kafka-ui-service-local.yaml
 
 # 4. 자체 서명 인증서 생성
 echo "🔐 자체 서명 인증서 생성 중..."
