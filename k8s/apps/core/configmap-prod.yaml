@@ -8,7 +8,6 @@ metadata:
 data:
   # Oracle Autonomous Database URL
   # 형식: jdbc:oracle:thin:@<host>:<port>/<service_name>
-  # 예시: jdbc:oracle:thin:@adb.ap-chuncheon-1.oraclecloud.com:1522/abc123xyz_interview_db_high.adb.oraclecloud.com
-  # 실제 URL은 OCI Autonomous Database 생성 후 Connection Strings에서 확인
-  datasource-url: "jdbc:oracle:thin:@<ORACLE_DB_HOST>:1522/<ORACLE_SERVICE_NAME>"
+  # 예시: jdbc:oracle:thin:@adb.ap-chuncheon-1.oraclecloud.com:1522/gf042308c5c1882_unbrdn0krn0db_high.adb.oraclecloud.com
+  datasource-url: "jdbc:oracle:thin:@adb.ap-chuncheon-1.oraclecloud.com:1522/gf042308c5c1882_unbrdn0krn0db_high.adb.oraclecloud.com"
   kafka-bootstrap-servers: "kafka-cluster-kafka-bootstrap.kafka:9092"
