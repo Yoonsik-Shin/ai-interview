@@ -1,0 +1,40 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    environment: prod
+spec:
+  acme:
+    # Let's Encrypt 프로덕션 서버
+    server: https://acme-v02.api.letsencrypt.org/directory
+    # 이메일 주소 (인증서 만료 알림용)
+    email: aaa946@naver.com
+    # 인증서를 저장할 Secret 이름
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    # HTTP-01 Challenge 방식 사용
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+# Staging 환경용 ClusterIssuer (테스트용)
+# 프로덕션 배포 전 테스트 시 사용
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    environment: staging
+spec:
+  acme:
+    # Let's Encrypt Staging 서버 (테스트용, Rate Limit이 더 관대함)
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: aaa946@naver.com
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    solvers:
+      - http01:
+          ingress:
+            class: nginx

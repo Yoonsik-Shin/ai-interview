@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: unbrdn
+  labels:
+    app: kafka
+    environment: local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+        environment: local
+    spec:
+      # Kubernetes가 Service 링크 환경변수(KAFKA_PORT=tcp://...)를 자동 주입하면
+      # confluentinc/cp-kafka의 /etc/confluent/docker/configure가 "port is deprecated"로 즉시 종료합니다.
+      # 이를 막기 위해 Service 링크 환경변수 주입을 비활성화합니다.
+      enableServiceLinks: false
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka:7.5.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9092
+              protocol: TCP
+            - containerPort: 29092
+              protocol: TCP
+          env:
+            # 두 개의 리스너(외부/내부)를 실제로 바인딩해야 inter-broker 리스너가 유효합니다.
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka:9092,PLAINTEXT_INTERNAL://kafka:29092"
+            - name: KAFKA_BROKER_ID
+              value: "1"
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: "zookeeper:2181"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT"
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT_INTERNAL"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            # 단일 브로커 환경에서 기본값(3) 때문에 기동 즉시 죽는 문제 방지
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      restartPolicy: Always
+

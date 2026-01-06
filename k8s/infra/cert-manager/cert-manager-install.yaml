@@ -1,0 +1,22 @@
+# Cert-Manager 설치 매니페스트
+# Cert-Manager v1.13.x (최신 안정 버전)
+# ARM64 아키텍처 지원
+# 설치 방법: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
+# 또는: kubectl apply -f k8s/infra/cert-manager/cert-manager-install.yaml
+
+# 참고: 이 파일은 Cert-Manager 공식 설치 매니페스트를 참조합니다.
+# 실제 설치 시 공식 매니페스트를 직접 사용하는 것을 권장합니다:
+# kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
+
+# 설치 확인:
+# kubectl get pods -n cert-manager
+# kubectl get crd | grep cert-manager
+
+---
+# Cert-Manager 설치 스크립트 참고
+# 아래 명령어로 설치하세요:
+# kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
+
+# 설치 후 확인:
+# kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=300s
+
