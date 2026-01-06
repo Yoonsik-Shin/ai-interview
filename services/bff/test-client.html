@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 면접관 - 실시간 면접 테스트</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 100%;
+        max-width: 800px;
+        height: 90vh;
+        max-height: 700px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .header .subtitle {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-left: 10px;
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .status.connected {
+        background: rgba(76, 175, 80, 0.3);
+      }
+
+      .status.disconnected {
+        background: rgba(244, 67, 54, 0.3);
+      }
+
+      .chat-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 25px;
+        overflow: hidden;
+      }
+
+      #chat-box {
+        flex: 1;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        overflow-y: auto;
+        background: #fafafa;
+        font-size: 15px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      #chat-box::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #chat-box::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+
+      #chat-box::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+      }
+
+      #chat-box::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+
+      .message {
+        margin-bottom: 16px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        animation: fadeIn 0.3s ease-in;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.user {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        margin-left: 20%;
+        text-align: right;
+      }
+
+      .message.interviewer {
+        background: white;
+        color: #333;
+        margin-right: 20%;
+        border: 1px solid #e0e0e0;
+      }
+
+      .message-label {
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        opacity: 0.8;
+      }
+
+      .input-container {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      #user-input {
+        flex: 1;
+        padding: 16px 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 25px;
+        font-size: 15px;
+        outline: none;
+        transition: all 0.3s ease;
+        font-family: inherit;
+      }
+
+      #user-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      #user-input::placeholder {
+        color: #999;
+      }
+
+      #send-btn {
+        padding: 16px 32px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      #send-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+      }
+
+      #send-btn:active {
+        transform: translateY(0);
+      }
+
+      #send-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .typing-indicator {
+        display: none;
+        padding: 12px 16px;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        margin-right: 20%;
+        margin-bottom: 16px;
+        color: #666;
+        font-style: italic;
+      }
+
+      .typing-indicator.active {
+        display: block;
+      }
+
+      .typing-indicator::after {
+        content: '...';
+        animation: dots 1.5s steps(4, end) infinite;
+      }
+
+      @keyframes dots {
+        0%,
+        20% {
+          content: '.';
+        }
+        40% {
+          content: '..';
+        }
+        60%,
+        100% {
+          content: '...';
+        }
+      }
+
+      @media (max-width: 600px) {
+        .container {
+          height: 100vh;
+          max-height: 100vh;
+          border-radius: 0;
+        }
+
+        .header h1 {
+          font-size: 22px;
+        }
+
+        .chat-container {
+          padding: 15px;
+        }
+
+        .message.user {
+          margin-left: 10%;
+        }
+
+        .message.interviewer {
+          margin-right: 10%;
+        }
+
+        #send-btn {
+          padding: 16px 24px;
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>
+          🤖 AI 면접관
+          <span class="status disconnected" id="status">연결 중...</span>
+        </h1>
+        <div class="subtitle">
+          실시간 AI 면접 시뮬레이션 (GPT-3.5)
+          <span id="env-badge" style="display: inline-block; margin-left: 10px; padding: 4px 8px; background: rgba(255,255,255,0.2); border-radius: 12px; font-size: 11px;"></span>
+        </div>
+      </div>
+
+      <div class="chat-container">
+        <div id="chat-box"></div>
+        <div class="typing-indicator" id="typing-indicator">
+          면접관이 답변을 작성 중입니다
+        </div>
+
+        <div class="input-container">
+          <input
+            type="text"
+            id="user-input"
+            placeholder="답변을 입력하세요 (예: 자바의 GC에 대해 설명해보세요)"
+            autocomplete="off"
+          />
+          <button id="send-btn" onclick="sendAnswer()">전송</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Socket.io 서버 URL 결정
+      // 로컬 개발 환경: Socket 서비스를 포트 4000으로 직접 연결
+      // 배포 환경: Ingress를 통해 /socket.io 경로로 라우팅
+      const getSocketUrl = () => {
+        // URL 파라미터로 환경 강제 지정 (예: ?env=local 또는 ?env=prod)
+        const urlParams = new URLSearchParams(window.location.search);
+        const forcedEnv = urlParams.get('env');
+        
+        if (forcedEnv === 'local') {
+          const hostname = window.location.hostname || 'localhost';
+          const protocol = window.location.protocol;
+          console.log('[강제 설정] 로컬 개발 환경으로 설정되었습니다.');
+          return `${protocol}//${hostname}:4000`;
+        }
+        
+        if (forcedEnv === 'prod' || forcedEnv === 'production') {
+          console.log('[강제 설정] 배포 환경으로 설정되었습니다.');
+          return window.location.origin;
+        }
+
+        // 자동 환경 감지
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        const port = window.location.port;
+        const isLocalhost = hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '';
+
+        // 로컬 개발 환경 판단
+        // 1. localhost/127.0.0.1이고
+        // 2. 포트가 있거나 (개발 서버), 포트가 없거나 (file:// 프로토콜)
+        // 3. 일반적인 개발 서버 포트 범위 (3000-9999) 또는 포트 없음
+        const isDevPort = !port || (parseInt(port) >= 3000 && parseInt(port) <= 9999);
+        
+        if (isLocalhost && isDevPort) {
+          // 로컬 개발 환경: Socket 서비스를 포트 4000으로 직접 연결
+          console.log('[자동 감지] 로컬 개발 환경 - Socket 서비스에 직접 연결합니다.');
+          return `${protocol}//${hostname}:4000`;
+        }
+
+        // 배포 환경: 현재 origin 사용 (Ingress를 통해 라우팅)
+        console.log('[자동 감지] 배포 환경 - Ingress를 통해 Socket 서비스에 연결합니다.');
+        return window.location.origin;
+      };
+
+      const socketUrl = getSocketUrl();
+      const isLocalEnv = socketUrl.includes(':4000');
+      
+      // 환경 배지 업데이트
+      const envBadge = document.getElementById('env-badge');
+      if (envBadge) {
+        if (isLocalEnv) {
+          envBadge.textContent = '🔧 로컬 개발 환경';
+          envBadge.style.background = 'rgba(255, 193, 7, 0.3)';
+        } else {
+          envBadge.textContent = '🚀 배포 환경';
+          envBadge.style.background = 'rgba(76, 175, 80, 0.3)';
+        }
+      }
+      
+      console.log('Socket.IO 서버 연결 URL:', socketUrl);
+      console.log('환경:', isLocalEnv ? '로컬 개발 환경' : '배포 환경');
+
+      const socket = io(socketUrl, {
+        path: '/socket.io',
+        transports: ['polling', 'websocket'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+        timeout: 20000,
+      });
+
+      const chatBox = document.getElementById('chat-box');
+      const userInput = document.getElementById('user-input');
+      const sendBtn = document.getElementById('send-btn');
+      const status = document.getElementById('status');
+      const typingIndicator = document.getElementById('typing-indicator');
+
+      // 연결 상태 업데이트
+      socket.on('connect', () => {
+        console.log('Socket connected:', socket.id);
+        status.textContent = '연결됨';
+        status.className = 'status connected';
+        addSystemMessage('서버에 연결되었습니다. 면접을 시작하세요!');
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', reason);
+        status.textContent = '연결 끊김';
+        status.className = 'status disconnected';
+        if (reason === 'io server disconnect') {
+          addSystemMessage('서버에서 연결을 종료했습니다.');
+        } else {
+          addSystemMessage('서버 연결이 끊어졌습니다. 재연결 시도 중...');
+        }
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+        status.textContent = '연결 실패';
+        status.className = 'status disconnected';
+        addSystemMessage(
+          '서버 연결에 실패했습니다: ' + (error.message || error),
+        );
+      });
+
+      socket.on('reconnect', (attemptNumber) => {
+        console.log('Socket reconnected after', attemptNumber, 'attempts');
+        status.textContent = '재연결됨';
+        status.className = 'status connected';
+        addSystemMessage('서버에 재연결되었습니다.');
+      });
+
+      socket.on('reconnect_error', (error) => {
+        console.error('Socket reconnection error:', error);
+        status.textContent = '재연결 실패';
+        status.className = 'status disconnected';
+      });
+
+      socket.on('reconnect_failed', () => {
+        console.error('Socket reconnection failed');
+        status.textContent = '연결 실패';
+        status.className = 'status disconnected';
+        addSystemMessage(
+          '서버 재연결에 실패했습니다. 페이지를 새로고침하세요.',
+        );
+      });
+
+      // Enter 키로 전송
+      userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendAnswer();
+        }
+      });
+
+      // 답변 전송 함수
+      function sendAnswer() {
+        const answer = userInput.value.trim();
+        if (!answer || sendBtn.disabled) return;
+
+        // 입력창 비우기 및 비활성화
+        userInput.value = '';
+        sendBtn.disabled = true;
+        typingIndicator.classList.add('active');
+
+        // 사용자 메시지 표시
+        addMessage('user', answer);
+
+        // 서버로 전송
+        socket.emit('send_answer', { answer: answer });
+      }
+
+      // 스트림 청크 수신
+      socket.on('stream_chunk', (text) => {
+        typingIndicator.classList.remove('active');
+
+        // 마지막 면접관 메시지 찾기 또는 새로 생성
+        let lastMsg = chatBox.lastElementChild;
+        if (
+          !lastMsg ||
+          !lastMsg.classList.contains('message') ||
+          !lastMsg.classList.contains('interviewer')
+        ) {
+          addMessage('interviewer', '');
+          lastMsg = chatBox.lastElementChild;
+        }
+
+        // 텍스트 추가
+        const content = lastMsg.querySelector('.message-content');
+        if (content) {
+          content.textContent += text;
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+      });
+
+      // 스트림 종료
+      socket.on('stream_end', () => {
+        typingIndicator.classList.remove('active');
+        sendBtn.disabled = false;
+        userInput.focus();
+      });
+
+      // 에러 처리
+      socket.on('error', (error) => {
+        typingIndicator.classList.remove('active');
+        sendBtn.disabled = false;
+        addSystemMessage('오류가 발생했습니다: ' + error);
+      });
+
+      // 메시지 추가 함수
+      function addMessage(type, text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+
+        const label = document.createElement('div');
+        label.className = 'message-label';
+        label.textContent = type === 'user' ? '[나]' : '[면접관]';
+
+        const content = document.createElement('div');
+        content.className = 'message-content';
+        content.textContent = text;
+
+        messageDiv.appendChild(label);
+        messageDiv.appendChild(content);
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      // 시스템 메시지 추가
+      function addSystemMessage(text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText =
+          'text-align: center; color: #999; font-size: 13px; padding: 8px; font-style: italic;';
+        messageDiv.textContent = text;
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      // 초기 안내 메시지
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          addSystemMessage(
+            'AI 면접관이 준비되었습니다. 아래에 답변을 입력하고 전송 버튼을 누르세요.',
+          );
+        }, 500);
+      });
+    </script>
+  </body>
+</html>
