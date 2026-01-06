@@ -14,9 +14,9 @@ COPY package.json pnpm-lock.yaml ./
 # 의존성 설치 (캐시 최적화를 위해 별도 레이어)
 RUN pnpm install --frozen-lockfile
 
-# 소스 코드 복사 (변경 빈도가 높은 파일)
-COPY tsconfig.json tsconfig.build.json nest-cli.json ./
-COPY src ./src
+# 소스 코드 전체 복사
+# (.dockerignore 파일이 필수입니다! node_modules 등을 제외하기 위해)
+COPY . .
 
 # NestJS 프로젝트 빌드
 RUN pnpm run build

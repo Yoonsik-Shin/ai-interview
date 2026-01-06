@@ -3,6 +3,10 @@ FROM gradle:8.14.0-jdk21 AS builder
 
 WORKDIR /app
 
+# 빌드 프로파일 설정 (기본값: local)
+ARG BUILD_PROFILE=local
+ENV BUILD_PROFILE=${BUILD_PROFILE}
+
 # Gradle 캐시 최적화를 위한 환경 변수 설정
 ENV GRADLE_USER_HOME=/app/.gradle
 
@@ -13,14 +17,12 @@ COPY gradle ./gradle
 # 의존성 다운로드 (소스 코드 변경 없이도 캐시 활용)
 RUN gradle dependencies --no-daemon || true
 
-# 소스 코드 복사
+# 소스 코드 복사 (proto 파일 포함)
 COPY src ./src
 
-# 프로토콜 버퍼 파일 복사 (있는 경우)
-COPY src/main/proto ./src/main/proto 2>/dev/null || true
-
 # Gradle을 사용하여 실행 가능한 JAR 파일 빌드 (테스트 제외, 데몬 모드 비활성화)
-RUN gradle bootJar -x test --no-daemon && \
+# 빌드 프로파일에 따라 적절한 의존성만 포함됨
+RUN gradle bootJar -x test --no-daemon -PbuildProfile=${BUILD_PROFILE} && \
     find /app/build/libs -name "*.jar" -not -name "*-plain.jar" -exec cp {} /app/app.jar \;
 
 # --- Stage 2: 실행 환경 (JRE만 있는 가벼운 환경) ---
