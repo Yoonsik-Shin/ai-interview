@@ -1,0 +1,96 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      bff: ${{ steps.filter.outputs.bff }}
+      socket: ${{ steps.filter.outputs.socket }}
+      inference: ${{ steps.filter.outputs.inference }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed services
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            core:
+              - 'services/core/**'
+            bff:
+              - 'services/bff/**'
+            socket:
+              - 'services/socket/**'
+            inference:
+              - 'services/inference/**'
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    env:
+      IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
+
+      - name: Apply infra manifests (if needed)
+        run: |
+          kubectl apply -f k8s/infra/redis -n unbrdn
+          kubectl apply -f k8s/infra/kafka -n unbrdn
+          kubectl apply -f k8s/infra/monitoring -n unbrdn
+
+      - name: Apply app manifests
+        run: |
+          kubectl apply -f k8s/apps/core -n unbrdn
+          kubectl apply -f k8s/apps/bff -n unbrdn
+          kubectl apply -f k8s/apps/socket -n unbrdn
+          kubectl apply -f k8s/apps/inference -n unbrdn
+
+      - name: Update Core image
+        if: needs.detect-changes.outputs.core == 'true'
+        run: |
+          kubectl set image deployment/core \
+            core=${IMAGE_REGISTRY}/unbrdn-krn-ocir-core:${IMAGE_TAG} \
+            -n unbrdn
+          kubectl rollout status deployment/core -n unbrdn
+
+      - name: Update BFF image
+        if: needs.detect-changes.outputs.bff == 'true'
+        run: |
+          kubectl set image deployment/bff \
+            bff=${IMAGE_REGISTRY}/unbrdn-krn-ocir-bff:${IMAGE_TAG} \
+            -n unbrdn
+          kubectl rollout status deployment/bff -n unbrdn
+
+      - name: Update Socket image
+        if: needs.detect-changes.outputs.socket == 'true'
+        run: |
+          kubectl set image deployment/socket \
+            socket=${IMAGE_REGISTRY}/unbrdn-krn-ocir-socket:${IMAGE_TAG} \
+            -n unbrdn
+          kubectl rollout status deployment/socket -n unbrdn
+
+      - name: Update Inference image
+        if: needs.detect-changes.outputs.inference == 'true'
+        run: |
+          kubectl set image deployment/inference \
+            inference=${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:${IMAGE_TAG} \
+            -n unbrdn
+          kubectl rollout status deployment/inference -n unbrdn
+
+

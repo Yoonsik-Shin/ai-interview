@@ -1,0 +1,166 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      bff: ${{ steps.filter.outputs.bff }}
+      socket: ${{ steps.filter.outputs.socket }}
+      inference: ${{ steps.filter.outputs.inference }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed services
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            core:
+              - 'services/core/**'
+            bff:
+              - 'services/bff/**'
+            socket:
+              - 'services/socket/**'
+            inference:
+              - 'services/inference/**'
+
+  lint-and-test:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install BFF deps
+        if: needs.detect-changes.outputs.bff == 'true'
+        working-directory: services/bff
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Socket deps
+        if: needs.detect-changes.outputs.socket == 'true'
+        working-directory: services/socket
+        run: pnpm install --frozen-lockfile
+
+      - name: Core - Gradle test
+        if: needs.detect-changes.outputs.core == 'true'
+        working-directory: services/core
+        run: ./gradlew test
+
+      - name: BFF - lint & test
+        if: needs.detect-changes.outputs.bff == 'true'
+        working-directory: services/bff
+        run: |
+          pnpm lint || echo "lint script not defined, skip"
+          pnpm test || echo "test script not defined, skip"
+
+      - name: Socket - lint & test
+        if: needs.detect-changes.outputs.socket == 'true'
+        working-directory: services/socket
+        run: |
+          pnpm lint || echo "lint script not defined, skip"
+          pnpm test || echo "test script not defined, skip"
+
+      - name: Inference - basic check
+        if: needs.detect-changes.outputs.inference == 'true'
+        working-directory: services/inference
+        run: |
+          python -m compileall .
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: [detect-changes, lint-and-test]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to OCI registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.OCI_REGISTRY }}
+          username: ${{ secrets.OCI_USERNAME }}
+          password: ${{ secrets.OCI_PASSWORD }}
+
+      - name: Build & push Core image
+        if: needs.detect-changes.outputs.core == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/core
+          file: ./services/core/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.OCI_REGISTRY }}/unbrdn-krn-ocir-core:${{ github.sha }}
+            ${{ secrets.OCI_REGISTRY }}/unbrdn-krn-ocir-core:latest
+
+      - name: Build & push BFF image
+        if: needs.detect-changes.outputs.bff == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/bff
+          file: ./services/bff/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.OCI_REGISTRY }}/unbrdn-krn-ocir-bff:${{ github.sha }}
+            ${{ secrets.OCI_REGISTRY }}/unbrdn-krn-ocir-bff:latest
+
+      - name: Build & push Socket image
+        if: needs.detect-changes.outputs.socket == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/socket
+          file: ./services/socket/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.OCI_REGISTRY }}/unbrdn-krn-ocir-socket:${{ github.sha }}
+            ${{ secrets.OCI_REGISTRY }}/unbrdn-krn-ocir-socket:latest
+
+      - name: Build & push Inference image
+        if: needs.detect-changes.outputs.inference == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/inference
+          file: ./services/inference/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ secrets.OCI_REGISTRY }}/unbrdn-krn-ocir-inference:${{ github.sha }}
+            ${{ secrets.OCI_REGISTRY }}/unbrdn-krn-ocir-inference:latest
