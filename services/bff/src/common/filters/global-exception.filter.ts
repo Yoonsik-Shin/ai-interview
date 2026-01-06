@@ -11,7 +11,7 @@ import { throwError } from 'rxjs';
 
 /**
  * 전역 예외 처리 필터
- * 
+ *
  * 애플리케이션 전체에서 발생하는 예외를 일관된 형식으로 처리합니다.
  */
 @Catch()
@@ -30,7 +30,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
         message = (exceptionResponse as any).message || exception.message;
       }
     } else if (exception instanceof Error) {
@@ -63,4 +66,3 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     });
   }
 }
-

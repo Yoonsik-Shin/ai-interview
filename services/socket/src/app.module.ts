@@ -8,4 +8,3 @@ import { HealthController } from "./health.controller";
   providers: [EventsGateway, SocketLoggingService],
 })
 export class AppModule {}
-

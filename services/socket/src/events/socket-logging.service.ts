@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import type { Socket } from 'socket.io';
+import { Injectable } from "@nestjs/common";
+import type { Socket } from "socket.io";
 
 /**
  * Socket 서비스 전용 로깅 서비스
@@ -12,7 +12,7 @@ export class SocketLoggingService {
   log(
     client: Socket | null,
     event: string,
-    fields: Record<string, unknown> = {},
+    fields: Record<string, unknown> = {}
   ): void {
     const now = new Date().toISOString();
     const traceId = client ? (client as any).traceId : undefined;
@@ -23,7 +23,7 @@ export class SocketLoggingService {
     console.log(
       JSON.stringify(
         {
-          service: 'socket',
+          service: "socket",
           event,
           traceId,
           userId,
@@ -32,10 +32,9 @@ export class SocketLoggingService {
           ...fields,
         },
         null,
-        0,
-      ),
+        0
+      )
     );
   }
 }
-
 
