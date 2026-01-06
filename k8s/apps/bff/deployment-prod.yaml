@@ -26,6 +26,22 @@ spec:
           ports:
             - containerPort: 3000
               protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
           env:
             - name: PORT
               value: "3000"
@@ -61,9 +77,9 @@ spec:
                   key: core-grpc-port
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "150m"
-            limits:
               memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
               cpu: "500m"
       restartPolicy: Always
