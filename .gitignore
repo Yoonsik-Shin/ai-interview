@@ -1,0 +1,129 @@
+# Archive folder
+archive/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+.DS_Store?
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+# 실제 환경 변수 파일은 제외
+.env
+.env.local
+.env.production
+.env.development
+.env.development.local
+.env.test.local
+**/.env
+# .env.* 패턴 (예시 파일 제외)
+**/.env.*
+!.env.example
+!.env*.example
+# 루트의 .env.example은 명시적으로 포함
+/.env.example
+
+# Kubernetes Secrets (로컬 개발용 - 실제 API 키 포함)
+k8s/**/secret-local.yaml
+k8s/**/*secret-local.yaml
+# 프로덕션 Secret도 민감 정보 포함 가능성이 있으므로 제외
+k8s/**/secret-prod.yaml
+k8s/**/*secret-prod.yaml
+k8s/**/*secret*.yaml
+# 예시 파일은 포함
+!k8s/**/secret-local.yaml.example
+!k8s/**/secret-prod.yaml.example
+!k8s/**/*secret*.yaml.example
+
+# Dependencies
+node_modules/
+**/node_modules/
+venv/
+**/venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+*.jar
+*.war
+*.ear
+target/
+**/target/
+*.class
+*.tsbuildinfo
+*.js.map
+*.d.ts.map
+
+# Gradle
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+# TypeScript
+*.tsbuildinfo
+
+# Python
+*.egg-info/
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.tmp/
+
+# Docker
+.dockerignore
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+
+# Certificates (자체 서명 인증서는 제외, Let's Encrypt는 자동 관리)
+*.pem
+*.key
+*.crt
+!k8s/**/*.example
+
+# Local development
+.local/
+local/
+
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Misc
+*.bak
+*.backup
+*.orig
+*.rej
+*~
