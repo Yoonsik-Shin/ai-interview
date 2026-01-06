@@ -53,6 +53,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install oci-cli
 
+      - name: Configure OCI config
+        run: |
+          mkdir -p ~/.oci
+          cat > ~/.oci/config <<EOF
+          [DEFAULT]
+          user=${{ secrets.OCI_USER_OCID }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          region=${{ secrets.OCI_REGION }}
+          key_file=/home/runner/.oci/oci_api_key.pem
+          EOF
+
+          echo "${{ secrets.OCI_API_PRIVATE_KEY }}" > /home/runner/.oci/oci_api_key.pem
+          chmod 600 /home/runner/.oci/oci_api_key.pem
+
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
 
