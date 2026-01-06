@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: socket
+  namespace: unbrdn
+  labels:
+    app: socket
+    environment: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: socket
+  template:
+    metadata:
+      labels:
+        app: socket
+        environment: prod
+    spec:
+      imagePullSecrets:
+        - name: ocir-secret
+      containers:
+        - name: socket
+          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-socket:${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: socket-config
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "80m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      restartPolicy: Always

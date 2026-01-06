@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference
+  namespace: unbrdn
+  labels:
+    app: inference
+    environment: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inference
+  template:
+    metadata:
+      labels:
+        app: inference
+        environment: prod
+    spec:
+      imagePullSecrets:
+        - name: ocir-secret
+      containers:
+        - name: inference
+          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: inference-secrets
+            - configMapRef:
+                name: inference-config
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      restartPolicy: Always
