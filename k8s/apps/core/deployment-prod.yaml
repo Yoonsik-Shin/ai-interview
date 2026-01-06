@@ -51,6 +51,10 @@ spec:
                 configMapKeyRef:
                   name: core-config
                   key: kafka-bootstrap-servers
+            - name: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
+              value: "org.hibernate.dialect.OracleDialect"
+            - name: SPRING_JPA_DATABASE_PLATFORM
+              value: "org.hibernate.dialect.OracleDialect"
           readinessProbe:
             httpGet:
               path: /actuator/health
