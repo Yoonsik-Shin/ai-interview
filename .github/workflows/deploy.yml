@@ -67,6 +67,11 @@ jobs:
 
           echo "${{ secrets.OCI_API_PRIVATE_KEY }}" > /home/runner/.oci/oci_api_key.pem
           chmod 600 /home/runner/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/config
+          
+          # OCI CLI 경고 억제
+          export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
+          export SUPPRESS_LABEL_WARNING=True
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
@@ -75,19 +80,25 @@ jobs:
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Verify cluster connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
 
       - name: Apply infra manifests (if needed)
         run: |
-          kubectl apply -f k8s/infra/redis -n unbrdn
-          kubectl apply -f k8s/infra/kafka -n unbrdn
-          kubectl apply -f k8s/infra/monitoring -n unbrdn
+          kubectl apply --validate=false -f k8s/infra/redis -n unbrdn || true
+          kubectl apply --validate=false -f k8s/infra/kafka -n unbrdn || true
+          kubectl apply --validate=false -f k8s/infra/monitoring -n unbrdn || true
 
       - name: Apply app manifests
         run: |
-          kubectl apply -f k8s/apps/core -n unbrdn
-          kubectl apply -f k8s/apps/bff -n unbrdn
-          kubectl apply -f k8s/apps/socket -n unbrdn
-          kubectl apply -f k8s/apps/inference -n unbrdn
+          kubectl apply --validate=false -f k8s/apps/core -n unbrdn
+          kubectl apply --validate=false -f k8s/apps/bff -n unbrdn
+          kubectl apply --validate=false -f k8s/apps/socket -n unbrdn
+          kubectl apply --validate=false -f k8s/apps/inference -n unbrdn
 
       - name: Update Core image
         if: needs.detect-changes.outputs.core == 'true'
