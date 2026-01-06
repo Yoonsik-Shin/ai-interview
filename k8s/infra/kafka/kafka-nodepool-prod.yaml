@@ -15,19 +15,15 @@ spec:
     volumes:
       - id: 0
         type: persistent-claim
-        size: 100Gi
-        deleteClaim: false
-      - id: 1
-        type: persistent-claim
-        size: 100Gi
+        size: 20Gi
         deleteClaim: false
   resources:
     requests:
       memory: 2Gi
       cpu: 300m
     limits:
-      memory: 4Gi
-      cpu: 1000m
+      memory: 2.5Gi
+      cpu: 500m
   jvmOptions:
-    -Xms: 4096m
-    -Xmx: 4096m
+    -Xms: 2.5g
+    -Xmx: 2.5g

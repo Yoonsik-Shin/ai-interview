@@ -26,10 +26,10 @@ spec:
               protocol: TCP
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "150m"
-            limits:
               memory: "512Mi"
-              cpu: "300m"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
       restartPolicy: Always
 

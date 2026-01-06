@@ -105,22 +105,22 @@ PYTHON_WORKER_URL=http://worker-python:8000
 
 ### 필수 환경 변수
 
-| 변수명              | 설명            | 기본값 | 필수 여부 | 설정 위치           |
-| ------------------- | --------------- | ------ | --------- | ------------------- |
-| `OPENAI_API_KEY`    | OpenAI API 키   | -      | **필수**  | ConfigMap 또는 Secret |
+| 변수명           | 설명          | 기본값 | 필수 여부 | 설정 위치             |
+| ---------------- | ------------- | ------ | --------- | --------------------- |
+| `OPENAI_API_KEY` | OpenAI API 키 | -      | **필수**  | ConfigMap 또는 Secret |
 
 ### 선택적 환경 변수
 
-| 변수명                           | 설명                       | 기본값                                         | 설정 위치 |
-| -------------------------------- | -------------------------- | ---------------------------------------------- | --------- |
-| `PORT`                           | API Gateway 포트           | `3000`                                         | Deployment |
-| `REDIS_HOST`                     | Redis 호스트 (서비스 이름) | `redis`                                        | Deployment |
-| `REDIS_PORT`                     | Redis 포트                 | `6379`                                         | Deployment |
-| `KAFKA_BROKER`                   | Kafka 브로커 주소          | `kafka:29092`                                  | Deployment |
-| `PYTHON_WORKER_URL`              | Python Worker URL          | `http://inference:8000`                        | Deployment |
+| 변수명                           | 설명                       | 기본값                             | 설정 위치  |
+| -------------------------------- | -------------------------- | ---------------------------------- | ---------- |
+| `PORT`                           | API Gateway 포트           | `3000`                             | Deployment |
+| `REDIS_HOST`                     | Redis 호스트 (서비스 이름) | `redis`                            | Deployment |
+| `REDIS_PORT`                     | Redis 포트                 | `6379`                             | Deployment |
+| `KAFKA_BROKER`                   | Kafka 브로커 주소          | `kafka:29092`                      | Deployment |
+| `PYTHON_WORKER_URL`              | Python Worker URL          | `http://inference:8000`            | Deployment |
 | `SPRING_DATASOURCE_URL`          | Spring DataSource URL      | Oracle DB URL (ConfigMap에서 설정) | Deployment |
-| `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Kafka Bootstrap Servers    | `kafka:29092`                                  | Deployment |
-| `SPRING_PROFILES_ACTIVE`         | Spring Boot 프로파일       | `local`                                        | Deployment |
+| `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Kafka Bootstrap Servers    | `kafka:29092`                      | Deployment |
+| `SPRING_PROFILES_ACTIVE`         | Spring Boot 프로파일       | `local`                            | Deployment |
 
 ## 서비스별 환경 변수
 
@@ -135,18 +135,18 @@ Core Service는 Spring Boot 프로파일을 통해 환경별 설정을 관리합
 
 #### 환경 변수
 
-| 변수명                           | 설명                         | 기본값                                          |
-| -------------------------------- | ---------------------------- | ----------------------------------------------- |
-| `SPRING_PROFILES_ACTIVE`         | 활성화할 프로파일            | `local`                                         |
-| `SPRING_DATASOURCE_URL`          | 데이터베이스 연결 URL        | Oracle DB URL (ConfigMap/Secret에서 설정)      |
-| `SPRING_DATASOURCE_USERNAME`     | 데이터베이스 사용자명        | Oracle DB 사용자명 (Secret에서 설정)           |
-| `SPRING_DATASOURCE_PASSWORD`     | 데이터베이스 비밀번호        | Oracle DB 비밀번호 (Secret에서 설정)           |
-| `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Kafka 브로커 주소            | `localhost:9092`                                |
-| `SPRING_KAFKA_CONSUMER_GROUP_ID` | Kafka Consumer Group ID      | `core-group`                                     |
-| `SPRING_JPA_HIBERNATE_DDL_AUTO`  | Hibernate DDL 자동 생성 모드 | `update`                                        |
-| `SPRING_JPA_SHOW_SQL`            | SQL 로깅 활성화 여부         | `false`                                         |
-| `LOG_LEVEL`                      | 로그 레벨                    | `INFO`                                          |
-| `LOG_LEVEL_CORE`                 | Core 패키지 로그 레벨        | `DEBUG`                                         |
+| 변수명                           | 설명                         | 기본값                                    |
+| -------------------------------- | ---------------------------- | ----------------------------------------- |
+| `SPRING_PROFILES_ACTIVE`         | 활성화할 프로파일            | `local`                                   |
+| `SPRING_DATASOURCE_URL`          | 데이터베이스 연결 URL        | Oracle DB URL (ConfigMap/Secret에서 설정) |
+| `SPRING_DATASOURCE_USERNAME`     | 데이터베이스 사용자명        | Oracle DB 사용자명 (Secret에서 설정)      |
+| `SPRING_DATASOURCE_PASSWORD`     | 데이터베이스 비밀번호        | Oracle DB 비밀번호 (Secret에서 설정)      |
+| `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Kafka 브로커 주소            | `localhost:9092`                          |
+| `SPRING_KAFKA_CONSUMER_GROUP_ID` | Kafka Consumer Group ID      | `core-group`                              |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO`  | Hibernate DDL 자동 생성 모드 | `update`                                  |
+| `SPRING_JPA_SHOW_SQL`            | SQL 로깅 활성화 여부         | `false`                                   |
+| `LOG_LEVEL`                      | 로그 레벨                    | `INFO`                                    |
+| `LOG_LEVEL_CORE`                 | Core 패키지 로그 레벨        | `DEBUG`                                   |
 
 ### API Gateway (Node.js/NestJS)
 
@@ -185,17 +185,20 @@ Core Service는 Spring Boot 프로파일을 통해 환경별 설정을 관리합
 ### 환경 변수가 적용되지 않는 경우
 
 1. ConfigMap/Secret이 올바르게 생성되었는지 확인:
+
    ```bash
    kubectl get configmap
    kubectl get secret
    ```
 
 2. Deployment의 환경 변수 참조 확인:
+
    ```bash
    kubectl get deployment <deployment-name> -o yaml | grep -A 10 env
    ```
 
 3. Pod 재시작:
+
    ```bash
    kubectl rollout restart deployment <deployment-name>
    ```
