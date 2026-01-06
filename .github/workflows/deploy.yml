@@ -54,6 +54,9 @@ jobs:
           pip install oci-cli
 
       - name: Configure OCI config
+        env:
+          OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+          SUPPRESS_LABEL_WARNING: "True"
         run: |
           mkdir -p ~/.oci
           cat > ~/.oci/config <<EOF
@@ -68,32 +71,53 @@ jobs:
           echo "${{ secrets.OCI_API_PRIVATE_KEY }}" > /home/runner/.oci/oci_api_key.pem
           chmod 600 /home/runner/.oci/oci_api_key.pem
           chmod 600 ~/.oci/config
-          
-          # OCI CLI 경고 억제
-          export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
-          export SUPPRESS_LABEL_WARNING=True
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
 
-      - name: Configure kubeconfig
+      - name: Generate kubeconfig from OCI
+        env:
+          OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+          SUPPRESS_LABEL_WARNING: "True"
         run: |
           mkdir -p $HOME/.kube
-          echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
+          # OCI CLI를 사용하여 kubeconfig 생성
+          oci ce cluster create-kubeconfig \
+            --cluster-id ${{ secrets.OKE_CLUSTER_OCID }} \
+            --file $HOME/.kube/config \
+            --region ${{ secrets.OCI_REGION }} \
+            --kubeconfig-token-version 2.0.0 || {
+            echo "⚠️  OCI CLI로 kubeconfig 생성 실패, secrets의 kubeconfig 사용 시도"
+            echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
+          }
           chmod 600 $HOME/.kube/config
 
       - name: Verify cluster connection
+        env:
+          OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+          SUPPRESS_LABEL_WARNING: "True"
         run: |
-          kubectl cluster-info
+          kubectl cluster-info || {
+            echo "❌ 클러스터 연결 실패"
+            echo "kubeconfig 내용 확인:"
+            cat $HOME/.kube/config | head -20
+            exit 1
+          }
           kubectl get nodes
 
       - name: Apply infra manifests (if needed)
+        env:
+          OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+          SUPPRESS_LABEL_WARNING: "True"
         run: |
           kubectl apply --validate=false -f k8s/infra/redis -n unbrdn || true
           kubectl apply --validate=false -f k8s/infra/kafka -n unbrdn || true
           kubectl apply --validate=false -f k8s/infra/monitoring -n unbrdn || true
 
       - name: Apply app manifests
+        env:
+          OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+          SUPPRESS_LABEL_WARNING: "True"
         run: |
           kubectl apply --validate=false -f k8s/apps/core -n unbrdn
           kubectl apply --validate=false -f k8s/apps/bff -n unbrdn
