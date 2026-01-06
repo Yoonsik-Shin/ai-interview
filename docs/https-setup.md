@@ -265,3 +265,4 @@ cert-manager.io/cluster-issuer: "letsencrypt-staging"
 - [Cert-Manager 공식 문서](https://cert-manager.io/docs/)
 - [Let's Encrypt 문서](https://letsencrypt.org/docs/)
 - [Nginx Ingress Controller TLS 설정](https://kubernetes.github.io/ingress-nginx/user-guide/tls/)
+

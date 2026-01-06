@@ -260,3 +260,4 @@ kubectl logs -l app=kafka -n unbrdn
 - 로컬 테스트는 `deployment-local.yaml` 파일을 사용합니다
 - 프로덕션 배포는 `deployment-prod.yaml` 파일을 사용합니다
 
+
