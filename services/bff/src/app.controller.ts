@@ -1,4 +1,4 @@
-import { Controller, Get, InternalServerErrorException, Res } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
 import { AppService } from './app.service';
 import { Kafka, Producer } from 'kafkajs';
 import type { Response } from 'express';
@@ -13,7 +13,7 @@ export class AppController {
   constructor(private readonly appService: AppService) {
     const kafkaBroker = process.env.KAFKA_BROKER || 'kafka:29092';
     this.kafka = new Kafka({
-      clientId: 'bff-node',
+      clientId: 'bff',
       brokers: [kafkaBroker],
       retry: {
         retries: 5,
@@ -78,7 +78,7 @@ export class AppController {
   getTestClient(@Res() res: Response): void {
     // 프로젝트 루트의 test-client.html 파일 제공
     const htmlPath = join(process.cwd(), 'test-client.html');
-    
+
     if (existsSync(htmlPath)) {
       res.sendFile(htmlPath);
     } else {
