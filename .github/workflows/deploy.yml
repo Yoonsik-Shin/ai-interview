@@ -93,7 +93,7 @@ jobs:
           SUPPRESS_LABEL_WARNING: "True"
         run: |
           mkdir -p $HOME/.kube
-          
+
           # OCI CLI로 kubeconfig 생성 시도
           if [ -n "${{ secrets.OKE_CLUSTER_OCID }}" ]; then
             echo "🔑 OCI CLI로 kubeconfig 생성 중..."
@@ -133,7 +133,7 @@ jobs:
             echo "❌ kubeconfig 파일이 없습니다"
             exit 1
           fi
-          
+
           echo "🔍 클러스터 연결 확인 중..."
           kubectl cluster-info && kubectl get nodes || {
             echo "❌ 클러스터 연결 실패"
@@ -147,8 +147,17 @@ jobs:
           SUPPRESS_LABEL_WARNING: "True"
         run: |
           kubectl apply --validate=false -f k8s/infra/redis -n unbrdn || true
-          # Kafka: unbrdn namespace 파일만 적용 (strimzi 관련은 kafka namespace이므로 제외)
-          kubectl apply --validate=false -f k8s/infra/kafka/kafka-service.yaml -n unbrdn || true
+          # Kafka: Strimzi 사용 (고가용성)
+          # Strimzi Operator 설치 확인
+          if ! kubectl get deployment strimzi-cluster-operator -n kafka &>/dev/null; then
+            echo "📦 Strimzi Operator 설치 중..."
+            kubectl apply -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka || true
+            sleep 10
+          fi
+          # Kafka 클러스터 배포
+          kubectl apply --validate=false -f k8s/infra/kafka/kafka-configmap-prod.yaml -n kafka || true
+          kubectl apply --validate=false -f k8s/infra/kafka/kafka-nodepool-prod.yaml -n kafka || true
+          kubectl apply --validate=false -f k8s/infra/kafka/strimzi-kafka-prod.yaml -n kafka || true
           # Monitoring: unbrdn namespace 파일만 적용 (kube-system namespace 파일 제외)
           kubectl apply --validate=false -f k8s/infra/monitoring/grafana-deployment.yaml -n unbrdn || true
           kubectl apply --validate=false -f k8s/infra/monitoring/kafka-exporter-deployment.yaml -n unbrdn || true
@@ -163,10 +172,18 @@ jobs:
           OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
           SUPPRESS_LABEL_WARNING: "True"
         run: |
+          # ConfigMap 및 Secret 배포
+          kubectl apply --validate=false -f k8s/apps/bff/configmap-prod.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/core/configmap-prod.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/inference/configmap-prod.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/inference/secret-prod.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/socket/configmap-prod.yaml -n unbrdn || true
+          # Deployment 배포
           envsubst < k8s/apps/core/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
           envsubst < k8s/apps/bff/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
           envsubst < k8s/apps/socket/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
           envsubst < k8s/apps/inference/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
+          # Service 배포
           kubectl apply --validate=false -f k8s/apps/core/service.yaml -n unbrdn || true
           kubectl apply --validate=false -f k8s/apps/bff/service.yaml -n unbrdn || true
           kubectl apply --validate=false -f k8s/apps/socket/service.yaml -n unbrdn || true
