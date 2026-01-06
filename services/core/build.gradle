@@ -1,0 +1,82 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.0.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+  id 'com.google.protobuf' version '0.9.4' // Protobuf 플러그인 추가
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+description = 'Demo project for Spring Boot'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+// 1. 웹 서버 기능 (REST API)
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	// JSON 직렬화/역직렬화(ObjectMapper, TypeReference 등)
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+	// 2. 데이터베이스 (JPA + Oracle)
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	// PostgreSQL (로컬 개발용 - 필요시 사용)
+	// runtimeOnly 'org.postgresql:postgresql'
+	// Oracle Database (프로덕션용)
+	runtimeOnly 'com.oracle.database.jdbc:ojdbc8'
+	
+	// 2-1. Health Check (Actuator)
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	// 3. 메시지 브로커 (Kafka)
+	implementation 'org.springframework.kafka:spring-kafka'
+
+	// 4. 편의 도구 (Lombok)
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// 5. 테스트 도구
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.kafka:spring-kafka-test'
+
+  // 🔥 gRPC Server Starter (이거 하나면 netty 서버 설정 끝)
+    implementation 'net.devh:grpc-server-spring-boot-starter:2.15.0.RELEASE'
+    // Protobuf & gRPC Stub 필수 의존성
+    implementation 'io.grpc:grpc-protobuf:1.58.0'
+    implementation 'io.grpc:grpc-stub:1.58.0'
+    compileOnly 'jakarta.annotation:jakarta.annotation-api:1.3.5' // 생성된 코드 호환성용
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+// Protobuf 코드 생성 설정 (src/main/proto 폴더를 읽어서 자동으로 자바 코드를 만들어줍니다)
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.24.0"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.58.0"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}

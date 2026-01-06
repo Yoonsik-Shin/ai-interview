@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+// 패키지명 충돌 방지
+package interview;
+
+// Java 코드 생성 옵션
+option java_multiple_files = true;
+option java_package = "com.example.core_java.grpc"; // 생성될 클래스들의 패키지 경로
+option java_outer_classname = "InterviewProto";
+
+// === 서비스 정의 (인터페이스) ===
+service InterviewServiceGrpc {
+  // 면접 세션 생성 요청을 받아서 응답을 반환한다.
+  rpc CreateInterview (CreateInterviewRequest) returns (CreateInterviewResponse);
+}
+
+// === Enum 정의 (0번은 꼭 UNSPECIFIED나 UNKNOWN으로 비워두는 게 관례) ===
+enum InterviewTypeProto {
+  INTERVIEW_TYPE_UNSPECIFIED = 0;
+  TEXT_CHAT = 1;
+  VIDEO_CALL = 2;
+}
+
+enum InterviewPersonaProto {
+  INTERVIEW_PERSONA_UNSPECIFIED = 0;
+  PRESSURE = 1;
+  COMFORTABLE = 2;
+  RANDOM = 3;
+}
+
+enum InterviewStatusProto {
+  INTERVIEW_STATUS_UNSPECIFIED = 0;
+  READY = 1;
+  IN_PROGRESS = 2;
+  COMPLETED = 3;
+}
+
+// === 메시지 정의 (DTO) ===
+message CreateInterviewRequest {
+  int64 user_id = 1;
+  int64 resume_id = 2;
+  string domain = 3;
+  InterviewTypeProto type = 4; // Enum 사용
+  InterviewPersonaProto persona = 5; // Enum 사용
+  int32 interviewer_count = 6;
+  int32 target_duration_minutes = 7;
+  string self_introduction = 8;
+}
+
+message CreateInterviewResponse {
+  int64 interview_id = 1;
+  InterviewStatusProto status = 2; // Enum 사용
+}
