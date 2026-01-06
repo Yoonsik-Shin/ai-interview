@@ -36,8 +36,22 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // 클라이언트 연결 처리
-  handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+  async handleConnection(client: Socket) {
+    // JWT 토큰 검증 (쿼리 파라미터 또는 헤더에서)
+    const token = client.handshake.auth?.token || client.handshake.query?.token;
+    
+    if (!token) {
+      console.log(`Client connection rejected: No token - ${client.id}`);
+      client.disconnect();
+      return;
+    }
+
+    // TODO: JWT 토큰 검증 로직 추가 (BFF의 JWT Strategy 재사용 또는 별도 검증)
+    // 현재는 토큰 존재 여부만 확인
+    console.log(`Client connected: ${client.id}, token: ${token ? 'present' : 'missing'}`);
+    
+    // 세션 정보를 클라이언트에 저장
+    (client as any).userId = token; // TODO: 실제 userId 추출
   }
 
   // 클라이언트 연결 해제 처리
@@ -45,7 +59,44 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`Client disconnected: ${client.id}`);
   }
 
-  // 클라이언트가 'send_answer' 메시지를 보내면 실행됨
+  // 오디오 청크 수신 및 Kafka 전송
+  @SubscribeMessage("audio_chunk")
+  async handleAudioChunk(
+    client: Socket,
+    payload: { chunk: Buffer | string; interviewId: number }
+  ): Promise<void> {
+    const userId = (client as any).userId;
+    console.log(`Audio chunk received: interviewId=${payload.interviewId}, userId=${userId}`);
+
+    try {
+      // 오디오 청크를 Kafka로 전송
+      const audioData = typeof payload.chunk === 'string' 
+        ? Buffer.from(payload.chunk, 'base64') 
+        : payload.chunk;
+
+      await this.producer.send({
+        topic: 'interview.audio.input',
+        messages: [
+          {
+            key: `${payload.interviewId}:${userId}`,
+            value: JSON.stringify({
+              interviewId: payload.interviewId,
+              userId: userId,
+              audioChunk: audioData.toString('base64'),
+              timestamp: new Date().toISOString(),
+            }),
+          },
+        ],
+      });
+
+      console.log(`Audio chunk sent to Kafka: interviewId=${payload.interviewId}`);
+    } catch (error) {
+      console.error('Kafka Send Failed:', error);
+      client.emit('error', 'Failed to send audio chunk');
+    }
+  }
+
+  // 클라이언트가 'send_answer' 메시지를 보내면 실행됨 (기존 텍스트 채팅용)
   @SubscribeMessage("send_answer")
   async handleMessage(
     client: Socket,
