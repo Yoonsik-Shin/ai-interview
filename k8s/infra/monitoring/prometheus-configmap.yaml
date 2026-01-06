@@ -56,7 +56,7 @@ data:
       - job_name: 'kafka-exporter'
         metrics_path: /metrics
         static_configs:
-          - targets: ['kafka-exporter:9308']
+          - targets: ['kafka-exporter.kafka:9308']
 
       # Redis Exporter (Redis 상태 확인)
       - job_name: 'redis-exporter'

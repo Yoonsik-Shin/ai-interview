@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: redis-exporter
-          image: oliver006/redis_exporter:v1.67.0
+          image: docker.io/oliver006/redis_exporter:v1.67.0
           imagePullPolicy: IfNotPresent
           env:
             # 로컬/프로덕션 모두 동일한 서비스 이름(redis:6379)을 사용하도록 설계됨
@@ -52,4 +52,3 @@ spec:
       port: 9121
       targetPort: 9121
       protocol: TCP
-
