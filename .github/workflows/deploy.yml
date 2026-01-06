@@ -59,6 +59,15 @@ jobs:
           SUPPRESS_LABEL_WARNING: "True"
         run: |
           mkdir -p ~/.oci
+
+          # API 키 파일 생성 (OCI_API_KEY 라벨 추가)
+          cat > /home/runner/.oci/oci_api_key.pem <<EOF
+          ${{ secrets.OCI_API_PRIVATE_KEY }}
+          OCI_API_KEY
+          EOF
+          chmod 600 /home/runner/.oci/oci_api_key.pem
+
+          # OCI config 파일 생성
           cat > ~/.oci/config <<EOF
           [DEFAULT]
           user=${{ secrets.OCI_USER_OCID }}
@@ -67,10 +76,13 @@ jobs:
           region=${{ secrets.OCI_REGION }}
           key_file=/home/runner/.oci/oci_api_key.pem
           EOF
-
-          echo "${{ secrets.OCI_API_PRIVATE_KEY }}" > /home/runner/.oci/oci_api_key.pem
-          chmod 600 /home/runner/.oci/oci_api_key.pem
           chmod 600 ~/.oci/config
+
+          # OCI 인증 테스트
+          echo "🔍 OCI 인증 테스트 중..."
+          oci iam region list --output table || {
+            echo "⚠️  OCI 인증 테스트 실패 (계속 진행)"
+          }
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
@@ -84,22 +96,43 @@ jobs:
           # OCI CLI를 사용하여 kubeconfig 생성 (OKE_CLUSTER_OCID가 있는 경우)
           if [ -n "${{ secrets.OKE_CLUSTER_OCID }}" ]; then
             echo "🔑 OCI CLI로 kubeconfig 생성 시도..."
+            echo "   클러스터 OCID: ${{ secrets.OKE_CLUSTER_OCID }}"
+            echo "   리전: ${{ secrets.OCI_REGION }}"
+            
+            # OCI CLI로 kubeconfig 생성 (에러 상세 출력)
             oci ce cluster create-kubeconfig \
               --cluster-id ${{ secrets.OKE_CLUSTER_OCID }} \
               --file $HOME/.kube/config \
               --region ${{ secrets.OCI_REGION }} \
-              --token-version 2.0.0 && {
+              --token-version 2.0.0 2>&1 | tee /tmp/oci-kubeconfig.log && {
               echo "✅ OCI CLI로 kubeconfig 생성 성공"
               chmod 600 $HOME/.kube/config
             } || {
-              echo "⚠️  OCI CLI로 kubeconfig 생성 실패, secrets의 kubeconfig 사용 시도"
-              echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
-              chmod 600 $HOME/.kube/config
+              echo "⚠️  OCI CLI로 kubeconfig 생성 실패"
+              echo "   에러 로그:"
+              cat /tmp/oci-kubeconfig.log || true
+              echo ""
+              echo "   secrets의 kubeconfig 사용 시도..."
+              if [ -n "${{ secrets.OKE_KUBECONFIG }}" ]; then
+                echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
+                chmod 600 $HOME/.kube/config
+                echo "✅ secrets의 kubeconfig 사용 완료"
+              else
+                echo "❌ OKE_KUBECONFIG secret도 설정되지 않음"
+                exit 1
+              fi
             }
           else
-            echo "⚠️  OKE_CLUSTER_OCID가 설정되지 않음, secrets의 kubeconfig 사용"
-            echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
-            chmod 600 $HOME/.kube/config
+            echo "⚠️  OKE_CLUSTER_OCID가 설정되지 않음"
+            if [ -n "${{ secrets.OKE_KUBECONFIG }}" ]; then
+              echo "   secrets의 kubeconfig 사용..."
+              echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
+              chmod 600 $HOME/.kube/config
+              echo "✅ secrets의 kubeconfig 사용 완료"
+            else
+              echo "❌ OKE_KUBECONFIG secret도 설정되지 않음"
+              exit 1
+            fi
           fi
 
       - name: Verify cluster connection
