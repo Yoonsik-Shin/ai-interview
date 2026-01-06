@@ -37,14 +37,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message = exception.message;
     }
 
-    // 에러 로깅
-    console.error('Exception caught:', {
-      path: request.url,
-      method: request.method,
-      status,
-      message,
-      stack: exception instanceof Error ? exception.stack : undefined,
-    });
+    const traceId = (request as any).traceId;
+
+    // 에러 로깅 (JSON 형식)
+    // eslint-disable-next-line no-console
+    console.error(
+      JSON.stringify({
+        service: 'bff',
+        event: 'exception',
+        traceId,
+        path: request.url,
+        method: request.method,
+        status,
+        message,
+        timestamp: new Date().toISOString(),
+        stack: exception instanceof Error ? exception.stack : undefined,
+      }),
+    );
 
     response.status(status).json({
       statusCode: status,

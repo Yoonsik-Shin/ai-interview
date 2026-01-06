@@ -3,12 +3,16 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { traceIdMiddleware } from './common/middleware/trace-id.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Cookie Parser 미들웨어 추가
   app.use(cookieParser());
+
+  // Trace ID 미들웨어 추가
+  app.use(traceIdMiddleware);
 
   // CORS 설정
   app.enableCors({

@@ -9,6 +9,8 @@ import { Server, Socket } from "socket.io";
 import { StringDecoder } from "string_decoder";
 import axios from "axios";
 import { Kafka, Producer } from "kafkajs";
+import { randomUUID } from "crypto";
+import { SocketLoggingService } from "./socket-logging.service";
 
 @WebSocketGateway({ cors: { origin: "*" } })
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -18,7 +20,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly kafka: Kafka;
   private readonly producer: Producer;
 
-  constructor() {
+  constructor(private readonly logger: SocketLoggingService) {
     const kafkaBroker = process.env.KAFKA_BROKER || "kafka:29092";
     this.kafka = new Kafka({
       brokers: [kafkaBroker],
@@ -30,8 +32,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.producer = this.kafka.producer();
     // 비동기로 연결 시도, 실패해도 앱은 시작됨
     this.producer.connect().catch((error) => {
-      console.error("Failed to connect to Kafka:", error);
-      console.log("Will retry when Kafka is available...");
+      this.logger.log(null, "kafka_connect_failed", {
+        error: String(error),
+      });
+      this.logger.log(null, "kafka_connect_retry_scheduled");
     });
   }
 
@@ -39,24 +43,32 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: Socket) {
     // JWT 토큰 검증 (쿼리 파라미터 또는 헤더에서)
     const token = client.handshake.auth?.token || client.handshake.query?.token;
-    
+
+    const traceId =
+      (client.handshake.auth?.traceId as string | undefined) || randomUUID();
+    (client as any).traceId = traceId;
+
     if (!token) {
-      console.log(`Client connection rejected: No token - ${client.id}`);
+      this.logger.log(client, "connection_rejected", {
+        reason: "no_token",
+      });
       client.disconnect();
       return;
     }
 
     // TODO: JWT 토큰 검증 로직 추가 (BFF의 JWT Strategy 재사용 또는 별도 검증)
     // 현재는 토큰 존재 여부만 확인
-    console.log(`Client connected: ${client.id}, token: ${token ? 'present' : 'missing'}`);
-    
+    this.logger.log(client, "connection_accepted", {
+      hasToken: !!token,
+    });
+
     // 세션 정보를 클라이언트에 저장
     (client as any).userId = token; // TODO: 실제 userId 추출
   }
 
   // 클라이언트 연결 해제 처리
   handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+    this.logger.log(client, "connection_disconnected");
   }
 
   // 오디오 청크 수신 및 Kafka 전송
@@ -66,33 +78,45 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     payload: { chunk: Buffer | string; interviewId: number }
   ): Promise<void> {
     const userId = (client as any).userId;
-    console.log(`Audio chunk received: interviewId=${payload.interviewId}, userId=${userId}`);
+    this.logger.log(client, "audio_chunk_received", {
+      interviewId: payload.interviewId,
+      userId,
+    });
 
     try {
       // 오디오 청크를 Kafka로 전송
-      const audioData = typeof payload.chunk === 'string' 
-        ? Buffer.from(payload.chunk, 'base64') 
-        : payload.chunk;
+      const audioData =
+        typeof payload.chunk === "string"
+          ? Buffer.from(payload.chunk, "base64")
+          : payload.chunk;
 
       await this.producer.send({
-        topic: 'interview.audio.input',
+        topic: "interview.audio.input",
         messages: [
           {
             key: `${payload.interviewId}:${userId}`,
             value: JSON.stringify({
               interviewId: payload.interviewId,
               userId: userId,
-              audioChunk: audioData.toString('base64'),
+              audioChunk: audioData.toString("base64"),
               timestamp: new Date().toISOString(),
+              traceId: (client as any).traceId,
             }),
           },
         ],
       });
 
-      console.log(`Audio chunk sent to Kafka: interviewId=${payload.interviewId}`);
+      this.logger.log(client, "audio_chunk_forwarded_kafka", {
+        interviewId: payload.interviewId,
+        userId,
+      });
     } catch (error) {
-      console.error('Kafka Send Failed:', error);
-      client.emit('error', 'Failed to send audio chunk');
+      this.logger.log(client, "audio_chunk_kafka_failed", {
+        interviewId: payload.interviewId,
+        userId,
+        error: String(error),
+      });
+      client.emit("error", "Failed to send audio chunk");
     }
   }
 
@@ -102,7 +126,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client: Socket,
     payload: { answer: string }
   ): Promise<void> {
-    console.log(`User Answer: ${payload.answer}`);
+    const traceId = (client as any).traceId;
+    this.logger.log(client, "user_answer_received", {
+      answerLength: payload.answer?.length ?? 0,
+    });
 
     try {
       // Inference 서비스 직접 호출 (실시간성 최우선)
@@ -111,7 +138,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const response = await axios.post(
         `${pythonWorkerUrl}/interview`,
         { user_answer: payload.answer },
-        { responseType: "stream" }
+        { responseType: "stream", headers: { "x-trace-id": traceId } }
       );
       const stream = response.data;
 
@@ -124,7 +151,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (!text) return;
 
         fullAiResponse += text;
-        console.log(`Received chunk: ${text}`);
+        this.logger.log(client, "ai_stream_chunk", {
+          chunkLength: text.length,
+        });
         client.emit("stream_chunk", text);
       });
 
@@ -136,11 +165,13 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           client.emit("stream_chunk", remaining);
         }
 
-        console.log("Stream finished.");
+        this.logger.log(client, "ai_stream_finished", {
+          totalLength: fullAiResponse.length,
+        });
         client.emit("stream_end", "Done");
 
         // Kafka로 결과 전송
-        console.log("Sending result to Kafka...");
+        this.logger.log(client, "send_result_kafka_start");
         try {
           await this.producer.send({
             topic: "interview-result",
@@ -149,17 +180,22 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 value: JSON.stringify({
                   userAnswer: payload.answer,
                   aiAnswer: fullAiResponse,
+                  traceId,
                 }),
               },
             ],
           });
-          console.log("✅ Kafka Sent Success");
+          this.logger.log(client, "send_result_kafka_success");
         } catch (e) {
-          console.error("Kafka Send Failed:", e);
+          this.logger.log(client, "send_result_kafka_failed", {
+            error: String(e),
+          });
         }
       });
     } catch (error) {
-      console.error("Python Stream Error:", error);
+      this.logger.log(client, "python_stream_error", {
+        error: String(error),
+      });
       client.emit("error", "AI Connection Failed");
     }
   }

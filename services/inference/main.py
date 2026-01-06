@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from datetime import datetime
 from fastapi.responses import StreamingResponse
 import time
@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import os
 from pydantic import BaseModel
+import json
+from uuid import uuid4
+
 
 # .env 파일 로드
 load_dotenv()
@@ -15,12 +18,74 @@ app = FastAPI()
 # OpenAI 클라이언트 생성
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# 요청 바디 정의 (Node.js에서 보낼 데이터)
+def log_json(event: str, **fields) -> None:
+    """
+    JSON 포맷으로 표준화된 로그를 출력합니다.
+    """
+    base = {
+        "service": "inference",
+        "event": event,
+        "timestamp": datetime.now().isoformat(),
+    }
+    base.update(fields)
+    print(json.dumps(base, ensure_ascii=False), flush=True)
+
+
+def get_trace_id(request: Request) -> str:
+    """
+    요청 컨텍스트에서 trace-id를 추출합니다.
+    - HTTP 미들웨어에서 request.state.trace_id에 설정한 값을 우선 사용합니다.
+    - 없으면 헤더의 x-trace-id를 사용합니다.
+    """
+    trace_id = getattr(request.state, "trace_id", None)
+    if trace_id:
+        return trace_id
+    return request.headers.get("x-trace-id", "")
+
+
+@app.middleware("http")
+async def trace_and_access_log(request: Request, call_next):
+    """
+    AOP 스타일 HTTP 미들웨어
+    - 요청당 traceId를 생성/전파하고,
+    - 요청/응답 메타데이터를 공통 포맷으로 로깅합니다.
+    """
+    start = time.time()
+    # 이미 상위 계층에서 전달된 traceId가 있으면 사용
+    incoming_trace_id = request.headers.get("x-trace-id")
+    trace_id = incoming_trace_id or str(uuid4())
+    request.state.trace_id = trace_id
+
+    response = await call_next(request)
+
+    duration_ms = int((time.time() - start) * 1000)
+    response.headers["x-trace-id"] = trace_id
+
+    log_json(
+        "http_request",
+        traceId=trace_id,
+        path=request.url.path,
+        method=request.method,
+        status=response.status_code,
+        latencyMs=duration_ms,
+    )
+
+    return response
+
+
 class UserRequest(BaseModel):
     user_answer: str
 
 @app.post("/interview")  # GET -> POST로 변경 (데이터를 받아야 하므로)
-def interview_stream(request: UserRequest):
+def interview_stream(request: UserRequest, http_request: Request):
+    trace_id = get_trace_id(http_request)
+
+    log_json(
+        "interview_request_received",
+        traceId=trace_id,
+        answerLength=len(request.user_answer),
+    )
+
     def generate_openai_response():
         # 1. GPT에게 보낼 메시지 구성
         messages = [
@@ -50,14 +115,33 @@ def interview_stream(request: UserRequest):
         # 3. 한 글자씩 받아서 yield
         for chunk in stream:
             if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+                content = chunk.choices[0].delta.content
+                log_json(
+                    "interview_stream_chunk",
+                    traceId=trace_id,
+                    chunkLength=len(content),
+                )
+                yield content
+
+        log_json(
+            "interview_stream_finished",
+            traceId=trace_id,
+        )
 
     # 스트리밍 응답 반환
     return StreamingResponse(generate_openai_response(), media_type="text/plain")
 
 @app.get("/ping")
 async def get_ping():
-    return {"message": "Python API is running", "timestamp": datetime.now().isoformat()}
+    return {
+        "message": "Python API is running",
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/health")
+async def get_health():
+    return {"status": "ok"}
 
 @app.get("/stream")
 def stream_response():
