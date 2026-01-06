@@ -41,6 +41,13 @@ dependencies {
 	// 2-1. Health Check (Actuator)
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+	// 2-2. Password Encoding (BCrypt)
+	implementation 'org.springframework.security:spring-security-crypto'
+
+	// 2-3. Apache Tika (문서 파싱: PDF, Word 등)
+	implementation 'org.apache.tika:tika-core:2.9.1'
+	implementation 'org.apache.tika:tika-parsers-standard-package:2.9.1'
+
 	// 3. 메시지 브로커 (Kafka)
 	implementation 'org.springframework.kafka:spring-kafka'
 
