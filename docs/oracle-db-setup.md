@@ -357,7 +357,7 @@ kubectl logs -l app=core -n unbrdn --tail=50
 다음과 같은 메시지가 보이면 성공:
 
 ```
-Started CoreJavaApplication in X.XXX seconds
+Started CoreApplication in X.XXX seconds
 ```
 
 ### 8.2 데이터베이스 연결 확인

@@ -142,7 +142,7 @@ Core Service는 Spring Boot 프로파일을 통해 환경별 설정을 관리합
 | `SPRING_DATASOURCE_USERNAME`     | 데이터베이스 사용자명        | Oracle DB 사용자명 (Secret에서 설정)           |
 | `SPRING_DATASOURCE_PASSWORD`     | 데이터베이스 비밀번호        | Oracle DB 비밀번호 (Secret에서 설정)           |
 | `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Kafka 브로커 주소            | `localhost:9092`                                |
-| `SPRING_KAFKA_CONSUMER_GROUP_ID` | Kafka Consumer Group ID      | `core-java-group`                               |
+| `SPRING_KAFKA_CONSUMER_GROUP_ID` | Kafka Consumer Group ID      | `core-group`                                     |
 | `SPRING_JPA_HIBERNATE_DDL_AUTO`  | Hibernate DDL 자동 생성 모드 | `update`                                        |
 | `SPRING_JPA_SHOW_SQL`            | SQL 로깅 활성화 여부         | `false`                                         |
 | `LOG_LEVEL`                      | 로그 레벨                    | `INFO`                                          |

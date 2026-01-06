@@ -12,7 +12,7 @@
 ## 아키텍처
 
 ```
-[사용자] 
+[사용자]
   ↓ HTTPS (443)
 [Ingress Controller (Nginx)]
   ↓ HTTP (내부)
@@ -47,7 +47,7 @@ kubectl get crd | grep cert-manager
 ```yaml
 spec:
   acme:
-    email: your-email@example.com  # 실제 이메일 주소로 변경
+    email: your-email@example.com # 실제 이메일 주소로 변경
 ```
 
 ClusterIssuer 배포:
@@ -64,10 +64,10 @@ kubectl apply -f k8s/infra/cert-manager/cluster-issuer-prod.yaml
 spec:
   tls:
     - hosts:
-        - your-domain.com  # 실제 도메인으로 변경
+        - your-domain.com # 실제 도메인으로 변경
       secretName: tls-secret
   rules:
-    - host: your-domain.com  # 실제 도메인으로 변경
+    - host: your-domain.com # 실제 도메인으로 변경
 ```
 
 Ingress 배포:
@@ -170,16 +170,19 @@ annotations:
 #### 인증서가 발급되지 않음
 
 1. **DNS 설정 확인**:
+
    ```bash
    nslookup your-domain.com
    ```
 
 2. **Ingress IP 확인**:
+
    ```bash
    kubectl get ingress main-ingress -n unbrdn
    ```
 
 3. **Cert-Manager 로그 확인**:
+
    ```bash
    kubectl logs -n cert-manager -l app.kubernetes.io/instance=cert-manager
    ```
@@ -201,6 +204,7 @@ cert-manager.io/cluster-issuer: "letsencrypt-staging"
 #### 인증서 갱신 실패
 
 1. Cert-Manager Pod 재시작:
+
    ```bash
    kubectl rollout restart deployment cert-manager -n cert-manager
    ```
@@ -216,11 +220,13 @@ cert-manager.io/cluster-issuer: "letsencrypt-staging"
 #### 인증서 생성 실패
 
 1. **OpenSSL 설치 확인**:
+
    ```bash
    openssl version
    ```
 
 2. **권한 확인**:
+
    ```bash
    chmod +x scripts/generate-self-signed-cert.sh
    ```
@@ -233,12 +239,14 @@ cert-manager.io/cluster-issuer: "letsencrypt-staging"
 #### HTTPS 접속 불가
 
 1. **Ingress 확인**:
+
    ```bash
    kubectl get ingress main-ingress -n unbrdn
    kubectl describe ingress main-ingress -n unbrdn
    ```
 
 2. **Ingress Controller 확인**:
+
    ```bash
    kubectl get pods -n ingress-nginx
    ```
@@ -257,4 +265,3 @@ cert-manager.io/cluster-issuer: "letsencrypt-staging"
 - [Cert-Manager 공식 문서](https://cert-manager.io/docs/)
 - [Let's Encrypt 문서](https://letsencrypt.org/docs/)
 - [Nginx Ingress Controller TLS 설정](https://kubernetes.github.io/ingress-nginx/user-guide/tls/)
-
