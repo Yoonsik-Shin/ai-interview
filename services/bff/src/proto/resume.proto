@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package resume;
+
+option java_package = "com.example.core.grpc";
+option java_outer_classname = "ResumeProto";
+
+service ResumeService {
+  // 이력서 업로드
+  rpc UploadResume (UploadResumeRequest) returns (UploadResumeResponse);
+}
+
+message UploadResumeRequest {
+  int64 userId = 1;
+  string title = 2;
+  bytes fileData = 3;
+  string fileName = 4;
+  string contentType = 5;
+}
+
+message UploadResumeResponse {
+  int64 resumeId = 1;
+}
+
