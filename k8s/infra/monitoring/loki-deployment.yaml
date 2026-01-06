@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: loki
-          image: grafana/loki:3.0.0
+          image: docker.io/grafana/loki:3.0.0
           imagePullPolicy: IfNotPresent
           args:
             - "-config.file=/etc/loki/config/loki-config.yaml"
@@ -99,4 +99,3 @@ data:
 
     analytics:
       reporting_enabled: false
-

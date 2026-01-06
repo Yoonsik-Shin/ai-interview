@@ -48,7 +48,7 @@ spec:
       serviceAccountName: default
       containers:
         - name: promtail
-          image: grafana/promtail:3.0.0
+          image: docker.io/grafana/promtail:3.0.0
           imagePullPolicy: IfNotPresent
           args:
             - "-config.file=/etc/promtail/promtail.yaml"
@@ -77,4 +77,3 @@ spec:
         - name: varlibdockercontainers
           hostPath:
             path: /var/lib/docker/containers
-

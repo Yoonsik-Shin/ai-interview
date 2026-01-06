@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: prom/prometheus:v2.53.0
+          image: docker.io/prom/prometheus:v2.53.0
           imagePullPolicy: IfNotPresent
           args:
             - "--config.file=/etc/prometheus/prometheus.yml"
@@ -64,4 +64,3 @@ spec:
       port: 9090
       targetPort: 9090
       protocol: TCP
-

@@ -176,10 +176,14 @@ jobs:
           OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
           SUPPRESS_LABEL_WARNING: "True"
         run: |
-          kubectl apply --validate=false -f k8s/apps/core -n unbrdn
-          kubectl apply --validate=false -f k8s/apps/bff -n unbrdn
-          kubectl apply --validate=false -f k8s/apps/socket -n unbrdn
-          kubectl apply --validate=false -f k8s/apps/inference -n unbrdn
+          envsubst < k8s/apps/core/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
+          envsubst < k8s/apps/bff/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
+          envsubst < k8s/apps/socket/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
+          envsubst < k8s/apps/inference/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
+          kubectl apply --validate=false -f k8s/apps/core/service.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/bff/service.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/socket/service.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/inference/service.yaml -n unbrdn || true
 
       - name: Update Core image
         if: needs.detect-changes.outputs.core == 'true'

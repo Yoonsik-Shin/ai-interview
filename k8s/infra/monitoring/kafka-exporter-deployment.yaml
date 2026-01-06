@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: kafka-exporter
-          image: bitnami/kafka-exporter:1.7.0
+          image: docker.io/bitnami/kafka-exporter:1.7.0
           imagePullPolicy: IfNotPresent
           args:
             # 로컬: unbrdn 네임스페이스의 단일 브로커 서비스(kafka:9092)
@@ -55,4 +55,3 @@ spec:
       port: 9308
       targetPort: 9308
       protocol: TCP
-
