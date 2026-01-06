@@ -81,28 +81,52 @@ jobs:
           SUPPRESS_LABEL_WARNING: "True"
         run: |
           mkdir -p $HOME/.kube
-          # OCI CLI를 사용하여 kubeconfig 생성
-          oci ce cluster create-kubeconfig \
-            --cluster-id ${{ secrets.OKE_CLUSTER_OCID }} \
-            --file $HOME/.kube/config \
-            --region ${{ secrets.OCI_REGION }} \
-            --kubeconfig-token-version 2.0.0 || {
-            echo "⚠️  OCI CLI로 kubeconfig 생성 실패, secrets의 kubeconfig 사용 시도"
+          # OCI CLI를 사용하여 kubeconfig 생성 (OKE_CLUSTER_OCID가 있는 경우)
+          if [ -n "${{ secrets.OKE_CLUSTER_OCID }}" ]; then
+            echo "🔑 OCI CLI로 kubeconfig 생성 시도..."
+            oci ce cluster create-kubeconfig \
+              --cluster-id ${{ secrets.OKE_CLUSTER_OCID }} \
+              --file $HOME/.kube/config \
+              --region ${{ secrets.OCI_REGION }} \
+              --token-version 2.0.0 && {
+              echo "✅ OCI CLI로 kubeconfig 생성 성공"
+              chmod 600 $HOME/.kube/config
+            } || {
+              echo "⚠️  OCI CLI로 kubeconfig 생성 실패, secrets의 kubeconfig 사용 시도"
+              echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
+              chmod 600 $HOME/.kube/config
+            }
+          else
+            echo "⚠️  OKE_CLUSTER_OCID가 설정되지 않음, secrets의 kubeconfig 사용"
             echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
-          }
-          chmod 600 $HOME/.kube/config
+            chmod 600 $HOME/.kube/config
+          fi
 
       - name: Verify cluster connection
         env:
           OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
           SUPPRESS_LABEL_WARNING: "True"
         run: |
+          # kubeconfig 파일 존재 및 내용 확인
+          if [ ! -f "$HOME/.kube/config" ]; then
+            echo "❌ kubeconfig 파일이 존재하지 않습니다"
+            exit 1
+          fi
+
+          echo "📋 kubeconfig 파일 크기: $(wc -c < $HOME/.kube/config) bytes"
+          echo "📋 kubeconfig 클러스터 정보:"
+          kubectl config view --minify --raw 2>/dev/null | grep -E "(server:|cluster:)" || true
+
+          # 클러스터 연결 테스트
+          echo "🔍 클러스터 연결 테스트 중..."
           kubectl cluster-info || {
             echo "❌ 클러스터 연결 실패"
-            echo "kubeconfig 내용 확인:"
-            cat $HOME/.kube/config | head -20
+            echo "kubeconfig 내용 (처음 30줄):"
+            head -30 $HOME/.kube/config
             exit 1
           }
+
+          echo "✅ 클러스터 연결 성공"
           kubectl get nodes
 
       - name: Apply infra manifests (if needed)
