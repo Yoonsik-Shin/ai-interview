@@ -10,14 +10,16 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
-    # HTTP to HTTPS 자동 리다이렉션
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # HTTP to HTTPS 자동 리다이렉션 (로컬 개발용으로 비활성화)
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # CORS preflight 요청에서 리다이렉트 방지
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
 spec:
   ingressClassName: nginx
-  tls:
-    - hosts:
-        - localhost
-      secretName: tls-secret
   rules:
     - host: localhost
       http:

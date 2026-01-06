@@ -27,6 +27,12 @@ spec:
           env:
             - name: PORT
               value: "3000"
+            - name: REDIS_HOST
+              value: redis
+            - name: REDIS_PORT
+              value: "6379"
+            - name: JWT_SECRET
+              value: "your-secret-key-change-in-production"
             - name: KAFKA_BROKER
               value: kafka:29092
             - name: PYTHON_WORKER_URL
@@ -43,4 +49,3 @@ spec:
               memory: "512Mi"
               cpu: "500m"
       restartPolicy: Always
-
