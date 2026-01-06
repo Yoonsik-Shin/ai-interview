@@ -205,10 +205,28 @@ jobs:
         env:
           IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+          OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+          SUPPRESS_LABEL_WARNING: "True"
         run: |
-          echo "🔄 Core 이미지 업데이트 중: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-core:${IMAGE_TAG}"
+          IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-core:${IMAGE_TAG}"
+          echo "🔄 Core 이미지 업데이트 시도: ${IMAGE_NAME}"
+
+          # 먼저 커밋 SHA 태그로 시도
+          if kubectl set image deployment/core \
+            core=${IMAGE_NAME} \
+            -n unbrdn 2>&1 | tee /tmp/image-update.log; then
+            echo "✅ 이미지 업데이트 성공: ${IMAGE_NAME}"
+            if kubectl rollout status deployment/core -n unbrdn --timeout=2m; then
+              echo "✅ 롤아웃 완료"
+              exit 0
+            fi
+          fi
+
+          # 실패 시 latest 태그로 폴백
+          echo "⚠️  이미지 업데이트 실패 또는 롤아웃 실패. latest 태그로 재시도..."
+          LATEST_IMAGE="${IMAGE_REGISTRY}/unbrdn-krn-ocir-core:latest"
           kubectl set image deployment/core \
-            core=${IMAGE_REGISTRY}/unbrdn-krn-ocir-core:${IMAGE_TAG} \
+            core=${LATEST_IMAGE} \
             -n unbrdn
           kubectl rollout status deployment/core -n unbrdn --timeout=5m
 
@@ -217,10 +235,28 @@ jobs:
         env:
           IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+          OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+          SUPPRESS_LABEL_WARNING: "True"
         run: |
-          echo "🔄 BFF 이미지 업데이트 중: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-bff:${IMAGE_TAG}"
+          IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-bff:${IMAGE_TAG}"
+          echo "🔄 BFF 이미지 업데이트 시도: ${IMAGE_NAME}"
+
+          # 먼저 커밋 SHA 태그로 시도
+          if kubectl set image deployment/bff \
+            bff=${IMAGE_NAME} \
+            -n unbrdn 2>&1 | tee /tmp/image-update.log; then
+            echo "✅ 이미지 업데이트 성공: ${IMAGE_NAME}"
+            if kubectl rollout status deployment/bff -n unbrdn --timeout=2m; then
+              echo "✅ 롤아웃 완료"
+              exit 0
+            fi
+          fi
+
+          # 실패 시 latest 태그로 폴백
+          echo "⚠️  이미지 업데이트 실패 또는 롤아웃 실패. latest 태그로 재시도..."
+          LATEST_IMAGE="${IMAGE_REGISTRY}/unbrdn-krn-ocir-bff:latest"
           kubectl set image deployment/bff \
-            bff=${IMAGE_REGISTRY}/unbrdn-krn-ocir-bff:${IMAGE_TAG} \
+            bff=${LATEST_IMAGE} \
             -n unbrdn
           kubectl rollout status deployment/bff -n unbrdn --timeout=5m
 
@@ -229,10 +265,28 @@ jobs:
         env:
           IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+          OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+          SUPPRESS_LABEL_WARNING: "True"
         run: |
-          echo "🔄 Socket 이미지 업데이트 중: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-socket:${IMAGE_TAG}"
+          IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-socket:${IMAGE_TAG}"
+          echo "🔄 Socket 이미지 업데이트 시도: ${IMAGE_NAME}"
+
+          # 먼저 커밋 SHA 태그로 시도
+          if kubectl set image deployment/socket \
+            socket=${IMAGE_NAME} \
+            -n unbrdn 2>&1 | tee /tmp/image-update.log; then
+            echo "✅ 이미지 업데이트 성공: ${IMAGE_NAME}"
+            if kubectl rollout status deployment/socket -n unbrdn --timeout=2m; then
+              echo "✅ 롤아웃 완료"
+              exit 0
+            fi
+          fi
+
+          # 실패 시 latest 태그로 폴백
+          echo "⚠️  이미지 업데이트 실패 또는 롤아웃 실패. latest 태그로 재시도..."
+          LATEST_IMAGE="${IMAGE_REGISTRY}/unbrdn-krn-ocir-socket:latest"
           kubectl set image deployment/socket \
-            socket=${IMAGE_REGISTRY}/unbrdn-krn-ocir-socket:${IMAGE_TAG} \
+            socket=${LATEST_IMAGE} \
             -n unbrdn
           kubectl rollout status deployment/socket -n unbrdn --timeout=5m
 
@@ -241,9 +295,27 @@ jobs:
         env:
           IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+          OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+          SUPPRESS_LABEL_WARNING: "True"
         run: |
-          echo "🔄 Inference 이미지 업데이트 중: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:${IMAGE_TAG}"
+          IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:${IMAGE_TAG}"
+          echo "🔄 Inference 이미지 업데이트 시도: ${IMAGE_NAME}"
+
+          # 먼저 커밋 SHA 태그로 시도
+          if kubectl set image deployment/inference \
+            inference=${IMAGE_NAME} \
+            -n unbrdn 2>&1 | tee /tmp/image-update.log; then
+            echo "✅ 이미지 업데이트 성공: ${IMAGE_NAME}"
+            if kubectl rollout status deployment/inference -n unbrdn --timeout=2m; then
+              echo "✅ 롤아웃 완료"
+              exit 0
+            fi
+          fi
+
+          # 실패 시 latest 태그로 폴백
+          echo "⚠️  이미지 업데이트 실패 또는 롤아웃 실패. latest 태그로 재시도..."
+          LATEST_IMAGE="${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:latest"
           kubectl set image deployment/inference \
-            inference=${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:${IMAGE_TAG} \
+            inference=${LATEST_IMAGE} \
             -n unbrdn
           kubectl rollout status deployment/inference -n unbrdn --timeout=5m
