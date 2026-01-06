@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package auth;
+
+option java_multiple_files = true;
+option java_package = "com.example.core.grpc"; // Java 패키지 경로
+option java_outer_classname = "AuthProto";
+
+service AuthService {
+  // 회원가입
+  rpc Signup (SignupRequest) returns (SignupResponse);
+  
+  // 로그인 검증 (BFF가 ID/PW를 보내면 Core가 유저 정보 리턴)
+  rpc ValidateUser (ValidateUserRequest) returns (ValidateUserResponse);
+}
+
+message SignupRequest {
+  string email = 1;
+  string password = 2;
+  string nickname = 3;
+}
+
+message SignupResponse {
+  int64 userId = 1; // 생성된 ID 반환
+}
+
+message ValidateUserRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message ValidateUserResponse {
+  int64 userId = 1;
+  string email = 2;
+  string nickname = 3;
+  string role = 4;
+}
+
