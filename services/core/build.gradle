@@ -5,7 +5,7 @@ plugins {
   id 'com.google.protobuf' version '0.9.4' // Protobuf 플러그인 추가
 }
 
-group = 'com.example'
+group = 'me.unbrdn'
 version = '0.0.1-SNAPSHOT'
 description = 'Demo project for Spring Boot'
 
@@ -31,12 +31,21 @@ dependencies {
 	// JSON 직렬화/역직렬화(ObjectMapper, TypeReference 등)
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-	// 2. 데이터베이스 (JPA + Oracle)
+	// 2. 데이터베이스 (JPA)
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	// PostgreSQL (로컬 개발용 - 필요시 사용)
-	// runtimeOnly 'org.postgresql:postgresql'
-	// Oracle Database (프로덕션용)
-	runtimeOnly 'com.oracle.database.jdbc:ojdbc8'
+	
+	// 프로파일별 데이터베이스 드라이버
+	// BUILD_PROFILE 환경 변수 또는 gradle.properties의 buildProfile 프로퍼티로 구분
+	// 기본값: local (로컬 개발용)
+	def buildProfile = project.findProperty('buildProfile') ?: System.getenv('BUILD_PROFILE') ?: 'local'
+	
+	if (buildProfile == 'prod') {
+		// 프로덕션용 (Oracle Database)
+		runtimeOnly 'com.oracle.database.jdbc:ojdbc8'
+	} else {
+		// 로컬 개발용 (PostgreSQL)
+		runtimeOnly 'org.postgresql:postgresql'
+	}
 	
 	// 2-1. Health Check (Actuator)
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -82,8 +91,18 @@ protobuf {
         }
     }
     generateProtoTasks {
-        all()*.plugins {
-            grpc {}
+        all().configureEach { task ->
+            task.builtins {
+                java {}
+            }
+            task.plugins {
+                grpc {}
+            }
         }
     }
+}
+
+// 컴파일 전에 proto 코드 생성이 완료되도록 보장
+tasks.named('compileJava').configure {
+    dependsOn tasks.named('generateProto')
 }

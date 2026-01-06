@@ -1,0 +1,16 @@
+package me.unbrdn.core.auth;
+
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * Auth 모듈 Configuration
+ * 
+ * Auth 도메인 관련 빈들을 스캔하여 등록합니다.
+ */
+@Configuration
+@ComponentScan(basePackages = "me.unbrdn.core.auth")
+public class AuthModule {
+  // Spring의 ComponentScan을 통해 자동으로 빈 등록됨
+}
+
