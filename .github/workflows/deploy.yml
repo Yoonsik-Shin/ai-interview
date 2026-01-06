@@ -93,46 +93,35 @@ jobs:
           SUPPRESS_LABEL_WARNING: "True"
         run: |
           mkdir -p $HOME/.kube
-          # OCI CLI를 사용하여 kubeconfig 생성 (OKE_CLUSTER_OCID가 있는 경우)
+          
+          # OCI CLI로 kubeconfig 생성 시도
           if [ -n "${{ secrets.OKE_CLUSTER_OCID }}" ]; then
-            echo "🔑 OCI CLI로 kubeconfig 생성 시도..."
-            echo "   클러스터 OCID: ${{ secrets.OKE_CLUSTER_OCID }}"
-            echo "   리전: ${{ secrets.OCI_REGION }}"
-            
-            # OCI CLI로 kubeconfig 생성 (에러 상세 출력)
-            oci ce cluster create-kubeconfig \
+            echo "🔑 OCI CLI로 kubeconfig 생성 중..."
+            if oci ce cluster create-kubeconfig \
               --cluster-id ${{ secrets.OKE_CLUSTER_OCID }} \
               --file $HOME/.kube/config \
               --region ${{ secrets.OCI_REGION }} \
-              --token-version 2.0.0 2>&1 | tee /tmp/oci-kubeconfig.log && {
-              echo "✅ OCI CLI로 kubeconfig 생성 성공"
+              --token-version 2.0.0 2>&1; then
               chmod 600 $HOME/.kube/config
-            } || {
-              echo "⚠️  OCI CLI로 kubeconfig 생성 실패"
-              echo "   에러 로그:"
-              cat /tmp/oci-kubeconfig.log || true
-              echo ""
-              echo "   secrets의 kubeconfig 사용 시도..."
-              if [ -n "${{ secrets.OKE_KUBECONFIG }}" ]; then
-                echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
-                chmod 600 $HOME/.kube/config
-                echo "✅ secrets의 kubeconfig 사용 완료"
-              else
-                echo "❌ OKE_KUBECONFIG secret도 설정되지 않음"
+              echo "✅ kubeconfig 생성 완료"
+            else
+              echo "⚠️  OCI CLI 실패, secrets의 kubeconfig 사용"
+              if [ -z "${{ secrets.OKE_KUBECONFIG }}" ]; then
+                echo "❌ OKE_KUBECONFIG secret이 설정되지 않음"
                 exit 1
               fi
-            }
-          else
-            echo "⚠️  OKE_CLUSTER_OCID가 설정되지 않음"
-            if [ -n "${{ secrets.OKE_KUBECONFIG }}" ]; then
-              echo "   secrets의 kubeconfig 사용..."
               echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
               chmod 600 $HOME/.kube/config
-              echo "✅ secrets의 kubeconfig 사용 완료"
-            else
-              echo "❌ OKE_KUBECONFIG secret도 설정되지 않음"
-              exit 1
+              echo "✅ kubeconfig 생성 완료"
             fi
+          elif [ -n "${{ secrets.OKE_KUBECONFIG }}" ]; then
+            echo "🔑 secrets의 kubeconfig 사용"
+            echo "${{ secrets.OKE_KUBECONFIG }}" > $HOME/.kube/config
+            chmod 600 $HOME/.kube/config
+            echo "✅ kubeconfig 생성 완료"
+          else
+            echo "❌ OKE_CLUSTER_OCID 또는 OKE_KUBECONFIG secret이 필요합니다"
+            exit 1
           fi
 
       - name: Verify cluster connection
@@ -140,27 +129,17 @@ jobs:
           OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
           SUPPRESS_LABEL_WARNING: "True"
         run: |
-          # kubeconfig 파일 존재 및 내용 확인
           if [ ! -f "$HOME/.kube/config" ]; then
-            echo "❌ kubeconfig 파일이 존재하지 않습니다"
+            echo "❌ kubeconfig 파일이 없습니다"
             exit 1
           fi
-
-          echo "📋 kubeconfig 파일 크기: $(wc -c < $HOME/.kube/config) bytes"
-          echo "📋 kubeconfig 클러스터 정보:"
-          kubectl config view --minify --raw 2>/dev/null | grep -E "(server:|cluster:)" || true
-
-          # 클러스터 연결 테스트
-          echo "🔍 클러스터 연결 테스트 중..."
-          kubectl cluster-info || {
+          
+          echo "🔍 클러스터 연결 확인 중..."
+          kubectl cluster-info && kubectl get nodes || {
             echo "❌ 클러스터 연결 실패"
-            echo "kubeconfig 내용 (처음 30줄):"
-            head -30 $HOME/.kube/config
             exit 1
           }
-
           echo "✅ 클러스터 연결 성공"
-          kubectl get nodes
 
       - name: Apply infra manifests (if needed)
         env:
@@ -168,8 +147,16 @@ jobs:
           SUPPRESS_LABEL_WARNING: "True"
         run: |
           kubectl apply --validate=false -f k8s/infra/redis -n unbrdn || true
-          kubectl apply --validate=false -f k8s/infra/kafka -n unbrdn || true
-          kubectl apply --validate=false -f k8s/infra/monitoring -n unbrdn || true
+          # Kafka: unbrdn namespace 파일만 적용 (strimzi 관련은 kafka namespace이므로 제외)
+          kubectl apply --validate=false -f k8s/infra/kafka/kafka-service.yaml -n unbrdn || true
+          # Monitoring: unbrdn namespace 파일만 적용 (kube-system namespace 파일 제외)
+          kubectl apply --validate=false -f k8s/infra/monitoring/grafana-deployment.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/infra/monitoring/kafka-exporter-deployment.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/infra/monitoring/loki-deployment.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/infra/monitoring/prometheus-configmap.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/infra/monitoring/prometheus-deployment.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/infra/monitoring/promtail-daemonset.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/infra/monitoring/redis-exporter-deployment.yaml -n unbrdn || true
 
       - name: Apply app manifests
         env:
