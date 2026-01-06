@@ -100,5 +100,3 @@ jobs:
             inference=${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:${IMAGE_TAG} \
             -n unbrdn
           kubectl rollout status deployment/inference -n unbrdn
-
-
