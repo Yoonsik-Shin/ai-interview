@@ -5,8 +5,6 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import me.unbrdn.core.domain.enums.UserRole;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -19,6 +17,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import me.unbrdn.core.domain.enums.UserRole;
 
 @Entity
 @Table(name = "users")
@@ -38,7 +37,7 @@ public class Users {
   @Column(nullable = false, length = 50)
   private String nickname;
 
-  @Column(nullable = true, length = 255)
+  @Column(name = "\"password\"", length = 255)
   private String password;
 
   @Enumerated(EnumType.STRING)
@@ -79,8 +78,7 @@ public class Users {
   }
 
   /**
-   * 인코딩된 비밀번호를 반환합니다.
-   * 비밀번호 검증은 Application Layer에서 PasswordEncoder를 통해 수행합니다.
+   * 인코딩된 비밀번호를 반환합니다. 비밀번호 검증은 Application Layer에서 PasswordEncoder를 통해 수행합니다.
    * 
    * @return 인코딩된 비밀번호 (없으면 null)
    */
