@@ -20,4 +20,3 @@
 # 설치 후 확인:
 # kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=cert-manager -n cert-manager --timeout=300s
 
-
