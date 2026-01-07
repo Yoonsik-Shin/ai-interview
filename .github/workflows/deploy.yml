@@ -93,7 +93,6 @@ jobs:
           SUPPRESS_LABEL_WARNING: "True"
         run: |
           mkdir -p $HOME/.kube
-          
           # OCI CLI로 kubeconfig 생성 시도
           if [ -n "${{ secrets.OKE_CLUSTER_OCID }}" ]; then
             echo "🔑 OCI CLI로 kubeconfig 생성 중..."
@@ -158,8 +157,12 @@ jobs:
           kubectl apply --validate=false -f k8s/infra/monitoring/loki-deployment.yaml -n unbrdn || true
           kubectl apply --validate=false -f k8s/infra/monitoring/prometheus-configmap.yaml -n unbrdn || true
           kubectl apply --validate=false -f k8s/infra/monitoring/prometheus-deployment.yaml -n unbrdn || true
+          # Promtail RBAC (Kubernetes API 접근 권한)
+          kubectl apply --validate=false -f k8s/infra/monitoring/promtail-rbac.yaml || true
           kubectl apply --validate=false -f k8s/infra/monitoring/promtail-daemonset.yaml -n unbrdn || true
           kubectl apply --validate=false -f k8s/infra/monitoring/redis-exporter-deployment.yaml -n unbrdn || true
+          # Ingress (Grafana 접근 경로 포함)
+          kubectl apply --validate=false -f k8s/common/ingress/ingress-prod.yaml -n unbrdn || true
 
       - name: Apply app manifests
         env:
@@ -200,10 +203,8 @@ jobs:
         run: |
           IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-core:${IMAGE_TAG}"
           echo "🔄 Core 이미지 업데이트 시도: ${IMAGE_NAME}"
-          
           # 커밋 SHA 태그로 이미지 업데이트
           kubectl set image deployment/core core=${IMAGE_NAME} -n unbrdn
-          
           # 롤아웃 상태 확인 (30초 타임아웃으로 빠르게 실패 감지)
           if kubectl rollout status deployment/core -n unbrdn --timeout=30s 2>&1; then
             echo "✅ 롤아웃 완료: ${IMAGE_NAME}"
@@ -221,9 +222,7 @@ jobs:
         run: |
           IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-bff:${IMAGE_TAG}"
           echo "🔄 BFF 이미지 업데이트 시도: ${IMAGE_NAME}"
-          
           kubectl set image deployment/bff bff=${IMAGE_NAME} -n unbrdn
-          
           if kubectl rollout status deployment/bff -n unbrdn --timeout=30s 2>&1; then
             echo "✅ 롤아웃 완료: ${IMAGE_NAME}"
           else
@@ -240,9 +239,7 @@ jobs:
         run: |
           IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-socket:${IMAGE_TAG}"
           echo "🔄 Socket 이미지 업데이트 시도: ${IMAGE_NAME}"
-          
           kubectl set image deployment/socket socket=${IMAGE_NAME} -n unbrdn
-          
           if kubectl rollout status deployment/socket -n unbrdn --timeout=30s 2>&1; then
             echo "✅ 롤아웃 완료: ${IMAGE_NAME}"
           else
@@ -259,9 +256,7 @@ jobs:
         run: |
           IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:${IMAGE_TAG}"
           echo "🔄 Inference 이미지 업데이트 시도: ${IMAGE_NAME}"
-          
           kubectl set image deployment/inference inference=${IMAGE_NAME} -n unbrdn
-          
           if kubectl rollout status deployment/inference -n unbrdn --timeout=30s 2>&1; then
             echo "✅ 롤아웃 완료: ${IMAGE_NAME}"
           else

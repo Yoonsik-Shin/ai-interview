@@ -19,6 +19,9 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/connection-upgrade: "$connection_upgrade"
+    nginx.ingress.kubernetes.io/upgrade: "$http_upgrade"
     # HTTP to HTTPS 자동 리다이렉션
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
@@ -38,6 +41,13 @@ spec:
                 name: kafka-ui
                 port:
                   number: 8080
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
           - path: /socket.io/
             pathType: Prefix
             backend:
