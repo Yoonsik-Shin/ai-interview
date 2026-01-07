@@ -263,3 +263,6 @@ kubectl logs -l app=kafka -n unbrdn
 
 
 
+
+
+
