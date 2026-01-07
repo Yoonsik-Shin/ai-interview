@@ -54,34 +54,42 @@ export class RedisIoAdapter extends IoAdapter {
     const defaultUpgradeTimeout = 10000; // 10초
 
     // 기존 options에서 타임아웃 값 추출 및 검증
-    const pingTimeout = options?.pingTimeout && options.pingTimeout > 0 
-      ? options.pingTimeout 
-      : defaultPingTimeout;
-    const pingInterval = options?.pingInterval && options.pingInterval > 0 && options.pingInterval < pingTimeout
-      ? options.pingInterval 
-      : defaultPingInterval;
-    const upgradeTimeout = options?.upgradeTimeout && options.upgradeTimeout > 0
-      ? options.upgradeTimeout 
-      : defaultUpgradeTimeout;
+    const pingTimeout =
+      options?.pingTimeout && options.pingTimeout > 0
+        ? options.pingTimeout
+        : defaultPingTimeout;
+    const pingInterval =
+      options?.pingInterval &&
+      options.pingInterval > 0 &&
+      options.pingInterval < pingTimeout
+        ? options.pingInterval
+        : defaultPingInterval;
+    const upgradeTimeout =
+      options?.upgradeTimeout && options.upgradeTimeout > 0
+        ? options.upgradeTimeout
+        : defaultUpgradeTimeout;
 
     // ServerOptions 타입 호환성을 위해 Partial을 사용하여 옵션 구성
     const serverOptions: Partial<ServerOptions> = {
       ...options,
       // 핵심 옵션은 명시적으로 덮어쓰기 (검증된 값 사용)
-      transports: ['websocket', 'polling'], // WebSocket 우선, 폴백으로 polling
+      transports: ["websocket", "polling"], // WebSocket 우선, 폴백으로 polling
       allowEIO3: true, // Socket.io v3 클라이언트 호환성
       pingTimeout,
       pingInterval,
       upgradeTimeout,
       maxHttpBufferSize: 1e6, // 1MB
       cors: {
-        origin: '*',
-        methods: ['GET', 'POST'],
+        origin: "*",
+        methods: ["GET", "POST"],
         credentials: true,
       },
     };
 
-    const server = super.createIOServer(port, serverOptions as ServerOptions) as Server;
+    const server = super.createIOServer(
+      port,
+      serverOptions as ServerOptions
+    ) as Server;
     // 서버에 어댑터 장착
     server.adapter(this.adapterConstructor);
 
