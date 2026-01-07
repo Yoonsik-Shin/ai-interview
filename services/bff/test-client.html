@@ -816,11 +816,24 @@
           return;
         }
 
+        // 토큰이 없으면 경고
+        if (!accessToken) {
+          alert('먼저 로그인하여 액세스 토큰을 받아주세요.');
+          return;
+        }
+
         const socketUrl = getSocketUrl();
         socket = io(socketUrl, {
           path: '/socket.io',
           transports: ['polling', 'websocket'],
           reconnection: true,
+          auth: {
+            token: accessToken,
+          },
+          // query 파라미터로도 전달 (서버가 auth 또는 query에서 토큰을 찾음)
+          query: {
+            token: accessToken,
+          },
         });
 
         socket.on('connect', () => {
