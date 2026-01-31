@@ -3,6 +3,9 @@ kind: ConfigMap
 metadata:
   name: core-config
   namespace: unbrdn
+  labels:
+    app: core
+    environment: prod
 data:
   # Server
   SERVER_PORT: "8081"
@@ -31,6 +34,8 @@ data:
   LOG_LEVEL: "INFO"
   LOG_LEVEL_CORE: "DEBUG"
 
-  # Database (PostgreSQL - 로컬 환경)
-  datasource-url: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/unbrdn"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/unbrdn"
+  # Database (Oracle ATP - 프로덕션 환경)
+  # 실제 연결 정보는 k8s/infra/oracle/prod/oracle-atp-configmap.yaml 참조
+  # 또는 deployment에서 oracle-atp-config ConfigMap을 직접 참조
+  datasource-url: "CHANGE_ME_ORACLE_ATP_CONNECTION_STRING"
+  SPRING_DATASOURCE_URL: "CHANGE_ME_ORACLE_ATP_CONNECTION_STRING"
