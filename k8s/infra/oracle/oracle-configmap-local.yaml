@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oracle-config
+  namespace: unbrdn
+  labels:
+    app: oracle
+    environment: local
+data:
+  # Oracle Autonomous Database Connection String
+  # 실제 값으로 업데이트하세요:
+  # 1. OCI 콘솔에서 Autonomous Database 선택
+  # 2. Database Connection 메뉴 → Connection Strings
+  # 3. TLS 연결 선택 → _high 엔드포인트 복사
+  #
+  # 예시: jdbc:oracle:thin:@adb.ap-chuncheon-1.oraclecloud.com:1522/abc123xyz_interviewdb_high.adb.oraclecloud.com
+  datasource-url: "jdbc:oracle:thin:@<YOUR_ORACLE_HOST>:1522/<YOUR_SERVICE_NAME>_high.adb.oraclecloud.com"
