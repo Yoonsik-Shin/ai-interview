@@ -21,10 +21,12 @@ data:
   REDIS_SENTINEL_PORT: "26379"
   REDIS_SENTINEL_NAME: "mymaster"
 
-  # Object Storage (S3/MinIO) - 로컬 환경
-  OBJECT_STORAGE_ENDPOINT: "http://minio.unbrdn.svc.cluster.local:9000"
+  # Object Storage (Oracle OCI) - 프로덕션 환경
+  # OCI Object Storage는 S3 호환 API 지원
+  OBJECT_STORAGE_ENDPOINT: "https://objectstorage.ap-seoul-1.oraclecloud.com"
   OBJECT_STORAGE_BUCKET: "interview-archives"
-  OBJECT_STORAGE_REGION: "us-east-1"
+  OBJECT_STORAGE_REGION: "ap-seoul-1"
+  # OCI 인증 정보는 Secret에서 참조
 
   # Worker Configuration
   QUEUE_SCAN_INTERVAL_SEC: "10"

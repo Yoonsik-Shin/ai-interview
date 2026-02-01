@@ -79,9 +79,9 @@ spec:
                 name: storage-secrets
           resources:
             requests:
-              cpu: "200m"
+              cpu: "100m"
               memory: "256Mi"
             limits:
-              cpu: "1000m"
-              memory: "1Gi"
+              cpu: "500m"
+              memory: "512Mi"
       restartPolicy: Always
