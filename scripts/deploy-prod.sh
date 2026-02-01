@@ -101,6 +101,17 @@ echo "📦 인프라 리소스 배포 중..."
 # Note: PostgreSQL은 Oracle DB로 마이그레이션되어 더 이상 필요하지 않습니다.
 # Oracle Autonomous Database는 외부 관리형 서비스로 별도 설정이 필요합니다.
 
+# Oracle ATP 및 Object Storage Secret/ConfigMap 배포
+echo "🔶 Oracle ATP 및 Object Storage 설정 배포 중..."
+if [ -d "k8s/infra/oracle/prod" ]; then
+    kubectl apply -f k8s/infra/oracle/prod/ -n ${NAMESPACE}
+    echo "✅ Oracle 설정 배포 완료"
+else
+    echo "⚠️  k8s/infra/oracle/prod/ 디렉토리가 없습니다."
+    echo "   Oracle ATP 및 Object Storage Secret을 수동으로 생성하세요."
+    echo "   가이드: k8s/infra/oracle/prod/README.md"
+fi
+
 echo "🔴 Redis Sentinel 배포 중 (Bitnami Helm Chart)..."
 # Bitnami Helm Repository 추가
 if ! helm repo list | grep -q bitnami; then
@@ -193,12 +204,15 @@ echo "📱 애플리케이션 배포 중..."
 # 환경 변수 치환이 필요한 경우 각 파일별로 처리
 # Core 서비스 먼저 배포 (BFF가 gRPC로 연결하므로)
 echo "🔷 Core 서비스 배포 중..."
+# Core는 prod ConfigMap 먼저 적용 (Oracle ATP 설정 placeholder)
+kubectl apply -f k8s/apps/core/prod/configmap.yaml
 if grep -q '\$' k8s/apps/core/prod/deployment.yaml 2>/dev/null; then
     envsubst < k8s/apps/core/prod/deployment.yaml | kubectl apply -f -
 else
     kubectl apply -f k8s/apps/core/prod/deployment.yaml
 fi
-kubectl apply -f k8s/apps/core/common/
+# common은 Service만 적용 (ConfigMap은 prod에서 이미 적용)
+kubectl apply -f k8s/apps/core/common/service.yaml
 
 echo "🔷 LLM 서비스 배포 중..."
 if grep -q '\$' k8s/apps/llm/prod/deployment.yaml 2>/dev/null; then
@@ -248,6 +262,46 @@ if kubectl wait --for=condition=ready pod -l app=socket -n ${NAMESPACE} --timeou
     echo "✅ Socket 서비스 준비 완료"
 else
     echo "⚠️  Socket 서비스 준비 시간 초과. 계속 진행합니다."
+fi
+
+echo "🔷 STT 서비스 배포 중..."
+if [ -d "k8s/apps/stt/prod" ]; then
+    if grep -q '\$' k8s/apps/stt/prod/deployment.yaml 2>/dev/null; then
+        envsubst < k8s/apps/stt/prod/deployment.yaml | kubectl apply -f -
+    else
+        kubectl apply -f k8s/apps/stt/prod/deployment.yaml
+    fi
+    kubectl apply -f k8s/apps/stt/common/
+else
+    echo "⚠️  k8s/apps/stt/prod/ 디렉토리가 없습니다. STT 서비스 배포를 건너뜁니다."
+fi
+
+echo "🔷 TTS 서비스 배포 중..."
+if [ -d "k8s/apps/tts/prod" ]; then
+    if grep -q '\$' k8s/apps/tts/prod/deployment.yaml 2>/dev/null; then
+        envsubst < k8s/apps/tts/prod/deployment.yaml | kubectl apply -f -
+    else
+        kubectl apply -f k8s/apps/tts/prod/deployment.yaml
+    fi
+    kubectl apply -f k8s/apps/tts/common/
+else
+    echo "⚠️  k8s/apps/tts/prod/ 디렉토리가 없습니다. TTS 서비스 배포를 건너뜁니다."
+fi
+
+echo "🔷 Storage 서비스 배포 중..."
+if [ -d "k8s/apps/storage/prod" ]; then
+    # Storage는 prod ConfigMap 먼저 적용 (Oracle Object Storage 설정)
+    kubectl apply -f k8s/apps/storage/prod/configmap.yaml
+    kubectl apply -f k8s/apps/storage/prod/secret.yaml
+    if grep -q '\$' k8s/apps/storage/prod/deployment.yaml 2>/dev/null; then
+        envsubst < k8s/apps/storage/prod/deployment.yaml | kubectl apply -f -
+    else
+        kubectl apply -f k8s/apps/storage/prod/deployment.yaml
+    fi
+    # common은 Service만 적용 (ConfigMap/Secret은 prod에서 이미 적용)
+    kubectl apply -f k8s/apps/storage/common/service.yaml
+else
+    echo "⚠️  k8s/apps/storage/prod/ 디렉토리가 없습니다. Storage 서비스 배포를 건너뜁니다."
 fi
 
 # 6. Kafka UI는 local에서만 사용 (prod에서는 제외)
