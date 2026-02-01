@@ -149,6 +149,16 @@ jobs:
           OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
           SUPPRESS_LABEL_WARNING: "True"
         run: |
+          # Oracle ATP 및 Object Storage 설정
+          echo "🔶 Oracle 설정 배포 중..."
+          if [ -d "k8s/infra/oracle/prod" ]; then
+            kubectl apply -f k8s/infra/oracle/prod/ -n unbrdn || true
+            echo "✅ Oracle 설정 배포 완료"
+          else
+            echo "⚠️  k8s/infra/oracle/prod/ 디렉토리가 없습니다."
+            echo "   Oracle ATP 및 Object Storage Secret을 수동으로 생성하세요."
+          fi
+
           # Redis: Bitnami Helm Chart 배포
           helm repo add bitnami https://charts.bitnami.com/bitnami || true
           helm repo update || true
