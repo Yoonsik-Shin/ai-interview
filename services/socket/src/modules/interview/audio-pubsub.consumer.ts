@@ -48,8 +48,14 @@ export class AudioPubSubConsumer implements OnModuleInit, OnModuleDestroy {
 
             // WebSocket으로 음성 데이터 전송
             // Frontend는 interview-session-{interviewSessionId}를 사용
+            // WebSocket으로 음성 데이터 전송
+            // Frontend는 interview-session-{interviewSessionId}를 사용
             const roomName = `interview-session-${interviewSessionId}`;
-            this.interviewGateway.server.to(roomName).emit("interview:audio", {
+
+            // Redis Adapter를 사용 중이므로, 모든 Pod가 Pub/Sub 메시지를 받으면
+            // server.to().emit()은 다시 브로드캐스트를 유발하여 중복 전송됩니다.
+            // 따라서 현재 Pod에 연결된 클라이언트에게만 전송하도록 local flag를 사용해야 합니다.
+            (this.interviewGateway.server as any).local.to(roomName).emit("interview:audio", {
                 sentenceIndex: payload.sentenceIndex,
                 audioData: payload.audioData, // base64
                 duration: payload.duration,
