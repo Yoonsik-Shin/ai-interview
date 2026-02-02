@@ -360,18 +360,24 @@ export function Interview() {
         ttsPlayingRef.current = false;
         setIsInterviewerSpeaking(false);
 
-        // INTERVIEWER_INTRO 단계에서 오디오 재생이 끝나면 백엔드에 알림 (-> SELF_INTRO 전환)
-        if (currentStageRef.current === InterviewStage.INTERVIEWER_INTRO) {
-          notifyStageReady(InterviewStage.INTERVIEWER_INTRO);
-        }
-
         // Only resume recording if in an allowed stage
         if (!manualPaused && connected && shouldResumeRecording()) {
           startRecording();
         } else {
           setConversationState(connected ? "IDLE" : "IDLE");
         }
+
+        // 다음 TTS 재생
         playNextTts();
+
+        // INTERVIEWER_INTRO 단계에서 모든 오디오 재생이 끝나면 백엔드에 알림 (-> SELF_INTRO_PROMPT 전환)
+        // TTS 큐가 비어있을 때만 알림
+        if (
+          currentStageRef.current === InterviewStage.INTERVIEWER_INTRO &&
+          ttsQueue.length === 0
+        ) {
+          notifyStageReady(InterviewStage.INTERVIEWER_INTRO);
+        }
       };
       audio.onerror = () => {
         URL.revokeObjectURL(url);
