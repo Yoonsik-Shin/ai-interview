@@ -1,5 +1,52 @@
 # Changelog
 
+## [2026-02-02] OKE 환경 구성: Oracle ATP 및 Object Storage 전환
+
+### 추가
+
+- **Oracle 인프라 설정 파일**:
+  - `k8s/infra/oracle/prod/oracle-atp-secret.yaml`: Oracle ATP 연결 정보 (username, password, connection-string)
+  - `k8s/infra/oracle/prod/oracle-atp-configmap.yaml`: Oracle ATP 설정 (datasource-url, jpa-database-platform, Connection Pool)
+  - `k8s/infra/oracle/prod/object-storage-secret.yaml`: Oracle Object Storage 인증 정보 (tenancy-id, user-id, fingerprint, private-key, region)
+  - `k8s/infra/oracle/prod/object-storage-configmap.yaml`: Oracle Object Storage 설정 (namespace, bucket, endpoint)
+  - `k8s/infra/oracle/prod/README.md`: Oracle 인프라 설정 가이드
+
+### 수정
+
+- **Core 서비스 Oracle ATP 연결**:
+  - `k8s/apps/core/prod/deployment.yaml`: Secret 이름 `oracle-db-credentials` → `oracle-atp-credentials` 변경
+  - Connection Pool 설정 추가 (HikariCP 최대 10개 연결, Always Free 세션 제한 30개 고려)
+  - 리소스 제약 조정: CPU 500m (1000m → 500m), Memory 1Gi (2Gi → 1Gi)
+
+- **Storage 서비스 Oracle Object Storage 연결**:
+  - `k8s/apps/storage/common/configmap.yaml`: MinIO → Oracle Object Storage 엔드포인트 변경
+  - `k8s/apps/storage/common/secret.yaml`: MinIO 인증 → OCI 인증 정보로 변경
+  - `k8s/apps/storage/prod/deployment.yaml`: 리소스 제약 조정 (CPU 500m, Memory 512Mi)
+
+- **배포 스크립트**:
+  - `scripts/deploy-prod.sh`: PostgreSQL 제거, Oracle ATP/Object Storage 설정 배포 추가
+  - `.github/workflows/deploy.yml`: CI/CD 워크플로우에 Oracle 설정 배포 추가
+
+- **문서화**:
+  - `docs/design-decisions.md`: OKE 환경 구성 의사결정 기록 추가
+
+### 배경
+
+- Oracle Kubernetes Engine (OKE)로 프로덕션 환경 구성
+- Oracle Cloud Always Free 티어 활용 (ATP 2개, Object Storage 20GB, OKE 노드 6 vCPU)
+- 기존 `k8s/apps/*/prod/` 디렉토리 그대로 사용, 최소한의 수정으로 마이그레이션
+- MinIO → Oracle Object Storage, PostgreSQL → Oracle ATP 전환
+
+### Always Free 제약사항
+
+- **ATP**: 동시 세션 30개, 7일 미활동 시 자동 정지, Private Endpoint 미지원
+- **Object Storage**: 총 20GB, API 요청 월 50,000회
+- **OKE**: 총 6 vCPU, 24GB RAM (VM.Standard.A1.Flex 2대)
+
+---
+
+# Changelog
+
 ## [2026-02-02] Frontend Interview 컴포넌트 구현
 
 ### 추가
