@@ -1,0 +1,10 @@
+{
+  "name": "AI 인터뷰",
+  "short_name": "AI 인터뷰",
+  "description": "실시간 AI 면접",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary"
+}
