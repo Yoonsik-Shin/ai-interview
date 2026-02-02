@@ -35,6 +35,12 @@ export class AudioPubSubConsumer implements OnModuleInit, OnModuleDestroy {
             const payload = JSON.parse(message);
             const interviewSessionId = payload.interviewSessionId; // 실제 PK (ULID)
 
+            console.log("🎵 TTS Audio received:", {
+                interviewSessionId,
+                sentenceIndex: payload.sentenceIndex,
+                audioDataLength: payload.audioData?.length || 0,
+            });
+
             if (!interviewSessionId) {
                 console.error("❌ Missing interviewSessionId in TTS payload");
                 return;
@@ -42,13 +48,19 @@ export class AudioPubSubConsumer implements OnModuleInit, OnModuleDestroy {
 
             // WebSocket으로 음성 데이터 전송
             // Frontend는 interview-session-{interviewSessionId}를 사용
-            this.interviewGateway.server
-                .to(`interview-session-${interviewSessionId}`)
-                .emit("interview:audio", {
-                    sentenceIndex: payload.sentenceIndex,
-                    audioData: payload.audioData, // base64
-                    duration: payload.duration,
-                });
+            const roomName = `interview-session-${interviewSessionId}`;
+            this.interviewGateway.server.to(roomName).emit("interview:audio", {
+                sentenceIndex: payload.sentenceIndex,
+                audioData: payload.audioData, // base64
+                duration: payload.duration,
+            });
+
+            console.log(
+                "✅ TTS Audio sent to room:",
+                roomName,
+                "sentenceIndex:",
+                payload.sentenceIndex,
+            );
         } catch (error) {
             console.error("❌ Audio handling error:", error);
         }
