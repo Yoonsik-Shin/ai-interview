@@ -2,9 +2,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: inference-config
-  namespace: unbrdn
+  namespace: inference
   labels:
     environment: prod
 data:
-  PORT: "8000"
-
+  model_repository: /models

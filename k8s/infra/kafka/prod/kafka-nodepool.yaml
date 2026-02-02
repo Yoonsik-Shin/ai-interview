@@ -1,0 +1,50 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: kafka-pool
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: kafka-cluster
+spec:
+  replicas: 3
+  roles:
+    - controller
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 20Gi
+        deleteClaim: false
+  resources:
+    requests:
+      memory: 2Gi
+      cpu: 300m
+    limits:
+      memory: 2.5Gi
+      cpu: 500m
+  jvmOptions:
+    -Xms: "1536m"
+    -Xmx: "1536m"
+  template:
+    pod:
+      # 고가용성(HA): Kafka 브로커가 서로 다른 노드에 배치되도록 강제
+      affinity:
+        podAntiAffinity:
+          # preferredDuringSchedulingIgnoredDuringExecution으로 변경하여 노드 부족 시에도 스케줄링 가능
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: strimzi.io/cluster
+                      operator: In
+                      values:
+                        - kafka-cluster
+                    - key: strimzi.io/pool-name
+                      operator: In
+                      values:
+                        - kafka-pool
+                # 호스트네임(노드) 기준으로 분리: 가능하면 3개 브로커가 3개 노드에 하나씩 배치
+                topologyKey: "kubernetes.io/hostname"
