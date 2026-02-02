@@ -1,110 +1,251 @@
 # 환경 변수 설정 가이드
 
-이 프로젝트는 환경 변수를 사용하여 설정을 관리합니다.
+이 문서는 각 서비스별 환경 변수와 설정값을 정의합니다.
 
-## 빠른 시작
+---
 
-1. `.env.example` 파일을 `.env`로 복사:
-   ```bash
-   cp .env.example .env
-   ```
+## 🔧 BFF (API Gateway)
 
-2. `.env` 파일을 열어 실제 값으로 수정:
-   ```bash
-   # 에디터로 .env 파일 열기
-   nano .env
-   # 또는
-   vim .env
-   ```
+### 필수
 
-3. 스크립트 실행 시 자동으로 `.env` 파일이 로드됩니다.
+- `CORE_GRPC_HOST`: Core gRPC 서버 호스트 (기본: `core`)
+- `CORE_GRPC_PORT`: Core gRPC 서버 포트 (기본: `9090`)
+- `JWT_SECRET`: JWT 토큰 서명 키 (필수, 시크릿)
+- `KAFKA_BROKER`: Kafka 브로커 주소 (기본: `kafka:29092`)
+- `REDIS_HOST`: Redis 호스트 (기본: `redis`)
+- `REDIS_PORT`: Redis 포트 (기본: `6379`)
 
-## 환경 변수 목록
+### 선택
 
-### Docker Registry 설정
-- `IMAGE_REGISTRY`: OCI Container Registry URL
-- `IMAGE_TAG`: Docker 이미지 태그
+- `LLM_GRPC_URL`: LLM gRPC 전체 URL (기본: `llm:50051`)
+- `PORT`: 서버 포트 (기본: `3000`)
+- `NODE_ENV`: 실행 환경 (기본: `development`)
 
-### Kubernetes 설정
-- `NAMESPACE`: Kubernetes 네임스페이스
-- `OCI_KE_CONTEXT`: OCI OKE 클러스터 컨텍스트 이름
+---
 
-### Oracle Database 설정
-- `ORACLE_HOST`: Oracle Autonomous Database 호스트
-- `ORACLE_SERVICE_NAME`: Oracle Database 서비스 이름
-- `ORACLE_USERNAME`: Oracle Database 사용자 이름
-- `ORACLE_PASSWORD`: Oracle Database 비밀번호 (스크립트 파라미터로 직접 입력 권장)
+## 🧠 Core (Domain Service)
 
-### Docker Repository 이름
-- `REPO_BFF`: BFF 서비스 Repository 이름
-- `REPO_CORE`: Core 서비스 Repository 이름
-- `REPO_INFERENCE`: Inference 서비스 Repository 이름
-- `REPO_SOCKET`: Socket 서비스 Repository 이름
+### 필수
 
-## 사용 예시
+- `CORE_GRPC_PORT`: gRPC 서버 포트 (기본: `9090`)
+- `LLM_GRPC_URL`: LLM gRPC 서버 URL (기본: `llm:50051`)
+- `KAFKA_BROKER`: Kafka 브로커 (기본: `kafka:29092`)
 
-### 프로덕션 배포
+### 데이터베이스 (CQRS)
+
+**Command Store (ATP - Oracle)**:
+
+- `DB_COMMAND_URL`: ATP JDBC URL
+- `DB_COMMAND_USERNAME`: 사용자명
+- `DB_COMMAND_PASSWORD`: 비밀번호 (시크릿)
+
+**Query Store (AJD - MongoDB 호환)**:
+
+- `DB_QUERY_URL`: AJD 연결 URL
+- `DB_QUERY_USERNAME`: 사용자명
+- `DB_QUERY_PASSWORD`: 비밀번호 (시크릿)
+
+### Redis
+
+- `REDIS_HOST`: Redis 호스트 (기본: `redis`)
+- `REDIS_PORT`: Redis 포트 (기본: `6379`)
+- `REDIS_DB`: Redis 데이터베이스 번호 (기본: `0`)
+
+---
+
+## 🔌 Socket (Real-time Gateway)
+
+### 필수
+
+- `STT_GRPC_URL`: STT Worker gRPC 주소 (향후 Fast Path 직접 스트리밍용)
+- `KAFKA_BROKER`: Kafka 브로커 (기본: `kafka:29092`)
+- `REDIS_HOST`: Redis 호스트 (기본: `redis`)
+- `REDIS_PORT`: Redis 포트 (기본: `6379`)
+
+### 선택
+
+- `LLM_GRPC_URL`: LLM gRPC 서버 (기본: `llm:50051`)
+- `PYTHON_WORKER_URL`: LLM HTTP API (기본: `http://llm:8000`)
+- `PORT`: 서버 포트 (기본: `3001`)
+
+---
+
+## 🤖 LLM (Orchestration Service)
+
+### 필수
+
+- `OPENAI_API_KEY`: OpenAI API 키 (TTS/STT용, 시크릿)
+- `GRPC_PORT`: gRPC 서버 포트 (기본: `50051`)
+- `KAFKA_BROKER`: Kafka 브로커 (기본: `kafka:29092`)
+- `REDIS_HOST`: Redis 호스트 (기본: `redis`)
+- `REDIS_PORT`: Redis 포트 (기본: `6379`)
+
+### 선택
+
+- `PORT`: HTTP API 포트 (기본: `8000`)
+- `LANGCHAIN_API_KEY`: LangChain 추적용 (선택)
+- `EDGE_TTS_ENABLED`: Edge-TTS 사용 여부 (기본: `true`, practice 모드)
+
+---
+
+## 🛠️ stt
+
+### 공통
+
+- `KAFKA_BROKER`: Kafka 브로커 (기본: `kafka:29092`)
+- `REDIS_HOST`: Redis 호스트 (기본: `redis`)
+- `REDIS_PORT`: Redis 포트 (기본: `6379`)
+- `PORT`: HTTP 헬스 체크 포트 (기본: `8000`)
+
+### STT Worker
+
+- `STT_INPUT_TOPIC`: 오디오 입력 토픽 (기본: `interview.audio.input`)
+- `STT_OUTPUT_TOPIC`: 텍스트 출력 토픽 (기본: `UserAnswer`)
+- `WHISPER_MODEL_SIZE`: Faster-Whisper 모델 크기 (기본: `tiny`, 옵션: `base`, `small`, `medium`)
+- `WHISPER_DEVICE`: 디바이스 (기본: `cpu`)
+- `WHISPER_COMPUTE_TYPE`: 연산 타입 (기본: `int8`)
+- `REDIS_DB`: Redis DB 번호 (기본: `1`)
+
+### STT gRPC Server
+
+- `STT_GRPC_PORT`: gRPC 포트 (기본: `50052`)
+- `OPENAI_API_KEY`: OpenAI Realtime/Whisper API 키 (real 모드용, 시크릿)
+
+---
+
+## 🛠️ tts
+
+- `KAFKA_BROKER`: Kafka 브로커 (기본: `kafka:29092`)
+- `TTS_INPUT_TOPIC`: 텍스트 입력 토픽 (기본: `BotQuestion`)
+- `REDIS_HOST`: Redis 호스트 (기본: `redis`)
+- `REDIS_PORT`: Redis 포트 (기본: `6379`)
+- `REDIS_DB`: Redis DB 번호 (기본: `3`)
+- `OPENAI_API_KEY`: OpenAI TTS API 키 (real 모드용, 시크릿)
+- `EDGE_TTS_ENABLED`: Edge-TTS 사용 여부 (기본: `true`)
+- `PORT`: HTTP 헬스 체크 포트 (기본: `8000`)
+
+---
+
+## 🛠️ storage
+
+- `KAFKA_BROKER`: Kafka 브로커 (기본: `kafka:29092`)
+- `STORAGE_COMPLETED_TOPIC`: 완료 이벤트 토픽 (기본: `storage.completed`)
+- `REDIS_HOST`: Redis 호스트 (기본: `redis`)
+- `REDIS_PORT`: Redis 포트 (기본: `6379`)
+- `REDIS_DB`: Redis DB 번호 (기본: `0`)
+- `REDIS_AUDIO_QUEUE_PREFIX`: Redis 큐 접두사 (기본: `interview:audio`)
+- `PORT`: HTTP 헬스 체크 포트 (기본: `8000`)
+
+**Object Storage (OCI/S3 호환)**:
+
+- `OBJECT_STORAGE_ENDPOINT`: Object Storage 엔드포인트 (예: `https://objectstorage.ap-seoul-1.oraclecloud.com`)
+- `OBJECT_STORAGE_ACCESS_KEY`: 액세스 키 (시크릿)
+- `OBJECT_STORAGE_SECRET_KEY`: 시크릿 키 (시크릿)
+- `OBJECT_STORAGE_BUCKET`: 버킷 이름 (기본: `interview-archives`)
+- `OBJECT_STORAGE_REGION`: 리전 (기본: `ap-seoul-1`)
+
+---
+
+## 🔐 시크릿 관리
+
+### Kubernetes Secret 생성 (로컬/프로덕션)
+
 ```bash
-# .env 파일에 설정된 값 사용
-./scripts/deploy-prod.sh
+# stt secrets
+kubectl create secret generic stt-secrets \
+  --from-literal=OPENAI_API_KEY=sk-xxx \
+  -n unbrdn
 
-# 또는 파라미터로 오버라이드
-./scripts/deploy-prod.sh ap-chuncheon-1.ocir.io/axrywc89b6lf v1.0.0
+# tts secrets
+kubectl create secret generic tts-secrets \
+  --from-literal=OPENAI_API_KEY=sk-xxx \
+  -n unbrdn
+
+# storage secrets
+kubectl create secret generic storage-secrets \
+  --from-literal=OBJECT_STORAGE_ACCESS_KEY=xxx \
+  --from-literal=OBJECT_STORAGE_SECRET_KEY=xxx \
+  -n unbrdn
+
+# Core database secrets
+kubectl create secret generic oracle-db-credentials \
+  --from-literal=DB_COMMAND_PASSWORD=xxx \
+  --from-literal=DB_QUERY_PASSWORD=xxx \
+  -n unbrdn
+
+# BFF JWT secret
+kubectl create secret generic bff-secrets \
+  --from-literal=JWT_SECRET=your-secret-key \
+  -n unbrdn
 ```
 
-### 이미지 빌드
-```bash
-# .env 파일에 설정된 값 사용
-./scripts/build-images.sh
+---
 
-# 또는 파라미터로 오버라이드
-./scripts/build-images.sh ap-chuncheon-1.ocir.io/axrywc89b6lf v1.0.0 linux/arm64
+## 🌐 토픽 설정 (Kafka)
+
+### 사용 토픽 목록
+
+- `interview.audio.input`: Fast Path 오디오 스트리밍
+- `UserAnswer`: STT 결과 (사용자 응답)
+- `BotQuestion`: AI 응답 문장 (TTS 입력)
+- `storage.completed`: 아카이빙 완료 알림
+- `interview.started`: 면접 시작 이벤트
+- `interview.completed`: 면접 완료 이벤트
+
+상세 스키마는 `docs/kafka-topics.md` 참조
+
+---
+
+## 📊 Redis 데이터베이스 분리
+
+- **DB 0**: Storage Worker 큐 (`interview:audio:*`)
+- **DB 1**: STT Worker 임시 데이터
+- **DB 2**: Core 서비스 대화 맥락
+- **DB 3**: Session Store (Socket.IO Adapter)
+
+---
+
+## 🔄 환경별 설정 예시
+
+### 로컬 개발 (Kind)
+
+```yaml
+KAFKA_BROKER: "kafka:29092"
+REDIS_HOST: "redis"
+CORE_GRPC_URL: "core:9090"
+LLM_GRPC_URL: "llm:50051"
+WHISPER_MODEL_SIZE: "tiny"
+EDGE_TTS_ENABLED: "true"
+OBJECT_STORAGE_ENDPOINT: "" # 로컬 테스트 시 비활성화 가능
 ```
 
-### Oracle DB 설정
-```bash
-# .env 파일에 설정된 값 사용
-./scripts/setup-oracle-db.sh "" "" "" "" "YourPassword123!"
+### 프로덕션 (OKE)
 
-# 또는 파라미터로 오버라이드
-./scripts/setup-oracle-db.sh unbrdn \
-  adb.ap-chuncheon-1.oraclecloud.com \
-  your-service-name_high.adb.oraclecloud.com \
-  ADMIN \
-  'YourPassword123!'
+```yaml
+KAFKA_BROKER: "kafka.infra.svc.cluster.local:29092"
+REDIS_HOST: "redis-master.infra.svc.cluster.local"
+CORE_GRPC_URL: "core.unbrdn.svc.cluster.local:9090"
+LLM_GRPC_URL: "llm.unbrdn.svc.cluster.local:50051"
+WHISPER_MODEL_SIZE: "small" # 정확도 향상
+EDGE_TTS_ENABLED: "true"
+OBJECT_STORAGE_ENDPOINT: "https://objectstorage.ap-seoul-1.oraclecloud.com"
+OBJECT_STORAGE_BUCKET: "interview-prod-archives"
 ```
 
-## 주의사항
+---
 
-1. **`.env` 파일은 Git에 커밋하지 마세요**
-   - `.env` 파일은 `.gitignore`에 포함되어 있습니다.
-   - `.env.example`만 Git에 포함됩니다.
+## ⚠️ 주의사항
 
-2. **비밀번호는 환경 변수에 저장하지 마세요**
-   - `ORACLE_PASSWORD`는 스크립트 파라미터로 직접 입력하세요.
-   - 또는 Kubernetes Secret으로 관리하세요.
+1. **시크릿 키는 절대 코드에 하드코딩하지 않습니다**
+2. **로컬 개발 시 `.env` 파일은 `.gitignore`에 포함**
+3. **프로덕션 시크릿은 Kubernetes Secret 또는 Vault 사용**
+4. **OPENAI_API_KEY는 비용 발생 — 사용량 모니터링 필수**
+5. **Object Storage 크레덴셜은 최소 권한 원칙 적용 (Put/Get만)**
 
-3. **환경 변수 우선순위**
-   - 스크립트 파라미터 > 환경 변수 > 기본값
-   - 파라미터로 전달된 값이 최우선으로 적용됩니다.
+---
 
-## 문제 해결
+참고:
 
-### `.env` 파일이 로드되지 않음
-```bash
-# .env 파일이 존재하는지 확인
-ls -la .env
-
-# .env.example을 복사하여 생성
-cp .env.example .env
-```
-
-### 환경 변수가 적용되지 않음
-```bash
-# 환경 변수 확인
-echo $IMAGE_REGISTRY
-echo $NAMESPACE
-
-# 스크립트에서 직접 확인
-./scripts/deploy-prod.sh
-```
+- 아키텍처: `docs/architecture_consolidated.md`
+- Kafka 토픽: `docs/kafka-topics.md`
+- 배포 가이드: `docs/ops_consolidated.md`

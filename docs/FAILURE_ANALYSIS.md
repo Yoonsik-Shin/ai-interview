@@ -109,15 +109,15 @@ spring.datasource.hikari.connection-test-query=SELECT 1 FROM DUAL
 1. **Secret 확인 결과**
 
    ```bash
-   kubectl get secret inference-secrets -n unbrdn -o jsonpath='{.data.OPENAI_API_KEY}' | base64 -d | wc -c
+   kubectl get secret llm-secrets -n unbrdn -o jsonpath='{.data.OPENAI_API_KEY}' | base64 -d | wc -c
    # 결과: 0 (비어있음)
    ```
 
 2. **문제점**
 
-   - `inference-secrets` Secret의 `OPENAI_API_KEY`가 비어있음
-   - `main.py`에서 `os.getenv("OPENAI_API_KEY")`가 `None`을 반환
-   - OpenAI 클라이언트 초기화 시 API 키가 없어서 오류 발생 가능
+- `llm-secrets` Secret의 `OPENAI_API_KEY`가 비어있음
+- `main.py`에서 `os.getenv("OPENAI_API_KEY")`가 `None`을 반환
+- OpenAI 클라이언트 초기화 시 API 키가 없어서 오류 발생 가능
 
 3. **Liveness probe 404 오류**
    - `/health` 엔드포인트는 존재하지만, 애플리케이션이 제대로 시작되지 않아 404 반환
@@ -129,41 +129,42 @@ spring.datasource.hikari.connection-test-query=SELECT 1 FROM DUAL
 
 ```bash
 # 실제 OpenAI API 키로 Secret 생성
-kubectl create secret generic inference-secrets \
+kubectl create secret generic llm-secrets \
   --from-literal=OPENAI_API_KEY='sk-your-actual-api-key-here' \
   --namespace=unbrdn \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Pod 재시작
-kubectl rollout restart deployment inference -n unbrdn
+kubectl rollout restart deployment llm -n unbrdn
 ```
 
 #### 2단계: Secret 확인
 
 ```bash
 # Secret이 제대로 생성되었는지 확인
-kubectl get secret inference-secrets -n unbrdn -o jsonpath='{.data.OPENAI_API_KEY}' | base64 -d | wc -c
+# Secret 존재 여부 (길이 확인)
+kubectl get secret llm-secrets -n unbrdn -o jsonpath='{.data.OPENAI_API_KEY}' | base64 -d | wc -c
 # 결과가 0보다 커야 함 (API 키 길이)
 
 # 실제 값 확인 (주의: 로그에 노출되지 않도록)
-kubectl get secret inference-secrets -n unbrdn -o jsonpath='{.data.OPENAI_API_KEY}' | base64 -d | head -c 10 && echo "..."
+kubectl get secret llm-secrets -n unbrdn -o jsonpath='{.data.OPENAI_API_KEY}' | base64 -d | head -c 10 && echo "..."
 ```
 
 #### 3단계: Pod 로그 확인
 
 ```bash
-# Inference Pod 로그 확인
-kubectl logs -n unbrdn -l app=inference --tail=100
+# LLM Pod 로그 확인
+kubectl logs -n unbrdn -l app=llm --tail=100
 
 # OpenAI API 키 관련 오류 메시지 확인
-kubectl logs -n unbrdn -l app=inference | grep -i "api.*key\|openai\|error"
+kubectl logs -n unbrdn -l app=llm | grep -i "api.*key\|openai\|error"
 ```
 
 #### 4단계: 헬스체크 엔드포인트 확인
 
 ```bash
 # 실행 중인 Pod에서 직접 테스트
-kubectl exec -n unbrdn $(kubectl get pod -n unbrdn -l app=inference -o jsonpath='{.items[0].metadata.name}') -- \
+kubectl exec -n unbrdn $(kubectl get pod -n unbrdn -l app=llm -o jsonpath='{.items[0].metadata.name}') -- \
   curl -s http://localhost:8000/health
 
 # 예상 결과: {"status":"ok"}
@@ -198,13 +199,13 @@ kubectl exec -n unbrdn $(kubectl get pod -n unbrdn -l app=inference -o jsonpath=
 
 ```bash
 # 이전 Deployment의 Pod 확인
-kubectl get pods -n unbrdn | grep -E "(core|inference)"
+kubectl get pods -n unbrdn | grep -E "(core|llm)"
 
 # 이전 ReplicaSet의 Pod 삭제
 kubectl delete pod -n unbrdn core-5749864dfb-hgkfx core-5749864dfb-qsmpm
 
 # 또는 이전 ReplicaSet 전체 삭제
-kubectl get rs -n unbrdn | grep -E "(core|inference)"
+kubectl get rs -n unbrdn | grep -E "(core|llm)"
 kubectl delete rs -n unbrdn <old-replicaset-name>
 ```
 
@@ -212,11 +213,11 @@ kubectl delete rs -n unbrdn <old-replicaset-name>
 
 ```bash
 # 임시로 replicas를 1로 줄여서 테스트
-kubectl scale deployment inference -n unbrdn --replicas=1
+kubectl scale deployment llm -n unbrdn --replicas=1
 kubectl scale deployment core -n unbrdn --replicas=1
 
 # 문제 해결 후 원래대로 복구
-kubectl scale deployment inference -n unbrdn --replicas=2
+kubectl scale deployment llm -n unbrdn --replicas=2
 kubectl scale deployment core -n unbrdn --replicas=2
 ```
 
@@ -307,7 +308,7 @@ readinessProbe:
 #### 3단계: Pod 로그에서 실제 포트 확인
 
 ```bash
-kubectl logs -n unbrdn -l app=inference | grep -i "running\|port\|uvicorn"
+kubectl logs -n unbrdn -l app=llm | grep -i "running\|port\|uvicorn"
 # 예상 출력: "Uvicorn running on http://0.0.0.0:8000"
 ```
 
@@ -315,7 +316,7 @@ kubectl logs -n unbrdn -l app=inference | grep -i "running\|port\|uvicorn"
 
 ```bash
 # 실행 중인 Pod에서 직접 테스트
-POD_NAME=$(kubectl get pod -n unbrdn -l app=inference -o jsonpath='{.items[0].metadata.name}')
+POD_NAME=$(kubectl get pod -n unbrdn -l app=llm -o jsonpath='{.items[0].metadata.name}')
 kubectl exec -n unbrdn $POD_NAME -- curl -v http://localhost:8000/health
 ```
 
@@ -327,17 +328,17 @@ kubectl exec -n unbrdn $POD_NAME -- curl -v http://localhost:8000/health
 
 ```bash
 # 1. OpenAI API 키로 Secret 생성
-kubectl create secret generic inference-secrets \
+kubectl create secret generic llm-secrets \
   --from-literal=OPENAI_API_KEY='실제_API_키' \
   --namespace=unbrdn \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# 2. Inference Pod 재시작
-kubectl rollout restart deployment inference -n unbrdn
+# 2. LLM Pod 재시작
+kubectl rollout restart deployment llm -n unbrdn
 
 # 3. 상태 확인
-kubectl get pods -n unbrdn -l app=inference
-kubectl logs -n unbrdn -l app=inference --tail=50
+kubectl get pods -n unbrdn -l app=llm
+kubectl logs -n unbrdn -l app=llm --tail=50
 ```
 
 ### 우선순위 2: Oracle DB 연결 문제 해결
@@ -419,11 +420,6 @@ kubectl describe deployment inference -n unbrdn
 ## 📚 참고 문서
 
 - [Oracle DB 설정 가이드](./oracle-db-setup.md)
-- [Inference Secret 설정 가이드](../k8s/apps/inference/README-secret.md)
+- [LLM Secret 설정 가이드](../k8s/apps/llm/README-secret.md)
 - [디버깅 가이드](./DEBUGGING.md)
 - [배포 가이드](./deployment-guide.md)
-
-
-
-
-
