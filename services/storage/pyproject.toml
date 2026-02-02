@@ -1,0 +1,19 @@
+[project]
+name = "storage"
+version = "1.0.0"
+description = "Storage service for AI Interview Solution - handles audio upload to object storage"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "redis>=5.2.0",
+    "boto3>=1.35.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.uv]
+package = false
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
