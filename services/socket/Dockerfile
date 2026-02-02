@@ -1,58 +1,70 @@
 # ------------------------------------
+# 0단계: Proto 생성 (Proto Gen Stage)
+# ------------------------------------
+FROM bufbuild/buf:latest AS proto-gen
+WORKDIR /workspace
+# --build-context proto=services/proto 로 주입된 컨텍스트를 사용
+COPY --from=proto . ./proto
+# buf.gen.yaml의 상대 경로(../socket/src/generated 등)를 위한 디렉토리 생성
+RUN mkdir -p bff/src/generated && \
+    mkdir -p socket/src/generated && \
+    mkdir -p core/src/main/java && \
+    mkdir -p llm/generated
+WORKDIR /workspace/proto
+RUN buf generate
+
+
+# ------------------------------------
 # 1단계: 빌드 (Builder Stage)
 # ------------------------------------
-FROM node:24-alpine AS builder
+FROM node:22-alpine AS builder
 
-# pnpm 설치 및 캐시 설정
+
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-WORKDIR /app
+WORKDIR /workspace
 
-# 의존성 파일 먼저 복사 (레이어 캐싱 최적화)
-COPY package.json pnpm-lock.yaml ./
+# proto (generated TS) — ../proto/generated/ts
+COPY --from=proto-gen /workspace/socket/src/generated /workspace/proto/generated/ts
 
-# 의존성 설치 (캐시 최적화를 위해 별도 레이어)
+
+# socket: 의존성 먼저 (레이어 캐싱)
+COPY package.json pnpm-lock.yaml ./socket/
+WORKDIR /workspace/socket
 RUN pnpm install --frozen-lockfile
 
-# 소스 코드 전체 복사
-# (.dockerignore 파일이 필수입니다! node_modules 등을 제외하기 위해)
+# socket: 소스 전체
 COPY . .
+# 캐시 무효화를 위한 환경 변수 (필요시 값 변경)
+ENV CACHE_BUST=1
 
-# NestJS 프로젝트 빌드
+
 RUN pnpm run build
 
 # ------------------------------------
-# 2단계: 실행 (Runner Stage) - 최종 이미지
+# 2단계: 실행 (Runner Stage)
 # ------------------------------------
-FROM node:24-alpine AS runner
+FROM node:22-alpine AS runner
 
-# 보안을 위한 non-root 사용자 생성
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
-# pnpm 설치
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-WORKDIR /app
+WORKDIR /app/socket
 
-# 프로덕션 의존성만 설치 (캐시 최적화)
 COPY --chown=nestjs:nodejs package.json pnpm-lock.yaml ./
-RUN pnpm install --prod --frozen-lockfile && \
+RUN pnpm install --prod --no-frozen-lockfile && \
     pnpm store prune
 
-# 빌드된 결과물만 복사
-COPY --chown=nestjs:nodejs --from=builder /app/dist ./dist
+COPY --chown=nestjs:nodejs --from=builder /workspace/socket/dist ./dist
+COPY --chown=nestjs:nodejs --from=proto-gen /workspace/proto /app/proto
 
-# non-root 사용자로 전환
+
 USER nestjs
-
-# 포트 노출
 EXPOSE 4000
 
-# 헬스체크 추가
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=5 \
+  CMD node -e "require('http').get('http://localhost:4000/health/liveness', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
 
-# 실행 명령어
 CMD ["pnpm", "run", "start:prod"]
-
