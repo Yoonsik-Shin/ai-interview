@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: unbrdn
+  labels:
+    app: frontend
+    environment: prod
+data:
+  # OCI Object Storage (프로덕션) — Storage 서비스와 동일 테넌시 사용
+  # 엔드포인트: https://{namespace}.objectstorage.{region}.oraclecloud.com
+  # namespace는 OCI 콘솔 Tenant 상세 또는 `oci os ns get` 로 확인
+  OBJECT_STORAGE_ENDPOINT: "https://objectstorage.ap-seoul-1.oraclecloud.com"
+  OBJECT_STORAGE_BUCKET: "frontend"
+  OBJECT_STORAGE_REGION: "ap-seoul-1"
