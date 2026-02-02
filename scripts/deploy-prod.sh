@@ -27,6 +27,7 @@ fi
 IMAGE_REGISTRY=${1:-${IMAGE_REGISTRY:-"ap-chuncheon-1.ocir.io/axrywc89b6lf"}}
 IMAGE_TAG=${2:-${IMAGE_TAG:-"latest"}}
 NAMESPACE=${NAMESPACE:-"unbrdn"}
+MONITORING_NAMESPACE="monitoring"
 OCI_KE_CONTEXT=${OCI_KE_CONTEXT:-"unbrdn-oracle"}
 
 echo "🚀 프로덕션 환경 배포를 시작합니다..."
@@ -69,6 +70,7 @@ export IMAGE_TAG=${IMAGE_TAG}
 # 네임스페이스 생성
 echo "📁 네임스페이스 생성 중..."
 kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace ${MONITORING_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
 
 # 1. Strimzi Operator 설치 확인 및 설치
 echo "🔍 Strimzi Operator 설치 확인 중..."
@@ -99,23 +101,79 @@ echo "📦 인프라 리소스 배포 중..."
 # Note: PostgreSQL은 Oracle DB로 마이그레이션되어 더 이상 필요하지 않습니다.
 # Oracle Autonomous Database는 외부 관리형 서비스로 별도 설정이 필요합니다.
 
-kubectl apply -f k8s/infra/redis/redis-deployment-prod.yaml
-kubectl apply -f k8s/infra/redis/redis-service.yaml
+echo "🔴 Redis Sentinel 배포 중 (Bitnami Helm Chart)..."
+# Bitnami Helm Repository 추가
+if ! helm repo list | grep -q bitnami; then
+    echo "   Bitnami Helm Repository 추가 중..."
+    helm repo add bitnami https://charts.bitnami.com/bitnami >/dev/null 2>&1
+    helm repo update >/dev/null 2>&1
+fi
+
+# Helm values 파일 확인
+if [ ! -f "k8s/infra/redis/helm/values.yaml" ]; then
+    echo "❌ Helm values 파일이 없습니다: k8s/infra/redis/helm/values.yaml"
+    exit 1
+fi
+
+# 실패한 Helm Release 정리
+REDIS_EXISTS=$(helm list -n ${NAMESPACE} -q 2>/dev/null | grep -x "^redis$" || echo "")
+if [ -n "$REDIS_EXISTS" ]; then
+    REDIS_STATUS=$(helm status redis -n ${NAMESPACE} 2>/dev/null | grep "^STATUS:" | awk '{print $2}' || echo "")
+    if [ "$REDIS_STATUS" = "failed" ] || [ "$REDIS_STATUS" = "pending-install" ] || [ "$REDIS_STATUS" = "pending-upgrade" ]; then
+        echo "   실패한 Redis Helm Release 정리 중..."
+        helm uninstall redis -n ${NAMESPACE} --ignore-not-found 2>/dev/null || true
+        sleep 2
+    fi
+fi
+
+# Helm 미관리 Redis 리소스 정리 (과거 YAML 매니페스트 잔여물)
+drop_old_redis() {
+    local kind=$1 name=$2
+    if kubectl get "$kind" "$name" -n ${NAMESPACE} &>/dev/null; then
+        local managed
+        managed=$(kubectl get "$kind" "$name" -n ${NAMESPACE} -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || echo "")
+        if [ "$managed" != "Helm" ]; then
+            echo "   기존 Redis 리소스 제거 중: $kind/$name (Helm 미관리)"
+            kubectl delete "$kind" "$name" -n ${NAMESPACE} --ignore-not-found --wait=false 2>/dev/null || true
+        fi
+    fi
+}
+drop_old_redis svc redis-headless
+drop_old_redis svc redis
+drop_old_redis configmap redis-config
+if kubectl get statefulset redis -n ${NAMESPACE} &>/dev/null; then
+    managed=$(kubectl get statefulset redis -n ${NAMESPACE} -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || echo "")
+    if [ "$managed" != "Helm" ]; then
+        echo "   기존 Redis StatefulSet 제거 중: redis (Helm 미관리)"
+        kubectl delete statefulset redis -n ${NAMESPACE} --cascade=orphan --ignore-not-found 2>/dev/null || true
+        kubectl delete pods -n ${NAMESPACE} -l app=redis --ignore-not-found --grace-period=0 --force 2>/dev/null || true
+    fi
+fi
+sleep 2
+
+# helm upgrade --install 사용 (Release가 있으면 upgrade, 없으면 install)
+echo "   Redis Helm Chart 배포 중 (upgrade --install)..."
+helm upgrade --install redis bitnami/redis \
+    --namespace ${NAMESPACE} \
+    --create-namespace \
+    --values k8s/infra/redis/helm/values.yaml \
+    --wait \
+    --timeout 5m
+
+if [ $? -ne 0 ]; then
+    echo "❌ Redis Helm 배포 실패"
+    echo "   상태 확인: helm status redis -n ${NAMESPACE}"
+    exit 1
+fi
 
 # 3. Kafka 클러스터 배포 (Strimzi)
 echo "📨 Kafka 클러스터 배포 중..."
-kubectl apply -f k8s/infra/kafka/kafka-configmap-prod.yaml -n kafka
-kubectl apply -f k8s/infra/kafka/kafka-nodepool-prod.yaml -n kafka
-kubectl apply -f k8s/infra/kafka/strimzi-kafka-prod.yaml -n kafka
+kubectl apply -f k8s/infra/kafka/common/
+kubectl apply -f k8s/infra/kafka/prod/ -n kafka
 
 echo "⏳ 인프라 Pod가 준비될 때까지 대기 중..."
 # Note: Oracle Autonomous Database는 외부 관리형 서비스이므로 Pod 대기가 필요 없습니다.
-echo "🔴 Redis 대기 중..."
-if kubectl wait --for=condition=ready pod -l app=redis -n ${NAMESPACE} --timeout=120s 2>/dev/null; then
-    echo "✅ Redis 준비 완료"
-else
-    echo "⚠️  Redis 준비 시간 초과. 계속 진행합니다."
-fi
+echo "✅ Redis Sentinel 배포 완료 (Helm이 자동 관리)"
 echo "📨 Kafka 대기 중..."
 if kubectl wait --for=condition=ready pod -l strimzi.io/cluster=kafka-cluster -n kafka --timeout=600s 2>/dev/null; then
     echo "✅ Kafka 준비 완료"
@@ -125,31 +183,46 @@ fi
 
 # 4. ConfigMap 및 Secret 배포
 echo "⚙️  ConfigMap 및 Secret 배포 중..."
-kubectl apply -f k8s/apps/bff/configmap-prod.yaml
-kubectl apply -f k8s/apps/core/configmap-prod.yaml
-kubectl apply -f k8s/apps/inference/configmap-prod.yaml
-kubectl apply -f k8s/apps/inference/secret-prod.yaml
-kubectl apply -f k8s/apps/socket/configmap-prod.yaml
+kubectl apply -f k8s/apps/bff/prod/
+kubectl apply -f k8s/apps/core/prod/
+kubectl apply -f k8s/apps/llm/prod/
+kubectl apply -f k8s/apps/socket/prod/
 
 # 5. 애플리케이션 배포
 echo "📱 애플리케이션 배포 중..."
-# 환경 변수 치환 후 배포
+# 환경 변수 치환이 필요한 경우 각 파일별로 처리
 # Core 서비스 먼저 배포 (BFF가 gRPC로 연결하므로)
 echo "🔷 Core 서비스 배포 중..."
-envsubst < k8s/apps/core/deployment-prod.yaml | kubectl apply -f -
-kubectl apply -f k8s/apps/core/service.yaml
+if grep -q '\$' k8s/apps/core/prod/deployment.yaml 2>/dev/null; then
+    envsubst < k8s/apps/core/prod/deployment.yaml | kubectl apply -f -
+else
+    kubectl apply -f k8s/apps/core/prod/deployment.yaml
+fi
+kubectl apply -f k8s/apps/core/common/
 
-echo "🔷 Inference 서비스 배포 중..."
-envsubst < k8s/apps/inference/deployment-prod.yaml | kubectl apply -f -
-kubectl apply -f k8s/apps/inference/service.yaml
+echo "🔷 LLM 서비스 배포 중..."
+if grep -q '\$' k8s/apps/llm/prod/deployment.yaml 2>/dev/null; then
+    envsubst < k8s/apps/llm/prod/deployment.yaml | kubectl apply -f -
+else
+    kubectl apply -f k8s/apps/llm/prod/deployment.yaml
+fi
+kubectl apply -f k8s/apps/llm/common/
 
 echo "🔷 BFF 서비스 배포 중..."
-envsubst < k8s/apps/bff/deployment-prod.yaml | kubectl apply -f -
-kubectl apply -f k8s/apps/bff/service.yaml
+if grep -q '\$' k8s/apps/bff/prod/deployment.yaml 2>/dev/null; then
+    envsubst < k8s/apps/bff/prod/deployment.yaml | kubectl apply -f -
+else
+    kubectl apply -f k8s/apps/bff/prod/deployment.yaml
+fi
+kubectl apply -f k8s/apps/bff/common/
 
 echo "🔷 Socket 서비스 배포 중..."
-envsubst < k8s/apps/socket/deployment-prod.yaml | kubectl apply -f -
-kubectl apply -f k8s/apps/socket/service.yaml
+if grep -q '\$' k8s/apps/socket/prod/deployment.yaml 2>/dev/null; then
+    envsubst < k8s/apps/socket/prod/deployment.yaml | kubectl apply -f -
+else
+    kubectl apply -f k8s/apps/socket/prod/deployment.yaml
+fi
+kubectl apply -f k8s/apps/socket/common/
 
 echo "⏳ 애플리케이션 Pod가 준비될 때까지 대기 중..."
 echo "🔷 Core 서비스 대기 중..."
@@ -158,11 +231,11 @@ if kubectl wait --for=condition=ready pod -l app=core -n ${NAMESPACE} --timeout=
 else
     echo "⚠️  Core 서비스 준비 시간 초과. 계속 진행합니다."
 fi
-echo "🔷 Inference 서비스 대기 중..."
-if kubectl wait --for=condition=ready pod -l app=inference -n ${NAMESPACE} --timeout=180s 2>/dev/null; then
-    echo "✅ Inference 서비스 준비 완료"
+echo "🔷 LLM 서비스 대기 중..."
+if kubectl wait --for=condition=ready pod -l app=llm -n ${NAMESPACE} --timeout=180s 2>/dev/null; then
+    echo "✅ LLM 서비스 준비 완료"
 else
-    echo "⚠️  Inference 서비스 준비 시간 초과. 계속 진행합니다."
+    echo "⚠️  LLM 서비스 준비 시간 초과. 계속 진행합니다."
 fi
 echo "🔷 BFF 서비스 대기 중..."
 if kubectl wait --for=condition=ready pod -l app=bff -n ${NAMESPACE} --timeout=180s 2>/dev/null; then
@@ -179,7 +252,24 @@ fi
 
 # 6. Kafka UI는 local에서만 사용 (prod에서는 제외)
 
-# 6. Cert-Manager 설치 확인 및 설치
+# 6. 모니터링 스택 배포
+echo "📊 모니터링 스택 배포 중..."
+kubectl apply -f k8s/infra/monitoring/common/
+echo "⏳ 모니터링 Pod가 준비될 때까지 대기 중..."
+echo "📊 Prometheus 대기 중..."
+if kubectl wait --for=condition=ready pod -l app=prometheus -n ${MONITORING_NAMESPACE} --timeout=120s 2>/dev/null; then
+    echo "✅ Prometheus 준비 완료"
+else
+    echo "⚠️  Prometheus 준비 시간 초과. 계속 진행합니다."
+fi
+echo "📊 Grafana 대기 중..."
+if kubectl wait --for=condition=ready pod -l app=grafana -n ${MONITORING_NAMESPACE} --timeout=120s 2>/dev/null; then
+    echo "✅ Grafana 준비 완료"
+else
+    echo "⚠️  Grafana 준비 시간 초과. 계속 진행합니다."
+fi
+
+# 8. Cert-Manager 설치 확인 및 설치
 echo "🔍 Cert-Manager 설치 확인 중..."
 if ! kubectl get namespace cert-manager &>/dev/null; then
     echo "⚠️  Cert-Manager가 설치되지 않았습니다."
@@ -194,20 +284,23 @@ else
     echo "✅ Cert-Manager가 이미 설치되어 있습니다."
 fi
 
-# 7. ClusterIssuer 배포
+# 9. ClusterIssuer 배포
 echo "🔐 Let's Encrypt ClusterIssuer 배포 중..."
-kubectl apply -f k8s/infra/cert-manager/cluster-issuer-prod.yaml
+kubectl apply -f k8s/infra/cert-manager/prod/
 echo "⚠️  ClusterIssuer의 이메일 주소를 실제 이메일로 변경했는지 확인하세요!"
 
-# 8. Ingress 배포
+# 10. Ingress 배포
 echo "🌐 Ingress 배포 중..."
-kubectl apply -f k8s/common/ingress/ingress-prod.yaml
+kubectl apply -f k8s/common/ingress/prod/
 echo "⚠️  Ingress의 도메인을 실제 도메인으로 변경했는지 확인하세요!"
 
 echo "✅ 프로덕션 환경 배포가 완료되었습니다!"
 echo ""
-echo "📊 배포 상태 확인:"
+echo "📊 배포 상태 확인 (unbrdn 네임스페이스):"
 kubectl get pods -n ${NAMESPACE}
+echo ""
+echo "📊 배포 상태 확인 (monitoring 네임스페이스):"
+kubectl get pods -n ${MONITORING_NAMESPACE}
 echo ""
 echo "🔗 Ingress 정보:"
 kubectl get ingress main-ingress -n ${NAMESPACE}
@@ -228,7 +321,7 @@ fi
 echo "   - 메인 (HTTPS): ${INGRESS_URL_HTTPS}/"
 echo "   - 메인 (HTTP, 자동 리다이렉션): ${INGRESS_URL_HTTP}/"
 echo "   - 테스트 클라이언트: ${INGRESS_URL_HTTPS}/test-client"
-echo "   - Kafka UI: ${INGRESS_URL_HTTPS}/admin"
+echo "   - Grafana: ${INGRESS_URL_HTTPS}/grafana"
 echo ""
 echo "🔐 TLS 인증서 상태:"
 kubectl get certificate -n ${NAMESPACE} 2>/dev/null || echo "   인증서가 아직 발급되지 않았습니다. 몇 분 후 다시 확인하세요."
