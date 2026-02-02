@@ -1,0 +1,3093 @@
+{
+  "entityData": [
+    {
+      "_id": "34AfpLQpXCbuCT2Xu",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2680,
+        "y": 2060
+      },
+      "name": "면접 메시지 (MongoDB)",
+      "pName": "interview_message",
+      "keys": {
+        "pks": [
+          {
+            "_id": "KwpK9FexJKG3uxXK6",
+            "name": "면접 메시지 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "47PsZb626tphzcmsL",
+          "name": "메시지 주체",
+          "pName": "role",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "User, Assistant, System",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "dFJxaPdqBRNod5s4t",
+          "name": "메시지성격",
+          "pName": "type",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "Question, Answer, Sytem Message",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "m7CusuYkc7ASzFAkN",
+          "name": "내용",
+          "pName": "content",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "STT메시지, LLM 답변, 시스템 메시지",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "JrX9h2M7zcQbRN8Bn",
+          "name": "오디오 파일 저장 위치",
+          "pName": "audio_url",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": "true",
+          "comment": "비동기로 업데이트",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "xghNvK7QtWRg62nZM",
+          "name": "면접과 메시지 사이의 차이 (sec)",
+          "pName": "relative_time",
+          "domain": "",
+          "type": "",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "영상과 싱크를 맞추기 위한 메타데이터, 면접 시작이후 몇 초 지났는지를 기록",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "wsEXApZEAJuJDBGD3",
+          "name": "생성시간",
+          "pName": "created_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "tjF5SfCJrQ66hNoGC",
+          "name": "면접 세션 ID",
+          "pName": "session_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "Qs9Qz3Ku3n7Gvxfct",
+          "relFieldId": "75HRrzmpXuxBP9PoN",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "BGEe7oRaJkjunmS2c"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "3DqzNkBNev2bjNQ6S",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2460,
+        "y": 1540
+      },
+      "name": "약관동의여부",
+      "pName": "user_term_agreement",
+      "keys": {
+        "pks": [],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "3SaQmKpTTEqy83Qnm",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "yHBe94M2AABSkiPMZ",
+          "relFieldId": "NRY5CYCPoWGbfFnHh",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "mLPHWRBty23Wbodek"
+        },
+        {
+          "_id": "ArmJSzkpR8CbjbtzZ",
+          "name": "약관ID",
+          "pName": "term_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "og6255hiqRcesG5sd",
+          "relFieldId": "haFMJyaaWoFrcB7j6",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "aj2jiEyfS4XJjyz6w"
+        },
+        {
+          "_id": "qWZJvyDnSsGkc4eDM",
+          "name": "약관동의여부",
+          "pName": "is_agreed",
+          "domain": "",
+          "type": "Boolean",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "j42dAtCStLa7k6oDs",
+          "name": "약관동의일시",
+          "pName": "agreed_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "uQxxSDm8iiwWTPDey",
+          "name": "접속IP주소",
+          "pName": "ip_address",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": "true",
+          "comment": "부인방지를 위한 당시 IP주소",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "3FGfPvDkv2jXsH2bG",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2160,
+        "y": 230
+      },
+      "name": "단품 패키지 상품",
+      "pName": "package",
+      "keys": {
+        "pks": [
+          {
+            "_id": "g8BpfjnxJpQJEWaWk",
+            "name": "단품 패키지 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "RyCJDKub9waQqQdiv",
+          "name": "패키지 이름",
+          "pName": "name",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "85wh23HpPYMnttPNw",
+          "name": "패키지 가격",
+          "pName": "price",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "크레딧을 의미",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "RxTKj6Gp9EKJhmbEu",
+          "name": "패키지 설명",
+          "pName": "description",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": "true",
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "4LWXRwfEu5HquZghw",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2000,
+        "y": 580
+      },
+      "name": "상품",
+      "pName": "product",
+      "keys": {
+        "pks": [
+          {
+            "_id": "3dhMYbi52H6XLZyts",
+            "name": "상품 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "FdN2xkQcgjiFbEadD",
+          "name": "상품명",
+          "pName": "name",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "9tRzCqvBnv9EWvNjQ",
+          "name": "상품유형",
+          "pName": "type",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "SUBSCRIPTION, ONE_TIME, CREDIT",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "bBRD8vYW4KALddBwy",
+          "name": "가격",
+          "pName": "price",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "XSkuXeDaN9RWcEpER",
+          "name": "통화",
+          "pName": "currency",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "sLmFxEJ67AWTaRgAp",
+          "name": "상품 설명",
+          "pName": "description",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": "true",
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "HR7b2ouhuSHcXg9wP",
+          "name": "판매 가능 여부",
+          "pName": "deprecated_at",
+          "domain": "",
+          "type": "Boolean",
+          "defaultValue": "",
+          "isAllowNull": "true",
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "5qgckpAkRKK6R34nT",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1830,
+        "y": 850
+      },
+      "name": "상품 사용 이력",
+      "pName": "product_usage_history",
+      "keys": {
+        "pks": [
+          {
+            "_id": "H3YSneyF39YsXzp6K",
+            "name": "상품 사용 이력 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "i6CZf9GWvbN4u6fCk",
+          "name": "증감유형",
+          "pName": "source_type",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "SUBSCRIPTION, INVENTORY",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "3mx49aCTY5mq3trJ5",
+          "name": "증감수량",
+          "pName": "amount",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "HQxvMoTf4ArMb7B5D",
+          "name": "차감 근거 타입",
+          "pName": "reference_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "SaGiuzRJ3DfpAYFMF",
+          "name": "차감 근거 관계",
+          "pName": "reference_type",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "INTERVIEW_SESSION, RESUME_VIEW",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "d9FnEFHSDfZ7g6mKi",
+          "name": "상품 사용일",
+          "pName": "created_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "LSSW8k89FPpXi4aRW",
+          "name": "상품 ID",
+          "pName": "product_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "4LWXRwfEu5HquZghw",
+          "relFieldId": "3dhMYbi52H6XLZyts",
+          "relType": "ZERO_OR_ONE_OR_MANY",
+          "relGroupId": "25PSsQqk4oJjvSH58"
+        },
+        {
+          "_id": "igfAhpyxTh9f6ck2b",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "yHBe94M2AABSkiPMZ",
+          "relFieldId": "NRY5CYCPoWGbfFnHh",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "WQxuw36bBxrdHmQHg"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "8xmy8ZtsGQyERGtG7",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2180,
+        "y": 1740
+      },
+      "name": "채용담당자",
+      "pName": "recruiter",
+      "keys": {
+        "pks": [],
+        "fks": [
+          {
+            "_id": "R4QHdGT5u2WX8FeRj",
+            "name": "사용자ID",
+            "pName": "id",
+            "domain": "",
+            "type": "VARCHAR",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": "yHBe94M2AABSkiPMZ",
+            "relFieldId": "NRY5CYCPoWGbfFnHh",
+            "relType": "ONE",
+            "relGroupId": "FoiCQcnih9Mhy259v"
+          }
+        ]
+      },
+      "fields": [],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "9ofd46d2jpQEaTWpA",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1430,
+        "y": 1990
+      },
+      "name": "커리어",
+      "pName": "career",
+      "keys": {
+        "pks": [
+          {
+            "_id": "SfzWFT4ctBnApoLva",
+            "name": "경력ID",
+            "pName": "id",
+            "domain": "",
+            "type": "",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "uBiKHCHTKryb9qis5",
+          "name": "회사명",
+          "pName": "company_name",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "LtfhfEqjGuPjtpbQP",
+          "name": "부서",
+          "pName": "department",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "eF82wesb7itu2bCBY",
+          "name": "입사일",
+          "pName": "started_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "FtXTpZFzhA2uxF3Lh",
+          "name": "퇴사일",
+          "pName": "ended_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "Th4pm9vjxih9BK6TC",
+          "name": "간단소개",
+          "pName": "description",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "qCdPkGQyuJZiNun7m",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "r2nWRBZFusZwYdpR2",
+          "relFieldId": "kRirJyCvYSw6BgDot",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "XDgKgMgWiv4ZNEkYB"
+        },
+        {
+          "_id": "nLTuDfTRDh7Nvu8fL",
+          "name": "직무분야ID",
+          "pName": "job_field_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "jzdSSq3Bbp5C8r3iE",
+          "relFieldId": "26p2xZfHNhHfKvaau",
+          "relType": "ZERO_OR_ONE_OR_MANY",
+          "relGroupId": "gHnsKHLMRMtcJzGpg"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "F4SX63vbNiCDAtPvL",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 3030,
+        "y": 1640
+      },
+      "name": "관리자 활동 로그",
+      "pName": "admin_audit",
+      "keys": {
+        "pks": [
+          {
+            "_id": "NRY5CYCPoWGbfFnHh",
+            "name": "관리자 계정 기록 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "AnfbTkwMPznRmJZGt",
+          "name": "대상 테이블",
+          "pName": "target_table",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "NULL",
+          "isAllowNull": false,
+          "comment": "변경된 데이터의 테이블",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "ocXynXE2zqoayHErJ",
+          "name": "대상 ID",
+          "pName": "target_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "변경된 데이터의 PK",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "ftpBESyeL6CPKtSHK",
+          "name": "행위 유형",
+          "pName": "action_type",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "CREATE, UPDATE, DELETE, PATCH, PUT",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "dmY52mnNuWwJyCANr",
+          "name": "변경 내용",
+          "pName": "changes",
+          "domain": "",
+          "type": "JSON",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "이전값/변경값 (JSON)",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "7P2sYWu8JkWAEjHjh",
+          "name": "접속 IP",
+          "pName": "ip_address",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "DWjgZNqEtdLC7RWou",
+          "name": "생성 일시",
+          "pName": "created_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "jHSkvr5CbPKqavj83",
+          "name": "관리자ID",
+          "pName": "admin_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "GjA22SnGvM6NEqDht",
+          "relFieldId": "NRY5CYCPoWGbfFnHh",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "rfgsuuepqobfaar6P"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "GjA22SnGvM6NEqDht",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 3050,
+        "y": 1280
+      },
+      "name": "관리자 계정 (별도관리)",
+      "pName": "admin",
+      "keys": {
+        "pks": [
+          {
+            "_id": "NRY5CYCPoWGbfFnHh",
+            "name": "관리자ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "igCuDSYvx4X6yr6vZ",
+          "name": "회원가입 이메일",
+          "pName": "email",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "6XWbNSyYKnmds64TQ",
+          "name": "비밀번호",
+          "pName": "password",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "LxKbBo6jPkj9Q8HYX",
+          "name": "역할",
+          "pName": "role",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "MASTER",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "rcwEcjSq5bY2BJG94",
+          "name": "계정활성상태",
+          "pName": "is_active",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "ACTIVE, DORMANT",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "NevcJCTsdDjSjTjj9",
+          "name": "계정 생성 시간",
+          "pName": "created_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "cnuonRnJmqB5f7pCY",
+          "name": "계정 최신 업데이트시간",
+          "pName": "updated_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "znAngb66zNzpnMkaL",
+          "name": "핸드폰번호",
+          "pName": "phone_number",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "010-0000-0000",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "LFGAyBZ9ypegJYRy7",
+          "name": "이메일인증",
+          "pName": "verified_email",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "NULL",
+          "isAllowNull": "true",
+          "comment": "인증받은 이메일값",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "ZbbN349B3KGmZhqav",
+          "name": "프로필사진 주소",
+          "pName": "profile_image_url",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "NULL",
+          "isAllowNull": "true",
+          "comment": "Object Storage 주소",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "ZZTF47z3wdZ6h8EBv",
+          "name": "계정 삭제 시간",
+          "pName": "deleted_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "NULL",
+          "isAllowNull": "true",
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "AnfbTkwMPznRmJZGt",
+          "name": "최근 계정 로그인 시간",
+          "pName": "last_logined_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "NULL",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "GxnqxKNfAeC8rJeBm",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2490,
+        "y": 830
+      },
+      "name": "크레딧 장부",
+      "pName": "credit_transaction",
+      "keys": {
+        "pks": [
+          {
+            "_id": "PQNrEPdkrLSdwjmAZ",
+            "name": "크레딧 장부 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "uRfa8iDq7xtwMoCpy",
+          "name": "증감량",
+          "pName": "amount",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "음수 가능",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "W9zYcCaYHoB8r69Dx",
+          "name": "증감이유",
+          "pName": "type",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "추가 고려 필요",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "nWfSfyxr3vHvzugK8",
+          "name": "참조 타입",
+          "pName": "reference_type",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "pK6BQymwcprqLvWhQ",
+          "name": "참조 ID",
+          "pName": "reference_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": "true",
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "3pDnyd3BbXcDcp43b",
+          "name": "지갑 ID",
+          "pName": "wallet_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "hrEzrEnyKZPMcEcBR",
+          "relFieldId": "pbA4ud8wcFLg8bywX",
+          "relType": "ONE_OR_MANY",
+          "relGroupId": "LeD5tYo8pPHtxWvS9"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "HodZSiRaRxMEairsK",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 730,
+        "y": 1380
+      },
+      "name": "소셜로그인 지원 플랫폼",
+      "pName": "oauth_provider",
+      "keys": {
+        "pks": [
+          {
+            "_id": "7GSMhQrY2fSgWWFQT",
+            "name": "소셜로그인지원플랫폼ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "tEEFehJsfpKChJamd",
+          "name": "플랫폼명",
+          "pName": "company_name",
+          "domain": "",
+          "type": "",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "NBaBx2XJk2RTHaXwL",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1230,
+        "y": 1360
+      },
+      "name": "유저 연동 소셜로그인 플랫폼",
+      "pName": "user_oauths",
+      "keys": {
+        "pks": [],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "w5YmQpQ2agCan3LmP",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "yHBe94M2AABSkiPMZ",
+          "relFieldId": "NRY5CYCPoWGbfFnHh",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "YcrqT4zBTTE722bQp"
+        },
+        {
+          "_id": "pQNt39TATFP5CJCng",
+          "name": "소셜로그인지원플랫폼ID",
+          "pName": "provider_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "HodZSiRaRxMEairsK",
+          "relFieldId": "7GSMhQrY2fSgWWFQT",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "cQox5mNTompfSgq3y"
+        },
+        {
+          "_id": "u7q8jXvMfPxKfynMt",
+          "name": "제공자측 사용ID",
+          "pName": "provider_user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "OAuth 제공자가 리턴하는 고유 사용자 식별값",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "e9oaPApSqesTyZNLW",
+          "name": "엑세트 토큰",
+          "pName": "access_token",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "DN8heDcocNf3Qp9bN",
+          "name": "토큰 만료 일시",
+          "pName": "token_expires_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "Qs9Qz3Ku3n7Gvxfct",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1860,
+        "y": 2210
+      },
+      "name": "면접 세션",
+      "pName": "interview_session",
+      "keys": {
+        "pks": [
+          {
+            "_id": "75HRrzmpXuxBP9PoN",
+            "name": "면접 세션 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "24mDSbXGZQEjryMfX",
+          "name": "면접명",
+          "pName": "title",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "Default: interview_당일시간",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "BLFa856YdF7WbRsdA",
+          "name": "인터뷰 진행상황",
+          "pName": "status",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "READY, INPROGRESS, PROCESSING, COMPETED, CANCELED",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "6EvNmq5wfASTC23n5",
+          "name": "면접 시작 시간",
+          "pName": "started_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "4dpSDRpT5oc7bqbmv",
+          "name": "면접 종료 시간",
+          "pName": "ended_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "xauYxrAzb99s4MaEJ",
+          "name": "면접 전체 영상 저장 위치",
+          "pName": "full_video_url",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "Kn2bDLPgWu6RrF7gc",
+          "name": "썸네일 저장 위치",
+          "pName": "thumbnail_url",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "dqoR7soqajAWcLFfN",
+          "name": "강제종료시간",
+          "pName": "canceled_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "xS9ydkXcrzEaqczxc",
+          "name": "이력서ID",
+          "pName": "resume_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "trEf2QmyiBXuSzQhC",
+          "relFieldId": "zywn6K2ebYnc9KLtv",
+          "relType": "ZERO_OR_ONE_OR_MANY",
+          "relGroupId": "drAmMc8jLf2x9BW8x"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "YqB4dALyjYSD3PWje",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1340,
+        "y": 1800
+      },
+      "name": "면접자 희망 직무분야",
+      "pName": "candidate_desire_job_field",
+      "keys": {
+        "pks": [],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "RvjyK4kkyHydiBAPW",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "r2nWRBZFusZwYdpR2",
+          "relFieldId": "kRirJyCvYSw6BgDot",
+          "relType": "ZERO_OR_ONE_OR_MANY",
+          "relGroupId": "L26363F46vc3gX8Cb"
+        },
+        {
+          "_id": "gm4GeojDHiY5Cqpw4",
+          "name": "직무분야ID",
+          "pName": "job_field_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "jzdSSq3Bbp5C8r3iE",
+          "relFieldId": "26p2xZfHNhHfKvaau",
+          "relType": "ZERO_OR_ONE_OR_MANY",
+          "relGroupId": "aAgnP3Szd5j5JWh7g"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "eBatNBvmiPKX9AasW",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2140,
+        "y": 390
+      },
+      "name": "패키지 구성품",
+      "pName": "package_content",
+      "keys": {
+        "pks": [
+          {
+            "_id": "A5mv8FZsTf2ao6PKP",
+            "name": "패키지 구성품 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "q6NpvzvMTyHnofpiH",
+          "name": "지급 수량",
+          "pName": "quantity",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "BNHcC53rqp7MQTy2K",
+          "name": "단품 패키지 ID",
+          "pName": "package_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "3FGfPvDkv2jXsH2bG",
+          "relFieldId": "g8BpfjnxJpQJEWaWk",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "JoWAmLhyDepYE7uWS"
+        },
+        {
+          "_id": "oqALin6mBcbrYQkus",
+          "name": "상품 ID",
+          "pName": "product_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "4LWXRwfEu5HquZghw",
+          "relFieldId": "3dhMYbi52H6XLZyts",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "MXTEixqvbrwmRTfiK"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "hrEzrEnyKZPMcEcBR",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2480,
+        "y": 1040
+      },
+      "name": "크레딧 관리 지갑",
+      "pName": "wallet",
+      "keys": {
+        "pks": [
+          {
+            "_id": "pbA4ud8wcFLg8bywX",
+            "name": "지갑 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "SEYy4EKtNronAMFNy",
+          "name": "무료 크레딧",
+          "pName": "free_credits",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "Default: 2000",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "wpWhNpaKjYSZtZas6",
+          "name": "추가 크레딧",
+          "pName": "paid_credits",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "Default: 0",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "zvENJgFDNGtBCkouN",
+          "name": "지갑 업데이트 시간",
+          "pName": "updated_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "RXpyd8ZSzkbZCJpt8",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "yHBe94M2AABSkiPMZ",
+          "relFieldId": "NRY5CYCPoWGbfFnHh",
+          "relType": "ONE",
+          "relGroupId": "RW7BJZJvc6xokD97h"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "iG8EzRWpG2zreExba",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1290,
+        "y": 1580
+      },
+      "name": "면접자 스킬",
+      "pName": "candidate_skills",
+      "keys": {
+        "pks": [],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "JfDbZ4ZZMAWvEvwBg",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "r2nWRBZFusZwYdpR2",
+          "relFieldId": "kRirJyCvYSw6BgDot",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "fKmbF4tyA9sKtHNWm"
+        },
+        {
+          "_id": "JrDWYBhheiHCiYHKT",
+          "name": "스킬ID",
+          "pName": "skill_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "zfvcj6BmpzMPBHP3R",
+          "relFieldId": "26p2xZfHNhHfKvaau",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "fHogANzFKDccGwYBB"
+        },
+        {
+          "_id": "vPBrT4RkzHfrPszvP",
+          "name": "숙련도",
+          "pName": "proficiency",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": "true",
+          "comment": "TRIED: 사용해봄, SKILLED: 능숙한, NULL: 노출 X",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "jzdSSq3Bbp5C8r3iE",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 950,
+        "y": 1900
+      },
+      "name": "직무분야",
+      "pName": "job_field",
+      "keys": {
+        "pks": [
+          {
+            "_id": "26p2xZfHNhHfKvaau",
+            "name": "직무분야ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "hEbQmczAog5D45dbq",
+          "name": "직무분야명",
+          "pName": "name",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "kpoWZAieKfC8DjfbR",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 3240,
+        "y": 790
+      },
+      "name": "PG사",
+      "pName": "pg_provider",
+      "keys": {
+        "pks": [
+          {
+            "_id": "DZQQ9SPRcuSoiftib",
+            "name": "PG사 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "8QgKaGskPNhGW78KG",
+          "name": "PG사 이름",
+          "pName": "name",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "mp7h7GRmHZpcZn7CH",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2790,
+        "y": 2540
+      },
+      "name": "면접자 답변 평가데이터 (MongoDB)",
+      "pName": "interview_qa_pair_evaluation",
+      "keys": {
+        "pks": [],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "5HGryw9CgfQJGEoyC",
+          "name": "점수",
+          "pName": "score",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "Zy69t43vyhAttKxaX",
+          "name": "피드백",
+          "pName": "feedback",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "kCxFajtw7obMQ653F",
+          "name": "키워드",
+          "pName": "keywords",
+          "domain": "",
+          "type": "Array",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "[\"Minor GC\", \"Major GC\", \"Stop-the-world\"]",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "nHkZHuDiK7xPkvRCX",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2680,
+        "y": 580
+      },
+      "name": "유저 구매 상품 인벤토리",
+      "pName": "inventory",
+      "keys": {
+        "pks": [
+          {
+            "_id": "sJCdzjXjp3Qbch8dQ",
+            "name": "인벤토리 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "DCfWTauiEPBRNqw4w",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "yHBe94M2AABSkiPMZ",
+          "relFieldId": "NRY5CYCPoWGbfFnHh",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "2hKW3qWLGNEGnXPRR"
+        },
+        {
+          "_id": "DdsXyGL3xqndLMtns",
+          "name": "상품 ID",
+          "pName": "product_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "4LWXRwfEu5HquZghw",
+          "relFieldId": "3dhMYbi52H6XLZyts",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "zdcXjksDhMBhXQTDR"
+        },
+        {
+          "_id": "g3z6MALaLsgHyuARx",
+          "name": "총 지급 수량",
+          "pName": "total_count",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "hiqxh5EpcJpjRhcPx",
+          "name": "잔여 수량",
+          "pName": "remaining_count",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "ZGZzuqHF9ZBEqwgAz",
+          "name": "먄료 일시",
+          "pName": "expired_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "bS5DJZyQoJLqKRtbe",
+          "name": "상태",
+          "pName": "status",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "ACTIVE, EXPIRED, EXHAUSTED",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "og6255hiqRcesG5sd",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2500,
+        "y": 1360
+      },
+      "name": "약관",
+      "pName": "Term",
+      "keys": {
+        "pks": [
+          {
+            "_id": "haFMJyaaWoFrcB7j6",
+            "name": "약관ID",
+            "pName": "id",
+            "domain": "",
+            "type": "",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "tj9uSusJTftPA8Bvw",
+          "name": "약관명",
+          "pName": "title",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "hY7CRhz24ZG6iEob5",
+          "name": "약관내용",
+          "pName": "content",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "JD2sPugyE4K7wrtoB",
+          "name": "약관 버전",
+          "pName": "version",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "iwMqNQo8zv9bEkRAg",
+          "name": "지원종료일",
+          "pName": "deprecated_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "r2nWRBZFusZwYdpR2",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1830,
+        "y": 1740
+      },
+      "name": "면접자",
+      "pName": "candidate",
+      "keys": {
+        "pks": [],
+        "fks": [
+          {
+            "_id": "kRirJyCvYSw6BgDot",
+            "name": "사용자ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": "yHBe94M2AABSkiPMZ",
+            "relFieldId": "NRY5CYCPoWGbfFnHh",
+            "relType": "ONE",
+            "relGroupId": "eH3N8Gdc4EaNZsNae"
+          }
+        ]
+      },
+      "fields": [],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "rWWywwdqCMTuRPxWA",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1370,
+        "y": 1150
+      },
+      "name": "유저개인설정",
+      "pName": "user_options",
+      "keys": {
+        "pks": [],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "dXggrzNdSR3kyh2TC",
+          "name": "프로필 공개 여부",
+          "pName": "is_profile_public",
+          "domain": "",
+          "type": "Boolean",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "Default: False",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "Ddx5CTiyW8Qvm79zb",
+          "name": "이력서 공개 여부",
+          "pName": "is_resume_public",
+          "domain": "",
+          "type": "Boolean",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "Default: False",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "CaoBdDwLPD9Cz6L2X",
+          "name": "인터뷰 공개 여부",
+          "pName": "is_interview_public",
+          "domain": "",
+          "type": "Boolean",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "Default: False",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "3AMADqRxzctBcwyth",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "yHBe94M2AABSkiPMZ",
+          "relFieldId": "NRY5CYCPoWGbfFnHh",
+          "relType": "ONE",
+          "relGroupId": "NPDwduvsqt2xB8rWd"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "rZ8RjjaKDDyPRrJq7",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1380,
+        "y": 920
+      },
+      "name": "구독 계약서",
+      "pName": "subscription",
+      "keys": {
+        "pks": [
+          {
+            "_id": "Eco6tjKQ3jLNSYXC3",
+            "name": "구독 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "bTKNc2wvBrHG6kTuB",
+          "name": "구독 플랜 ID",
+          "pName": "plan_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "us4nphWYrd4xMkAQR",
+          "relFieldId": "9NhCZpJYPFxAYygnt",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "xNejPXvtnSWP8L9g2"
+        },
+        {
+          "_id": "TSJWRN5jBMBib25Ar",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "yHBe94M2AABSkiPMZ",
+          "relFieldId": "NRY5CYCPoWGbfFnHh",
+          "relType": "ZERO_OR_ONE",
+          "relGroupId": "boF7e4FSMMDnf5gCx"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "shbzbXCFH3seigrrZ",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1540,
+        "y": 680
+      },
+      "name": "구독 할당량 사용량",
+      "pName": "subscription_usages",
+      "keys": {
+        "pks": [
+          {
+            "_id": "2L9YMJ7pKpaeWiozu",
+            "name": "Key",
+            "pName": "Key",
+            "domain": "",
+            "type": "",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "3zWqZS9ocPaS6GoBd",
+          "name": "구독 ID",
+          "pName": "subscription_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "rZ8RjjaKDDyPRrJq7",
+          "relFieldId": "Eco6tjKQ3jLNSYXC3",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "27kRiTKgasdzDfHEt"
+        },
+        {
+          "_id": "iYSbwaPS4XK5JosBH",
+          "name": "상품 ID",
+          "pName": "product_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "4LWXRwfEu5HquZghw",
+          "relFieldId": "3dhMYbi52H6XLZyts",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "z7bZ3cPWLiWTQGWj3"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "trEf2QmyiBXuSzQhC",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1980,
+        "y": 1930
+      },
+      "name": "이력서",
+      "pName": "resume",
+      "keys": {
+        "pks": [
+          {
+            "_id": "zywn6K2ebYnc9KLtv",
+            "name": "이력서ID",
+            "pName": "id",
+            "domain": "",
+            "type": "",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "RWNsNmKEfExWudfY4",
+          "name": "이력서 이름",
+          "pName": "title",
+          "domain": "",
+          "type": "",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "4zJhSewAH6m2t9zsC",
+          "name": "이력서 부가 설명",
+          "pName": "description",
+          "domain": "",
+          "type": "",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "zXFbWe8hCHFDXFhG2",
+          "name": "이력시 원본 저장소 위치",
+          "pName": "original_url",
+          "domain": "",
+          "type": "",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "SEHK3wweqGXngTFWk",
+          "name": "이력서 추출 텍스트",
+          "pName": "extract_text",
+          "domain": "",
+          "type": "",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "RbZwujkThaPN894ND",
+          "name": "이력서 추출 이미지",
+          "pName": "extract_image",
+          "domain": "",
+          "type": "JSON",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "이미지 url 배열",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "G4LZJqunKW5DALQtX",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "VARCHAR",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "r2nWRBZFusZwYdpR2",
+          "relFieldId": "kRirJyCvYSw6BgDot",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "YQns9y3j92Jq46RQB"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "us4nphWYrd4xMkAQR",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1040,
+        "y": 480
+      },
+      "name": "구독 플랜",
+      "pName": "plan",
+      "keys": {
+        "pks": [
+          {
+            "_id": "9NhCZpJYPFxAYygnt",
+            "name": "구독 플랜 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "mpWH4ncc8TqnkMyxu",
+          "name": "구독 플랜명",
+          "pName": "name",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "Standard, Premium",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "nJERbF6ZC7gTSaf3G",
+          "name": "월간 가격",
+          "pName": "price_monthly",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "katwz8he8oKACnSu2",
+          "name": "연간 가격",
+          "pName": "price_yearly",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "LLsJFbeYzgWw3R5kJ",
+          "name": "결제 주기",
+          "pName": "billing_cycle",
+          "domain": "",
+          "type": "",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "MONTHLY, YEARLY",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "rezKM436Hv4MuZhR8",
+          "name": "플랜 등급",
+          "pName": "level",
+          "domain": "",
+          "type": "",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "상위 플랜 업그레이드 판단용",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "vFA3CN5wjSRMtsuCb",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2680,
+        "y": 2350
+      },
+      "name": "면접 메시지 질문쌍 (MongoDB)",
+      "pName": "interview_qa_pair",
+      "keys": {
+        "pks": [
+          {
+            "_id": "cCrvZ5Piak4qToM8F",
+            "name": "면접 메시지 질문쌍 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "FsKHsZyHYByPjbdi2",
+          "name": "질문순서",
+          "pName": "sequence",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "zW4exj6PyjqzQFJ5K",
+          "name": "질문유형",
+          "pName": "category",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "92QLWHThwNfEk99Pv",
+          "name": "질문요지요약",
+          "pName": "question_summary",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "nTx6pXEh578zNg3py",
+          "name": "질문 시작 타임스탬프",
+          "pName": "video_start_time_ms",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "영상 싱크용, 질문 세트가 시작된 영상 시점",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "kKgRKj73chibjWCyW",
+          "name": "답변 완료 타임스탬프",
+          "pName": "video_end_time_ms",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "영상 싱크용, 이 질문 세트가 끝난 영상 시점",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "6kHbk2pH3ztZqwQKc",
+          "name": "면접자 답변 평가데이터",
+          "pName": "evaluation",
+          "domain": "",
+          "type": "JSON",
+          "defaultValue": "",
+          "isAllowNull": "true",
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "vj8d8DcFf4irmoAwk",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1570,
+        "y": 320
+      },
+      "name": "구독플랜별 월 제공량",
+      "pName": "plan_quota",
+      "keys": {
+        "pks": [
+          {
+            "_id": "3xG9Rbdhmm4nHhd2z",
+            "name": "구독플랜별 월 제공량 ID",
+            "pName": "id",
+            "domain": "",
+            "type": "",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "WMfTKBz7MbJKWC67B",
+          "name": "기능코드",
+          "pName": "feature_code",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "AI_INTERVIEW_LIMIT",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "GeAx3AqASNJLHG5YP",
+          "name": "제한값",
+          "pName": "limit_value",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "-1이면 무제한",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "xqa2FYg5t7cQkbDAx",
+          "name": "초기화 주기",
+          "pName": "frequency",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "MONTHLY, DAILY",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "um82yjjkz8DmXrdWT",
+          "name": "상품 ID",
+          "pName": "product_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "4LWXRwfEu5HquZghw",
+          "relFieldId": "3dhMYbi52H6XLZyts",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "pcyK7h8egvQLgA6aJ"
+        },
+        {
+          "_id": "c6pLDs4wsbNTNZtMW",
+          "name": "구독 플랜 ID",
+          "pName": "plan_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "us4nphWYrd4xMkAQR",
+          "relFieldId": "9NhCZpJYPFxAYygnt",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "MRZCN7FPEMBNF2F8J"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "yHBe94M2AABSkiPMZ",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 1880,
+        "y": 1130
+      },
+      "name": "유저 (공통속성)",
+      "pName": "user",
+      "keys": {
+        "pks": [
+          {
+            "_id": "NRY5CYCPoWGbfFnHh",
+            "name": "사용자ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "igCuDSYvx4X6yr6vZ",
+          "name": "회원가입 이메일",
+          "pName": "email",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "6XWbNSyYKnmds64TQ",
+          "name": "비밀번호",
+          "pName": "password",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "LxKbBo6jPkj9Q8HYX",
+          "name": "역할",
+          "pName": "role",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "CANDIDATE, RECRUITER",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "rcwEcjSq5bY2BJG94",
+          "name": "계정활성상태",
+          "pName": "is_active",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "ACTIVE, DORMANT",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "NevcJCTsdDjSjTjj9",
+          "name": "계정 생성 시간",
+          "pName": "created_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "cnuonRnJmqB5f7pCY",
+          "name": "계정 최신 업데이트시간",
+          "pName": "updated_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "znAngb66zNzpnMkaL",
+          "name": "핸드폰번호",
+          "pName": "phone_number",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "010-0000-0000",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "LFGAyBZ9ypegJYRy7",
+          "name": "이메일인증",
+          "pName": "verified_email",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "NULL",
+          "isAllowNull": "true",
+          "comment": "인증받은 이메일값",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "ZbbN349B3KGmZhqav",
+          "name": "프로필사진 주소",
+          "pName": "profile_image_url",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "NULL",
+          "isAllowNull": "true",
+          "comment": "Object Storage 주소",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "ZZTF47z3wdZ6h8EBv",
+          "name": "계정 삭제 시간",
+          "pName": "deleted_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "NULL",
+          "isAllowNull": "true",
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "AnfbTkwMPznRmJZGt",
+          "name": "최근 계정 로그인 시간",
+          "pName": "last_logined_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "NULL",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "ytXH3iuELZ7G59SgE",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2980,
+        "y": 930
+      },
+      "name": "PG 결제 내역",
+      "pName": "Payment",
+      "keys": {
+        "pks": [
+          {
+            "_id": "YAg9rAH9tTWwYQdyQ",
+            "name": "Key",
+            "pName": "Key",
+            "domain": "",
+            "type": "",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "wujGBzSnZ93csEkdh",
+          "name": "결제금액",
+          "pName": "amount",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "qyK529yrNzaDArx5c",
+          "name": "통화",
+          "pName": "currency",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "9FjmwFyxyuCFDeNvp",
+          "name": "결제상태",
+          "pName": "status",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "PENDING, SUCCESS, FAILED, REFUNDED",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "vYrZoryXT6NPhYvx7",
+          "name": "서비스내부 상품 ID",
+          "pName": "merchant_uid",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "주문번호",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "C2678hvYPXQTHjRAF",
+          "name": "결제 승인 시간",
+          "pName": "paid_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": "true",
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "M6DXEbnvwekzXZ9mc",
+          "name": "결제 내역 생성일시",
+          "pName": "created_at",
+          "domain": "",
+          "type": "Date",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "HkWbQ7SvS2hdrkQ6b",
+          "name": "사용자ID",
+          "pName": "user_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "yHBe94M2AABSkiPMZ",
+          "relFieldId": "NRY5CYCPoWGbfFnHh",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "B3XTSXjzzKriCX4mD"
+        },
+        {
+          "_id": "6W5BQ7X4tiGwSWyZq",
+          "name": "PG사 ID",
+          "pName": "pg_provider_id",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "kpoWZAieKfC8DjfbR",
+          "relFieldId": "DZQQ9SPRcuSoiftib",
+          "relType": "ONLY_ONE",
+          "relGroupId": "FxfeugxTSCRTNNKGn"
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "zfvcj6BmpzMPBHP3R",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 690,
+        "y": 1570
+      },
+      "name": "기술스택",
+      "pName": "skill",
+      "keys": {
+        "pks": [
+          {
+            "_id": "26p2xZfHNhHfKvaau",
+            "name": "스킬ID",
+            "pName": "id",
+            "domain": "",
+            "type": "String",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "hEbQmczAog5D45dbq",
+          "name": "스킬명",
+          "pName": "name",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "MnjRYnoiapYQh9KsL",
+          "name": "카테고리",
+          "pName": "category",
+          "domain": "",
+          "type": "Enum",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "Language, Framework, DB",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "amkZmWBdw3gDGJD8v",
+          "name": "스킬 배지 이미지 저장 공간",
+          "pName": "badge_image",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "별도 정적 이미지로 저장",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(10, 10, 10, 0.5)"
+    }
+  ],
+  "memoData": [],
+  "domainData": [
+    {
+      "name": "role'",
+      "type": "",
+      "defaultValue": ""
+    }
+  ],
+  "createdAt": "2026-01-13T15:25:45.667Z",
+  "creatorName": "신윤식",
+  "creatorThumb": "https://lh3.googleusercontent.com/a/AAcHTte0cuDOw--gLbmHU8wuFSpDcw_rBjWRESWcdQM9=s96-c"
+}

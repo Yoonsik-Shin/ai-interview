@@ -56,6 +56,7 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
             PushTtsQueueCommand ttsCommand =
                     PushTtsQueueCommand.builder()
                             .interviewId(interviewId)
+                            .interviewSessionId(command.getInterviewSessionId())
                             .sentence(accumulator.getCurrentSentence())
                             .sentenceIndex(accumulator.getSentenceIndex())
                             .persona(command.getPersona())

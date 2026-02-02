@@ -22,9 +22,16 @@ public class RedisPublisherAdapter implements PublishTranscriptPort {
     public void publish(PublishTranscriptCommand command) {
         String channel = "interview:transcript:" + command.getInterviewId();
 
-        Map<String, Object> message = Map.of("interviewId", command.getInterviewId(), "token",
-                command.getToken() != null ? command.getToken() : "", "thinking",
-                command.getThinking() != null ? command.getThinking() : "", "timestamp", Instant.now().toString());
+        Map<String, Object> message =
+                Map.of(
+                        "interviewId",
+                        command.getInterviewId(),
+                        "token",
+                        command.getToken() != null ? command.getToken() : "",
+                        "thinking",
+                        command.getThinking() != null ? command.getThinking() : "",
+                        "timestamp",
+                        Instant.now().toString());
 
         try {
             String jsonMessage = objectMapper.writeValueAsString(message);

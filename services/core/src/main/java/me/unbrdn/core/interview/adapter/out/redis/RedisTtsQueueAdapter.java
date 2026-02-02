@@ -17,9 +17,20 @@ public class RedisTtsQueueAdapter implements PushTtsQueuePort {
 
     @Override
     public void push(PushTtsQueueCommand command) {
-        Map<String, Object> message = Map.of("interviewId", command.getInterviewId(), "sentence", command.getSentence(),
-                "sentenceIndex", command.getSentenceIndex(), "persona", command.getPersona(), "mode",
-                command.getMode());
+        Map<String, Object> message =
+                Map.of(
+                        "interviewId",
+                        command.getInterviewId(),
+                        "interviewSessionId",
+                        command.getInterviewSessionId(),
+                        "sentence",
+                        command.getSentence(),
+                        "sentenceIndex",
+                        command.getSentenceIndex(),
+                        "persona",
+                        command.getPersona(),
+                        "mode",
+                        command.getMode());
 
         try {
             String jsonMessage = objectMapper.writeValueAsString(message);

@@ -3,9 +3,8 @@ package me.unbrdn.core.interview.domain.enums;
 /**
  * 면접 진행 단계
  *
- * <p>
- * 면접은 다음 순서로 진행됩니다: WAITING → GREETING → CANDIDATE_GREETING → INTERVIEWER_INTRO
- * → SELF_INTRO_PROMPT → SELF_INTRO → IN_PROGRESS → COMPLETED
+ * <p>면접은 다음 순서로 진행됩니다: WAITING → GREETING → CANDIDATE_GREETING → INTERVIEWER_INTRO →
+ * SELF_INTRO_PROMPT → SELF_INTRO → IN_PROGRESS → COMPLETED
  */
 public enum InterviewStage {
     /** 연결 대기 (초기 상태) */

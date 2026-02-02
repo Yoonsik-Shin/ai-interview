@@ -55,6 +55,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
         CallLlmCommand llmCommand =
                 CallLlmCommand.builder()
                         .interviewId(command.getInterviewId())
+                        .interviewSessionId(interviewSession.getId().toString())
                         .userId(command.getUserId())
                         .userText(command.getUserText())
                         .persona(interviewSession.getPersona().name())

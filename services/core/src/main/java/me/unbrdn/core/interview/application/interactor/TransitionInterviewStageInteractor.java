@@ -22,24 +22,31 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
 
     @Override
     public void execute(TransitionStageCommand command) {
-        InterviewSession session = interviewPort.loadById(command.interviewSessionId()).orElseThrow(
-                () -> new IllegalArgumentException("Interview session not found: " + command.interviewSessionId()));
+        InterviewSession session =
+                interviewPort
+                        .loadById(command.interviewSessionId())
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Interview session not found: "
+                                                        + command.interviewSessionId()));
 
         // Domain logic - Entity의 transition 메서드 호출
         switch (command.newStage()) {
-        case GREETING -> session.transitionToGreeting();
-        case CANDIDATE_GREETING -> session.transitionToCandidateGreeting();
-        case INTERVIEWER_INTRO -> {
-            session.transitionToInterviewerIntro();
-            // INTERVIEWER_INTRO 단계 진입 시 면접관 소개 자동 발화 트리거
-            triggerInterviewerIntro(session);
-        }
-        case SELF_INTRO_PROMPT -> session.transitionToSelfIntroPrompt();
-        case SELF_INTRO -> session.transitionToSelfIntro();
-        case IN_PROGRESS -> session.transitionToInProgress();
-        case COMPLETED -> session.transitionToCompleted();
-        case WAITING -> throw new IllegalArgumentException("Cannot transition back to WAITING stage");
-        default -> throw new IllegalArgumentException("Unknown stage: " + command.newStage());
+            case GREETING -> session.transitionToGreeting();
+            case CANDIDATE_GREETING -> session.transitionToCandidateGreeting();
+            case INTERVIEWER_INTRO -> {
+                session.transitionToInterviewerIntro();
+                // INTERVIEWER_INTRO 단계 진입 시 면접관 소개 자동 발화 트리거
+                triggerInterviewerIntro(session);
+            }
+            case SELF_INTRO_PROMPT -> session.transitionToSelfIntroPrompt();
+            case SELF_INTRO -> session.transitionToSelfIntro();
+            case IN_PROGRESS -> session.transitionToInProgress();
+            case COMPLETED -> session.transitionToCompleted();
+            case WAITING -> throw new IllegalArgumentException(
+                    "Cannot transition back to WAITING stage");
+            default -> throw new IllegalArgumentException("Unknown stage: " + command.newStage());
         }
 
         interviewPort.save(session);
@@ -54,18 +61,26 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
         List<ConversationHistory> history = manageConversationHistoryPort.loadHistory(interviewId);
 
         // LLM 호출 커맨드 생성 (Auto Trigger)
-        CallLlmCommand llmCommand = CallLlmCommand.builder().interviewId(interviewId).userId(userId).userText(".") // 트리거용
-                                                                                                                   // 더미
-                                                                                                                   // 텍스트
-                                                                                                                   // (LLM
-                                                                                                                   // 서비스에서
-                                                                                                                   // Stage
-                                                                                                                   // 기반으로
-                                                                                                                   // 프롬프트
-                                                                                                                   // 처리)
-                .persona(session.getPersona().name()).history(history).mode(session.getType().name())
-                .stage(session.getStage()).interviewerCount(session.getInterviewerCount()).domain(session.getDomain())
-                .build();
+        CallLlmCommand llmCommand =
+                CallLlmCommand.builder()
+                        .interviewId(interviewId)
+                        .userId(userId)
+                        .userText(".") // 트리거용
+                        // 더미
+                        // 텍스트
+                        // (LLM
+                        // 서비스에서
+                        // Stage
+                        // 기반으로
+                        // 프롬프트
+                        // 처리)
+                        .persona(session.getPersona().name())
+                        .history(history)
+                        .mode(session.getType().name())
+                        .stage(session.getStage())
+                        .interviewerCount(session.getInterviewerCount())
+                        .domain(session.getDomain())
+                        .build();
 
         callLlmPort.generateResponse(llmCommand);
     }

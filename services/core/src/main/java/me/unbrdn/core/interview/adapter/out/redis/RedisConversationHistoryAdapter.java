@@ -30,8 +30,7 @@ public class RedisConversationHistoryAdapter implements ManageConversationHistor
         }
 
         try {
-            return objectMapper.readValue(json, new TypeReference<List<ConversationHistory>>() {
-            });
+            return objectMapper.readValue(json, new TypeReference<List<ConversationHistory>>() {});
         } catch (Exception e) {
             log.error("Failed to parse conversation history", e);
             return new ArrayList<>();

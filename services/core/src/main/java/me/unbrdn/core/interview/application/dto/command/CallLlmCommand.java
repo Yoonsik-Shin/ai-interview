@@ -9,7 +9,8 @@ import me.unbrdn.core.interview.domain.model.ConversationHistory;
 @Getter
 @Builder
 public class CallLlmCommand {
-    private final String interviewId;
+    private final String interviewId; // legacy sessionUuid
+    private final String interviewSessionId; // 실제 PK (ULID)
     private final String userId;
     private final String userText;
     private final String persona;

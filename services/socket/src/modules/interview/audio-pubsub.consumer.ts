@@ -33,14 +33,22 @@ export class AudioPubSubConsumer implements OnModuleInit, OnModuleDestroy {
     private handleAudio(message: string) {
         try {
             const payload = JSON.parse(message);
-            const interviewId = payload.interviewId;
+            const interviewSessionId = payload.interviewSessionId; // 실제 PK (ULID)
+
+            if (!interviewSessionId) {
+                console.error("❌ Missing interviewSessionId in TTS payload");
+                return;
+            }
 
             // WebSocket으로 음성 데이터 전송
-            this.interviewGateway.server.to(`interview:${interviewId}`).emit("interview:audio", {
-                sentenceIndex: payload.sentenceIndex,
-                audioData: payload.audioData, // base64
-                duration: payload.duration,
-            });
+            // Frontend는 interview-session-{interviewSessionId}를 사용
+            this.interviewGateway.server
+                .to(`interview-session-${interviewSessionId}`)
+                .emit("interview:audio", {
+                    sentenceIndex: payload.sentenceIndex,
+                    audioData: payload.audioData, // base64
+                    duration: payload.duration,
+                });
         } catch (error) {
             console.error("❌ Audio handling error:", error);
         }

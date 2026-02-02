@@ -6,7 +6,8 @@ import lombok.Getter;
 @Getter
 @Builder
 public class PushTtsQueueCommand {
-    private final String interviewId;
+    private final String interviewId; // legacy sessionUuid
+    private final String interviewSessionId; // 실제 PK (ULID)
     private final String sentence;
     private final int sentenceIndex;
     private final String persona;

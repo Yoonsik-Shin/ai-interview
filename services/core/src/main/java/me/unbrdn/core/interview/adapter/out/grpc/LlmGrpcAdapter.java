@@ -33,24 +33,36 @@ public class LlmGrpcAdapter implements CallLlmPort {
     public void generateResponse(CallLlmCommand command) {
         // gRPC Metadata (session-id) 추가
         Metadata metadata = new Metadata();
-        metadata.put(Metadata.Key.of("session-id", Metadata.ASCII_STRING_MARSHALLER), command.getInterviewId());
+        metadata.put(
+                Metadata.Key.of("session-id", Metadata.ASCII_STRING_MARSHALLER),
+                command.getInterviewId());
 
-        LlmServiceGrpc.LlmServiceStub stubWithMetadata = llmServiceStub
-                .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
+        LlmServiceGrpc.LlmServiceStub stubWithMetadata =
+                llmServiceStub.withInterceptors(
+                        MetadataUtils.newAttachHeadersInterceptor(metadata));
 
         // gRPC Request 생성
-        GenerateRequest request = GenerateRequest.newBuilder().setInterviewId(command.getInterviewId())
-                .setUserId(command.getUserId()).setUserText(command.getUserText()).setPersona(command.getPersona())
-                .addAllHistory(toProtoHistory(command.getHistory())).setStage(toProtoInterviewStage(command.getStage()))
-                .setInterviewerCount(command.getInterviewerCount()).setDomain(command.getDomain()).build();
+        GenerateRequest request =
+                GenerateRequest.newBuilder()
+                        .setInterviewId(command.getInterviewId())
+                        .setUserId(command.getUserId())
+                        .setUserText(command.getUserText())
+                        .setPersona(command.getPersona())
+                        .addAllHistory(toProtoHistory(command.getHistory()))
+                        .setStage(toProtoInterviewStage(command.getStage()))
+                        .setInterviewerCount(command.getInterviewerCount())
+                        .setDomain(command.getDomain())
+                        .build();
 
         // 스트리밍 응답 처리 (재시도 로직 포함)
-        StreamObserver<TokenChunk> responseObserver = new LlmStreamObserver(command, stubWithMetadata, request, 0);
+        StreamObserver<TokenChunk> responseObserver =
+                new LlmStreamObserver(command, stubWithMetadata, request, 0);
 
         // incoming gRPC Context가 종료되어도 LLM 스트리밍인 유지되도록 Root Context에서 실행
-        io.grpc.Context.ROOT.run(() -> {
-            stubWithMetadata.generateResponse(request, responseObserver);
-        });
+        io.grpc.Context.ROOT.run(
+                () -> {
+                    stubWithMetadata.generateResponse(request, responseObserver);
+                });
     }
 
     private me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto toProtoInterviewStage(
@@ -59,25 +71,30 @@ public class LlmGrpcAdapter implements CallLlmPort {
             return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.IN_PROGRESS_STAGE;
         }
         switch (stage) {
-        case GREETING:
-            return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.GREETING;
-        case INTERVIEWER_INTRO:
-            return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.INTERVIEWER_INTRO;
-        case SELF_INTRO:
-            return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.SELF_INTRO;
-        case IN_PROGRESS:
-            return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.IN_PROGRESS_STAGE;
-        case COMPLETED:
-            return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.COMPLETED_STAGE;
-        default:
-            return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.IN_PROGRESS_STAGE;
+            case GREETING:
+                return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.GREETING;
+            case INTERVIEWER_INTRO:
+                return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.INTERVIEWER_INTRO;
+            case SELF_INTRO:
+                return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.SELF_INTRO;
+            case IN_PROGRESS:
+                return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.IN_PROGRESS_STAGE;
+            case COMPLETED:
+                return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.COMPLETED_STAGE;
+            default:
+                return me.unbrdn.core.grpc.llm.LlmProto.InterviewStageProto.IN_PROGRESS_STAGE;
         }
     }
 
     private List<ConversationHistory> toProtoHistory(
             List<me.unbrdn.core.interview.domain.model.ConversationHistory> history) {
         return history.stream()
-                .map(h -> ConversationHistory.newBuilder().setRole(h.getRole()).setContent(h.getContent()).build())
+                .map(
+                        h ->
+                                ConversationHistory.newBuilder()
+                                        .setRole(h.getRole())
+                                        .setContent(h.getContent())
+                                        .build())
                 .collect(Collectors.toList());
     }
 
@@ -90,7 +107,10 @@ public class LlmGrpcAdapter implements CallLlmPort {
         private static final int MAX_RETRIES = 3;
         private static final long INITIAL_BACKOFF_MS = 1000;
 
-        public LlmStreamObserver(CallLlmCommand command, LlmServiceGrpc.LlmServiceStub stub, GenerateRequest request,
+        public LlmStreamObserver(
+                CallLlmCommand command,
+                LlmServiceGrpc.LlmServiceStub stub,
+                GenerateRequest request,
                 int retryCount) {
             this.command = command;
             this.stub = stub;
@@ -101,10 +121,19 @@ public class LlmGrpcAdapter implements CallLlmPort {
         @Override
         public void onNext(TokenChunk chunk) {
             // Proto → Command 변환
-            ProcessLlmTokenCommand tokenCommand = ProcessLlmTokenCommand.builder().interviewId(command.getInterviewId())
-                    .userId(command.getUserId()).userText(command.getUserText()).token(chunk.getToken())
-                    .thinking(chunk.getThinking()).isSentenceEnd(chunk.getIsSentenceEnd()).isFinal(chunk.getIsFinal())
-                    .persona(command.getPersona()).mode(command.getMode()).build();
+            ProcessLlmTokenCommand tokenCommand =
+                    ProcessLlmTokenCommand.builder()
+                            .interviewId(command.getInterviewId())
+                            .interviewSessionId(command.getInterviewSessionId())
+                            .userId(command.getUserId())
+                            .userText(command.getUserText())
+                            .token(chunk.getToken())
+                            .thinking(chunk.getThinking())
+                            .isSentenceEnd(chunk.getIsSentenceEnd())
+                            .isFinal(chunk.getIsFinal())
+                            .persona(command.getPersona())
+                            .mode(command.getMode())
+                            .build();
 
             // Use Case로 위임
             processLlmTokenUseCase.execute(tokenCommand);
@@ -112,7 +141,11 @@ public class LlmGrpcAdapter implements CallLlmPort {
 
         @Override
         public void onError(Throwable t) {
-            log.error("LLM gRPC stream error: interviewId={}, retryCount={}", command.getInterviewId(), retryCount, t);
+            log.error(
+                    "LLM gRPC stream error: interviewId={}, retryCount={}",
+                    command.getInterviewId(),
+                    retryCount,
+                    t);
 
             if (retryCount < MAX_RETRIES) {
                 long backoffMs = INITIAL_BACKOFF_MS * (long) Math.pow(2, retryCount);
@@ -125,10 +158,13 @@ public class LlmGrpcAdapter implements CallLlmPort {
                     return;
                 }
 
-                StreamObserver<TokenChunk> nextObserver = new LlmStreamObserver(command, stub, request, retryCount + 1);
+                StreamObserver<TokenChunk> nextObserver =
+                        new LlmStreamObserver(command, stub, request, retryCount + 1);
                 stub.generateResponse(request, nextObserver);
             } else {
-                log.error("Max retries reached for LLM gRPC stream: interviewId={}", command.getInterviewId());
+                log.error(
+                        "Max retries reached for LLM gRPC stream: interviewId={}",
+                        command.getInterviewId());
             }
         }
 
