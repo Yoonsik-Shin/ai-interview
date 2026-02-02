@@ -1,921 +1,3122 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI 면접 솔루션 - 통합 테스트 클라이언트</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AI 면접 솔루션 - 통합 테스트 클라이언트</title>
+        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
 
-      body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-          sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        padding: 20px;
-      }
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+                    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }
 
-      .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        background: white;
-        border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        overflow: hidden;
-      }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                overflow: hidden;
+            }
 
-      .header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 30px;
-        text-align: center;
-      }
+            .header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 30px;
+                text-align: center;
+            }
 
-      .header h1 {
-        font-size: 32px;
-        font-weight: 600;
-        margin-bottom: 10px;
-      }
+            .header h1 {
+                font-size: 32px;
+                font-weight: 600;
+                margin-bottom: 10px;
+            }
 
-      .header .subtitle {
-        font-size: 14px;
-        opacity: 0.9;
-      }
+            .header .subtitle {
+                font-size: 14px;
+                opacity: 0.9;
+            }
 
-      .tabs {
-        display: flex;
-        background: #f5f5f5;
-        border-bottom: 2px solid #e0e0e0;
-      }
+            .tabs {
+                display: flex;
+                background: #f5f5f5;
+                border-bottom: 2px solid #e0e0e0;
+            }
 
-      .tab {
-        flex: 1;
-        padding: 20px;
-        text-align: center;
-        cursor: pointer;
-        font-weight: 600;
-        color: #666;
-        transition: all 0.3s;
-        border-bottom: 3px solid transparent;
-      }
+            .tab {
+                flex: 1;
+                padding: 20px;
+                text-align: center;
+                cursor: pointer;
+                font-weight: 600;
+                color: #666;
+                transition: all 0.3s;
+                border-bottom: 3px solid transparent;
+            }
 
-      .tab:hover {
-        background: #eeeeee;
-      }
+            .tab:hover {
+                background: #eeeeee;
+            }
 
-      .tab.active {
-        color: #667eea;
-        border-bottom-color: #667eea;
-        background: white;
-      }
+            .tab.active {
+                color: #667eea;
+                border-bottom-color: #667eea;
+                background: white;
+            }
 
-      .tab-content {
-        display: none;
-        padding: 30px;
-      }
+            .tab-content {
+                display: none;
+                padding: 30px;
+            }
 
-      .tab-content.active {
-        display: block;
-      }
+            .tab-content.active {
+                display: block;
+            }
 
-      .form-group {
-        margin-bottom: 20px;
-      }
+            .form-group {
+                margin-bottom: 20px;
+            }
 
-      .form-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 600;
-        color: #333;
-      }
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                color: #333;
+            }
 
-      .form-group input,
-      .form-group textarea,
-      .form-group select {
-        width: 100%;
-        padding: 12px 16px;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        font-size: 14px;
-        font-family: inherit;
-        transition: all 0.3s;
-      }
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                width: 100%;
+                padding: 12px 16px;
+                border: 2px solid #e0e0e0;
+                border-radius: 8px;
+                font-size: 14px;
+                font-family: inherit;
+                transition: all 0.3s;
+            }
 
-      .form-group input:focus,
-      .form-group textarea:focus,
-      .form-group select:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      }
+            .form-group input:focus,
+            .form-group textarea:focus,
+            .form-group select:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
 
-      .btn {
-        padding: 12px 24px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-      }
+            .btn {
+                padding: 12px 24px;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            }
 
-      .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-      }
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            }
 
-      .btn:active {
-        transform: translateY(0);
-      }
+            .btn:active {
+                transform: translateY(0);
+            }
 
-      .btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-      }
+            .btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                transform: none;
+            }
 
-      .btn-secondary {
-        background: #6c757d;
-        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
-      }
+            .btn-secondary {
+                background: #6c757d;
+                box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+            }
 
-      .response-box {
-        margin-top: 20px;
-        padding: 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border: 2px solid #e0e0e0;
-        max-height: 400px;
-        overflow-y: auto;
-        font-family: 'Courier New', monospace;
-        font-size: 13px;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-      }
+            /* 자연스러운 대화 모드 상태 표시 */
+            .conversation-state {
+                padding: 4px 12px;
+                border-radius: 15px;
+                font-size: 13px;
+                font-weight: 600;
+                display: inline-block;
+                transition: all 0.3s ease;
+            }
 
-      .status {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-        margin-left: 10px;
-      }
+            .state-idle {
+                background: #e0e0e0;
+                color: #666;
+            }
 
-      .status.success {
-        background: rgba(76, 175, 80, 0.2);
-        color: #4caf50;
-      }
+            .state-listening {
+                background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%);
+                color: white;
+                animation: pulse-listening 1.5s infinite;
+            }
 
-      .status.error {
-        background: rgba(244, 67, 54, 0.2);
-        color: #f44336;
-      }
+            .state-processing {
+                background: linear-gradient(135deg, #2196f3 0%, #03a9f4 100%);
+                color: white;
+                animation: pulse-processing 0.8s infinite;
+            }
 
-      .status.info {
-        background: rgba(33, 150, 243, 0.2);
-        color: #2196f3;
-      }
+            .state-speaking {
+                background: linear-gradient(135deg, #ff9800 0%, #ffc107 100%);
+                color: white;
+                animation: pulse-speaking 0.6s infinite;
+            }
 
-      .token-display {
-        margin-top: 15px;
-        padding: 15px;
-        background: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 8px;
-        font-size: 12px;
-        word-break: break-all;
-      }
+            @keyframes pulse-listening {
+                0%,
+                100% {
+                    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+                }
+                50% {
+                    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+                }
+            }
 
-      .file-input-wrapper {
-        position: relative;
-        display: inline-block;
-        width: 100%;
-      }
+            @keyframes pulse-processing {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.7;
+                }
+            }
 
-      .file-input-wrapper input[type='file'] {
-        position: absolute;
-        opacity: 0;
-        width: 100%;
-        height: 100%;
-        cursor: pointer;
-      }
+            @keyframes pulse-speaking {
+                0%,
+                100% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.05);
+                }
+            }
 
-      .file-input-label {
-        display: block;
-        padding: 12px 16px;
-        border: 2px dashed #e0e0e0;
-        border-radius: 8px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s;
-      }
+            .response-box {
+                margin-top: 20px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border: 2px solid #e0e0e0;
+                max-height: 400px;
+                overflow-y: auto;
+                font-family: "Courier New", monospace;
+                font-size: 13px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
 
-      .file-input-label:hover {
-        border-color: #667eea;
-        background: #f8f9ff;
-      }
+            .status {
+                display: inline-block;
+                padding: 6px 12px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 500;
+                margin-left: 10px;
+            }
 
-      .file-name {
-        margin-top: 8px;
-        font-size: 12px;
-        color: #666;
-      }
+            .status.success {
+                background: rgba(76, 175, 80, 0.2);
+                color: #4caf50;
+            }
 
-      .chat-container {
-        margin-top: 20px;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        height: 400px;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
+            .status.error {
+                background: rgba(244, 67, 54, 0.2);
+                color: #f44336;
+            }
 
-      #chat-box {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-        background: #fafafa;
-        font-size: 14px;
-        line-height: 1.6;
-      }
+            .status.info {
+                background: rgba(33, 150, 243, 0.2);
+                color: #2196f3;
+            }
 
-      .message {
-        margin-bottom: 16px;
-        padding: 12px 16px;
-        border-radius: 12px;
-        animation: fadeIn 0.3s ease-in;
-      }
+            .token-display {
+                margin-top: 15px;
+                padding: 15px;
+                background: #fff3cd;
+                border: 1px solid #ffc107;
+                border-radius: 8px;
+                font-size: 12px;
+                word-break: break-all;
+            }
 
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(5px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+            .file-input-wrapper {
+                position: relative;
+                display: inline-block;
+                width: 100%;
+            }
 
-      .message.user {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        margin-left: 20%;
-        text-align: right;
-      }
+            .file-input-wrapper input[type="file"] {
+                position: absolute;
+                opacity: 0;
+                width: 100%;
+                height: 100%;
+                cursor: pointer;
+            }
 
-      .message.interviewer {
-        background: white;
-        color: #333;
-        margin-right: 20%;
-        border: 1px solid #e0e0e0;
-      }
+            .file-input-label {
+                display: block;
+                padding: 12px 16px;
+                border: 2px dashed #e0e0e0;
+                border-radius: 8px;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
 
-      .chat-input-container {
-        display: flex;
-        gap: 12px;
-        padding: 15px;
-        border-top: 2px solid #e0e0e0;
-        background: white;
-      }
+            .file-input-label:hover {
+                border-color: #667eea;
+                background: #f8f9ff;
+            }
 
-      .chat-input-container input {
-        flex: 1;
-        padding: 12px 16px;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        font-size: 14px;
-      }
+            .file-name {
+                margin-top: 8px;
+                font-size: 12px;
+                color: #666;
+            }
 
-      .typing-indicator {
-        display: none;
-        padding: 12px 16px;
-        background: white;
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        margin-right: 20%;
-        margin-bottom: 16px;
-        color: #666;
-        font-style: italic;
-      }
+            .chat-container {
+                margin-top: 20px;
+                border: 2px solid #e0e0e0;
+                border-radius: 8px;
+                height: 400px;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
 
-      .typing-indicator.active {
-        display: block;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <h1>🤖 AI 면접 솔루션 - 통합 테스트 클라이언트</h1>
-        <div class="subtitle">
-          Auth, Resume, Interview, Socket.io 기능 테스트
-          <span
-            id="env-badge"
-            style="
-              display: inline-block;
-              margin-left: 10px;
-              padding: 4px 8px;
-              background: rgba(255, 255, 255, 0.2);
-              border-radius: 12px;
-              font-size: 11px;
-            "
-          ></span>
-        </div>
-      </div>
+            #chat-box {
+                flex: 1;
+                padding: 20px;
+                overflow-y: auto;
+                background: #fafafa;
+                font-size: 14px;
+                line-height: 1.6;
+            }
 
-      <div class="tabs">
-        <div class="tab active" onclick="switchTab('auth')">🔐 인증</div>
-        <div class="tab" onclick="switchTab('resume')">📄 이력서</div>
-        <div class="tab" onclick="switchTab('interview')">💼 면접</div>
-        <div class="tab" onclick="switchTab('socket')">💬 실시간 면접</div>
-      </div>
+            .message {
+                margin-bottom: 16px;
+                padding: 12px 16px;
+                border-radius: 12px;
+                animation: fadeIn 0.3s ease-in;
+            }
 
-      <!-- Auth Tab -->
-      <div id="auth-tab" class="tab-content active">
-        <h2>인증 테스트</h2>
-        <div class="form-group">
-          <label>이메일</label>
-          <input type="email" id="auth-email" placeholder="test@example.com" />
-        </div>
-        <div class="form-group">
-          <label>비밀번호</label>
-          <input type="password" id="auth-password" placeholder="password123" />
-        </div>
-        <div class="form-group">
-          <label>닉네임 (회원가입용)</label>
-          <input type="text" id="auth-nickname" placeholder="홍길동" />
-        </div>
-        <div style="display: flex; gap: 10px">
-          <button class="btn" onclick="testRegister()">회원가입</button>
-          <button class="btn" onclick="testLogin()">로그인</button>
-          <button class="btn btn-secondary" onclick="testRefreshToken()">
-            토큰 갱신
-          </button>
-        </div>
-        <div
-          id="auth-response"
-          class="response-box"
-          style="display: none"
-        ></div>
-        <div id="auth-token" class="token-display" style="display: none"></div>
-      </div>
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(5px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
 
-      <!-- Resume Tab -->
-      <div id="resume-tab" class="tab-content">
-        <h2>이력서 업로드 테스트</h2>
-        <div class="form-group">
-          <label>제목</label>
-          <input type="text" id="resume-title" placeholder="내 이력서" />
-        </div>
-        <div class="form-group">
-          <label>파일 선택</label>
-          <div class="file-input-wrapper">
-            <input type="file" id="resume-file" accept=".pdf,.doc,.docx" />
-            <div class="file-input-label">
-              📎 파일을 선택하거나 드래그하세요 (PDF, DOC, DOCX)
+            .message.user {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                margin-left: 20%;
+                text-align: right;
+            }
+
+            .message.interviewer {
+                background: white;
+                color: #333;
+                margin-right: 20%;
+                border: 1px solid #e0e0e0;
+            }
+
+            .chat-input-container {
+                display: flex;
+                gap: 12px;
+                padding: 15px;
+                border-top: 2px solid #e0e0e0;
+                background: white;
+            }
+
+            .chat-input-container input {
+                flex: 1;
+                padding: 12px 16px;
+                border: 2px solid #e0e0e0;
+                border-radius: 8px;
+                font-size: 14px;
+            }
+
+            .typing-indicator {
+                display: none;
+                padding: 12px 16px;
+                background: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 12px;
+                margin-right: 20%;
+                margin-bottom: 16px;
+                color: #666;
+                font-style: italic;
+            }
+
+            .typing-indicator.active {
+                display: block;
+            }
+
+            /* 음성 레벨 게이지 */
+            .voice-level-container {
+                margin-top: 15px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border: 2px solid #e0e0e0;
+            }
+
+            .voice-level-label {
+                font-size: 14px;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .voice-level-bar-container {
+                width: 100%;
+                height: 30px;
+                background: #e0e0e0;
+                border-radius: 15px;
+                overflow: hidden;
+                position: relative;
+            }
+
+            .voice-level-bar {
+                height: 100%;
+                width: 0%;
+                background: linear-gradient(90deg, #4caf50 0%, #ffeb3b 50%, #f44336 100%);
+                transition: width 0.1s ease-out;
+                border-radius: 15px;
+            }
+
+            .voice-level-text {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 12px;
+                font-weight: 600;
+                color: #333;
+                text-shadow: 0 0 2px white;
+            }
+
+            .voice-stats {
+                display: flex;
+                justify-content: space-around;
+                margin-top: 10px;
+                font-size: 12px;
+                color: #666;
+            }
+
+            .voice-stat-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .voice-stat-value {
+                font-weight: 600;
+                color: #667eea;
+                font-size: 16px;
+            }
+
+            /* 디버그 패널 스타일 */
+            .debug-panel {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                width: 400px;
+                max-height: 300px;
+                background: #1e1e1e;
+                border-top-left-radius: 12px;
+                box-shadow: -5px -5px 20px rgba(0, 0, 0, 0.3);
+                z-index: 1000;
+                transition: transform 0.3s ease;
+                font-family: "Courier New", monospace;
+            }
+
+            .debug-panel.collapsed {
+                transform: translateY(calc(100% - 40px));
+            }
+
+            .debug-panel-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 15px;
+                background: #333;
+                border-top-left-radius: 12px;
+                cursor: pointer;
+                color: #fff;
+                font-size: 13px;
+                font-weight: 600;
+            }
+
+            .debug-panel-header:hover {
+                background: #444;
+            }
+
+            .debug-panel-content {
+                height: 260px;
+                overflow-y: auto;
+                padding: 10px;
+                font-size: 11px;
+                line-height: 1.4;
+            }
+
+            .debug-log {
+                margin-bottom: 4px;
+                padding: 4px 8px;
+                border-radius: 4px;
+                white-space: pre-wrap;
+                word-break: break-all;
+            }
+
+            .debug-log.info {
+                color: #4fc3f7;
+                background: rgba(79, 195, 247, 0.1);
+            }
+
+            .debug-log.success {
+                color: #81c784;
+                background: rgba(129, 199, 132, 0.1);
+            }
+
+            .debug-log.warn {
+                color: #ffb74d;
+                background: rgba(255, 183, 77, 0.1);
+            }
+
+            .debug-log.error {
+                color: #e57373;
+                background: rgba(229, 115, 115, 0.1);
+            }
+
+            .debug-log.state {
+                color: #ba68c8;
+                background: rgba(186, 104, 200, 0.1);
+            }
+
+            .debug-timestamp {
+                color: #888;
+                margin-right: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🤖 AI 면접 솔루션 - 통합 테스트 클라이언트</h1>
+                <div class="subtitle">
+                    Auth, Resume, Interview, Socket.io 기능 테스트
+                    <span
+                        id="env-badge"
+                        style="
+                            display: inline-block;
+                            margin-left: 10px;
+                            padding: 4px 8px;
+                            background: rgba(255, 255, 255, 0.2);
+                            border-radius: 12px;
+                            font-size: 11px;
+                        "
+                    ></span>
+                </div>
             </div>
-          </div>
-          <div id="resume-file-name" class="file-name"></div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('auth', event)">🔐 인증</div>
+                <div class="tab" onclick="switchTab('resume', event)">📄 이력서</div>
+                <div class="tab" onclick="switchTab('interview', event)">💼 면접</div>
+                <div class="tab" onclick="switchTab('socket', event)">💬 실시간 면접</div>
+            </div>
+
+            <!-- Auth Tab -->
+            <div id="auth-tab" class="tab-content active">
+                <h2>인증 테스트</h2>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="auth-email" placeholder="test@example.com" />
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="auth-password" placeholder="password123" />
+                </div>
+                <div class="form-group">
+                    <label>닉네임 (회원가입용)</label>
+                    <input type="text" id="auth-nickname" placeholder="홍길동" />
+                </div>
+                <div style="display: flex; gap: 10px">
+                    <button class="btn" onclick="testRegister()">회원가입</button>
+                    <button class="btn" onclick="testLogin()">로그인</button>
+                    <button class="btn btn-secondary" onclick="testRefreshToken()">
+                        토큰 갱신
+                    </button>
+                </div>
+                <div id="auth-response" class="response-box" style="display: none"></div>
+                <div id="auth-token" class="token-display" style="display: none"></div>
+            </div>
+
+            <!-- Resume Tab -->
+            <div id="resume-tab" class="tab-content">
+                <h2>이력서 업로드 테스트</h2>
+                <div class="form-group">
+                    <label>제목</label>
+                    <input type="text" id="resume-title" placeholder="내 이력서" />
+                </div>
+                <div class="form-group">
+                    <label>파일 선택</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="resume-file" accept=".pdf,.doc,.docx" />
+                        <div class="file-input-label">
+                            📎 파일을 선택하거나 드래그하세요 (PDF, DOC, DOCX)
+                        </div>
+                    </div>
+                    <div id="resume-file-name" class="file-name"></div>
+                </div>
+                <button class="btn" onclick="testUploadResume()">이력서 업로드</button>
+                <div id="resume-response" class="response-box" style="display: none"></div>
+            </div>
+
+            <!-- Interview Tab -->
+            <div id="interview-tab" class="tab-content">
+                <h2>면접 생성 테스트</h2>
+                <div class="form-group">
+                    <label>이력서 ID</label>
+                    <input type="number" id="interview-resume-id" placeholder="1" value="1" />
+                </div>
+                <div class="form-group">
+                    <label>도메인</label>
+                    <input type="text" id="interview-domain" placeholder="백엔드" value="백엔드" />
+                </div>
+                <div class="form-group">
+                    <label>면접 유형</label>
+                    <select id="interview-type">
+                        <option value="TEXT_CHAT">텍스트 채팅</option>
+                        <option value="VIDEO_CALL">영상 통화</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>면접관 페르소나</label>
+                    <select id="interview-persona">
+                        <option value="PRESSURE">압박 면접</option>
+                        <option value="COMFORTABLE">편안한 면접</option>
+                        <option value="RANDOM">랜덤</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>면접관 수</label>
+                    <input type="number" id="interview-count" placeholder="1" value="1" min="1" />
+                </div>
+                <div class="form-group">
+                    <label>목표 시간 (분)</label>
+                    <input
+                        type="number"
+                        id="interview-duration"
+                        placeholder="30"
+                        value="30"
+                        min="1"
+                    />
+                </div>
+                <div class="form-group">
+                    <label>자기소개</label>
+                    <textarea
+                        id="interview-intro"
+                        rows="3"
+                        placeholder="안녕하세요. 백엔드 개발자입니다."
+                    ></textarea>
+                </div>
+                <button class="btn" onclick="testCreateInterview()">면접 생성</button>
+                <div id="interview-response" class="response-box" style="display: none"></div>
+            </div>
+
+            <!-- Socket Tab -->
+            <div id="socket-tab" class="tab-content">
+                <h2>실시간 면접 테스트</h2>
+                <div class="form-group">
+                    <label>Interview ID (음성 면접용)</label>
+                    <input type="number" id="socket-interview-id" placeholder="1" value="1" />
+                </div>
+
+                <!-- 면접 모드 설정 -->
+                <div class="form-group">
+                    <label>🎭 면접 모드</label>
+                    <select id="interview-mode" onchange="togglePersonaField()">
+                        <option value="practice">💡 연습 모드 (무료, Edge-TTS)</option>
+                        <option value="real">🎯 실전 모드 (유료, OpenAI TTS)</option>
+                    </select>
+                </div>
+
+                <!-- 페르소나 설정 (실전 모드일 때만 표시) -->
+                <div class="form-group" id="persona-field" style="display: none">
+                    <label>🎤 면접관 페르소나 (실전 모드 전용)</label>
+                    <select id="tts-persona">
+                        <option value="COMFORTABLE">🌸 편안한 톤 (nova)</option>
+                        <option value="PRESSURE">⚡ 압박 톤 (onyx)</option>
+                        <option value="RANDOM">🎲 중립 톤 (alloy)</option>
+                    </select>
+                </div>
+
+                <!-- 음성 증폭 설정 -->
+                <div class="form-group">
+                    <label>🎚️ 입력 증폭 (Input Gain): <span id="gain-value">1.2</span>x</label>
+                    <input
+                        type="range"
+                        id="input-gain"
+                        min="0.5"
+                        max="3.0"
+                        step="0.1"
+                        value="1.2"
+                        oninput="document.getElementById('gain-value').textContent = this.value"
+                        style="width: 100%"
+                    />
+                    <div style="font-size: 12px; color: #666; margin-top: 5px">
+                        🍎 Mac Pro 권장: 1.2x ~ 1.5x (자동 정규화로 클리핑 방지)
+                    </div>
+                </div>
+
+                <!-- 음성 임계점 설정 -->
+                <div class="form-group">
+                    <label>🔇 음성 임계점 (Threshold): <span id="threshold-value">5</span>%</label>
+                    <input
+                        type="range"
+                        id="voice-threshold"
+                        min="0"
+                        max="30"
+                        step="1"
+                        value="5"
+                        oninput="
+                            document.getElementById('threshold-value').textContent = this.value
+                        "
+                        style="width: 100%"
+                    />
+                    <div style="font-size: 12px; color: #666; margin-top: 5px">
+                        이 값보다 작은 소리는 노이즈로 간주 (0% ~ 30%, 권장: 5% ~ 10%)
+                    </div>
+                </div>
+
+                <!-- 🎙️ Mac Pro 오디오 최적화 가이드 -->
+                <div
+                    style="
+                        background: #f0f7ff;
+                        border-left: 4px solid #2196f3;
+                        padding: 12px;
+                        border-radius: 4px;
+                        margin-top: 15px;
+                        font-size: 12px;
+                        color: #333;
+                    "
+                >
+                    <strong>🍎 Mac Pro 음질 개선 팁:</strong>
+                    <ul style="margin: 8px 0 0 20px; padding: 0">
+                        <li>Input Gain: 1.2x ~ 1.5x (자동 정규화 활성)</li>
+                        <li>Threshold: 3% ~ 5% (배경 노이즈 필터)</li>
+                        <li>마이크 최대음량: 시스템 설정 → 사운드 → 입력</li>
+                        <li>AirPods/외장 마이크 사용 시 음질 향상</li>
+                        <li>브라우저 재시작 후 "▶︎ 마지막 녹음 재생" 테스트</li>
+                    </ul>
+                </div>
+
+                <!-- TTS 음성 재생 컨트롤 -->
+                <div
+                    class="form-group"
+                    style="display: flex; align-items: center; gap: 10px; margin-top: 15px"
+                >
+                    <label style="margin: 0">🔊 음성 자동 재생</label>
+                    <input type="checkbox" id="auto-play-tts" checked style="width: auto" />
+                    <span style="font-size: 12px; color: #666"
+                        >(체크 시 AI 응답을 자동으로 음성으로 재생)</span
+                    >
+                </div>
+
+                <!-- 텍스트 표시 설정 -->
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px">
+                    <label style="margin: 0">📝 AI 텍스트 표시</label>
+                    <input type="checkbox" id="show-ai-text" checked style="width: auto" />
+                    <span style="font-size: 12px; color: #666">(해제 시 실전처럼 음성만 전달)</span>
+                </div>
+
+                <!-- 현재 설정 정보 -->
+                <div
+                    style="
+                        background: #f0f7ff;
+                        border: 1px solid #2196f3;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin-bottom: 15px;
+                    "
+                >
+                    <div style="font-weight: 600; color: #1976d2; margin-bottom: 8px">
+                        📊 현재 설정
+                    </div>
+                    <div style="font-size: 13px; color: #555; line-height: 1.8">
+                        <div>
+                            • 모드:
+                            <span id="current-mode-display" style="font-weight: 600; color: #667eea"
+                                >연습 (무료)</span
+                            >
+                        </div>
+                        <div id="current-persona-display" style="display: none">
+                            • 페르소나:
+                            <span style="font-weight: 600; color: #764ba2">편안한 톤</span>
+                        </div>
+                        <div>
+                            • 예상 비용:
+                            <span id="current-cost-display" style="font-weight: 600; color: #4caf50"
+                                >$0/회</span
+                            >
+                        </div>
+                        <div>
+                            • 텍스트 표시:
+                            <span id="current-text-display" style="font-weight: 600; color: #2196f3"
+                                >ON (연습용)</span
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 음성 레벨 게이지 -->
+                <div class="voice-level-container" id="voice-level-container" style="display: none">
+                    <div class="voice-level-label">
+                        <span>🎤 음성 레벨</span>
+                        <span id="recording-time">00:00</span>
+                    </div>
+                    <div class="voice-level-bar-container">
+                        <div class="voice-level-bar" id="voice-level-bar"></div>
+                        <div class="voice-level-text" id="voice-level-text">0%</div>
+                    </div>
+                    <div class="voice-stats">
+                        <div class="voice-stat-item">
+                            <div class="voice-stat-value" id="voice-volume">0 dB</div>
+                            <div>볼륨</div>
+                        </div>
+                        <div class="voice-stat-item">
+                            <div class="voice-stat-value" id="voice-peak">0%</div>
+                            <div>피크</div>
+                        </div>
+                        <div class="voice-stat-item">
+                            <div class="voice-stat-value" id="voice-chunks">0</div>
+                            <div>청크</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-container">
+                    <div id="chat-box"></div>
+                    <div class="typing-indicator" id="typing-indicator">
+                        면접관이 답변을 작성 중입니다
+                    </div>
+
+                    <!-- 자연스러운 대화 모드 컨트롤 -->
+                    <div
+                        style="
+                            background: linear-gradient(135deg, #e8f5e9 0%, #f3e5f5 100%);
+                            border-radius: 12px;
+                            padding: 15px;
+                            margin-bottom: 15px;
+                            border: 2px solid #81c784;
+                        "
+                    >
+                        <div
+                            style="
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                flex-wrap: wrap;
+                                gap: 10px;
+                            "
+                        >
+                            <div>
+                                <div
+                                    style="
+                                        font-weight: 700;
+                                        color: #2e7d32;
+                                        font-size: 16px;
+                                        margin-bottom: 5px;
+                                    "
+                                >
+                                    🎙️ 자연스러운 대화 모드
+                                </div>
+                                <div style="font-size: 12px; color: #666">
+                                    침묵 감지 시 자동 전송 + TTS 끝나면 자동 녹음
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 15px">
+                                <div style="text-align: center">
+                                    <div style="font-size: 11px; color: #888">상태</div>
+                                    <div
+                                        id="conversation-state-display"
+                                        class="conversation-state state-idle"
+                                    >
+                                        ⏸️ 대기
+                                    </div>
+                                </div>
+                                <div style="text-align: center">
+                                    <div style="font-size: 11px; color: #888">모드</div>
+                                    <span
+                                        id="conversation-mode-status"
+                                        style="font-weight: 600; color: #999"
+                                        >비활성화</span
+                                    >
+                                </div>
+                                <button
+                                    id="conversation-mode-btn"
+                                    class="btn"
+                                    onclick="toggleConversationMode()"
+                                    style="padding: 10px 20px"
+                                >
+                                    🎙️ 대화 모드 시작
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-container">
+                        <button
+                            class="btn"
+                            id="start-record-btn"
+                            onclick="startRecording()"
+                            style="flex: 0 0 auto"
+                        >
+                            🎤 녹음
+                        </button>
+                        <button
+                            class="btn btn-secondary"
+                            id="stop-record-btn"
+                            onclick="stopRecording()"
+                            disabled
+                            style="flex: 0 0 auto"
+                        >
+                            ⏹ 중지
+                        </button>
+                        <input
+                            type="text"
+                            id="socket-input"
+                            placeholder="답변을 입력하세요..."
+                            onkeypress="if (event.key === 'Enter') sendSocketMessage();"
+                        />
+                        <button class="btn" onclick="sendSocketMessage()">전송</button>
+                    </div>
+                </div>
+                <div
+                    style="
+                        margin-top: 15px;
+                        display: flex;
+                        gap: 10px;
+                        align-items: center;
+                        flex-wrap: wrap;
+                    "
+                >
+                    <button class="btn btn-secondary" onclick="connectSocket()">연결</button>
+                    <button class="btn btn-secondary" onclick="disconnectSocket()">
+                        연결 끊기
+                    </button>
+                    <button
+                        class="btn btn-secondary"
+                        onclick="stopAudioPlayback()"
+                        id="stop-audio-btn"
+                        disabled
+                    >
+                        🔇 음성 중지
+                    </button>
+                    <span id="socket-status" class="status info">연결 안됨</span>
+                </div>
+
+                <!-- 🔄 ACK 백업 상태 표시 -->
+                <div
+                    style="
+                        margin-top: 15px;
+                        padding: 15px;
+                        background: #f8f9fa;
+                        border-radius: 8px;
+                        border: 2px solid #e0e0e0;
+                        font-size: 12px;
+                        color: #666;
+                    "
+                >
+                    <strong>🔄 오디오 청크 전송 상태:</strong>
+                    <div style="margin-top: 8px; display: flex; gap: 20px; flex-wrap: wrap">
+                        <span
+                            >📦 ACK 대기 중:
+                            <strong id="backupCount" style="color: #667eea">0</strong>개</span
+                        >
+                        <span
+                            >✅ 전송 완료:
+                            <strong id="sentCount" style="color: #4caf50">0</strong>개</span
+                        >
+                        <span
+                            >🔄 재전송:
+                            <strong id="retryCount" style="color: #ff9800">0</strong>개</span
+                        >
+                    </div>
+                </div>
+
+                <!-- 🎧 마이크 입력 즉시 재생 설정 -->
+                <div
+                    style="
+                        margin-top: 10px;
+                        padding: 12px;
+                        background: #fff;
+                        border-radius: 8px;
+                        border: 2px solid #e0e0e0;
+                        font-size: 13px;
+                        color: #444;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    "
+                >
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer">
+                        <input type="checkbox" id="play-mic-local" checked />
+                        <span>🎧 녹음 종료 시 내가 말한 음성 즉시 재생</span>
+                    </label>
+                    <button
+                        class="btn btn-secondary"
+                        onclick="playLastRecording()"
+                        style="margin-left: auto"
+                    >
+                        ▶︎ 마지막 녹음 재생
+                    </button>
+                </div>
+            </div>
         </div>
-        <button class="btn" onclick="testUploadResume()">이력서 업로드</button>
-        <div
-          id="resume-response"
-          class="response-box"
-          style="display: none"
-        ></div>
-      </div>
 
-      <!-- Interview Tab -->
-      <div id="interview-tab" class="tab-content">
-        <h2>면접 생성 테스트</h2>
-        <div class="form-group">
-          <label>이력서 ID</label>
-          <input
-            type="number"
-            id="interview-resume-id"
-            placeholder="1"
-            value="1"
-          />
+        <!-- 디버그 패널 -->
+        <div id="debug-panel" class="debug-panel collapsed">
+            <div class="debug-panel-header" onclick="toggleDebugPanel()">
+                <span>🔧 디버그 로그</span>
+                <span id="debug-toggle-icon">▲</span>
+            </div>
+            <div class="debug-panel-content" id="debug-content">
+                <div class="debug-log info">디버그 패널 초기화됨</div>
+            </div>
         </div>
-        <div class="form-group">
-          <label>도메인</label>
-          <input
-            type="text"
-            id="interview-domain"
-            placeholder="백엔드"
-            value="백엔드"
-          />
-        </div>
-        <div class="form-group">
-          <label>면접 유형</label>
-          <select id="interview-type">
-            <option value="TEXT_CHAT">텍스트 채팅</option>
-            <option value="VIDEO_CALL">영상 통화</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>면접관 페르소나</label>
-          <select id="interview-persona">
-            <option value="PRESSURE">압박 면접</option>
-            <option value="COMFORTABLE">편안한 면접</option>
-            <option value="RANDOM">랜덤</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>면접관 수</label>
-          <input
-            type="number"
-            id="interview-count"
-            placeholder="1"
-            value="1"
-            min="1"
-          />
-        </div>
-        <div class="form-group">
-          <label>목표 시간 (분)</label>
-          <input
-            type="number"
-            id="interview-duration"
-            placeholder="30"
-            value="30"
-            min="1"
-          />
-        </div>
-        <div class="form-group">
-          <label>자기소개</label>
-          <textarea
-            id="interview-intro"
-            rows="3"
-            placeholder="안녕하세요. 백엔드 개발자입니다."
-          ></textarea>
-        </div>
-        <button class="btn" onclick="testCreateInterview()">면접 생성</button>
-        <div
-          id="interview-response"
-          class="response-box"
-          style="display: none"
-        ></div>
-      </div>
 
-      <!-- Socket Tab -->
-      <div id="socket-tab" class="tab-content">
-        <h2>실시간 면접 테스트</h2>
-        <div class="chat-container">
-          <div id="chat-box"></div>
-          <div class="typing-indicator" id="typing-indicator">
-            면접관이 답변을 작성 중입니다
-          </div>
-          <div class="chat-input-container">
-            <input
-              type="text"
-              id="socket-input"
-              placeholder="답변을 입력하세요..."
-              onkeypress="if (event.key === 'Enter') sendSocketMessage();"
-            />
-            <button class="btn" onclick="sendSocketMessage()">전송</button>
-          </div>
-        </div>
-        <div style="margin-top: 15px">
-          <button class="btn btn-secondary" onclick="connectSocket()">
-            연결
-          </button>
-          <button class="btn btn-secondary" onclick="disconnectSocket()">
-            연결 끊기
-          </button>
-          <span id="socket-status" class="status info" style="margin-left: 10px"
-            >연결 안됨</span
-          >
-        </div>
-      </div>
-    </div>
+        <script>
+            // 🔧 디버그 패널 함수
+            function toggleDebugPanel() {
+                const panel = document.getElementById("debug-panel");
+                const icon = document.getElementById("debug-toggle-icon");
+                panel.classList.toggle("collapsed");
+                icon.textContent = panel.classList.contains("collapsed") ? "▲" : "▼";
+            }
 
-    <script>
-      // API Base URL
-      const getApiBaseUrl = () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const forcedEnv = urlParams.get('env');
+            function addDebugLog(message, type = "info") {
+                const content = document.getElementById("debug-content");
+                if (!content) return;
 
-        // 직접 접근 모드 (포트 3000으로 직접 연결)
-        if (forcedEnv === 'direct' || forcedEnv === 'dev') {
-          return 'http://localhost:3000';
-        }
+                const timestamp = new Date().toLocaleTimeString("ko-KR", {
+                    hour12: false,
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    fractionalSecondDigits: 3,
+                });
 
-        // 현재 페이지의 origin 사용 (CORS 문제 방지)
-        // BFF 서비스에서 제공되는 경우: http://localhost 또는 https://localhost
-        // 로컬 파일로 열린 경우: http://127.0.0.1:5500 -> http://localhost로 변환
-        const hostname = window.location.hostname;
-        const protocol = window.location.protocol;
-        const isLocalhost =
-          hostname === '127.0.0.1' ||
-          hostname === 'localhost' ||
-          hostname === '';
+                const logDiv = document.createElement("div");
+                logDiv.className = `debug-log ${type}`;
+                logDiv.innerHTML = `<span class="debug-timestamp">[${timestamp}]</span>${message}`;
 
-        if (isLocalhost) {
-          // 127.0.0.1에서 접근해도 localhost로 통일하여 CORS 문제 방지
-          return protocol === 'https:'
-            ? 'https://localhost'
-            : 'http://localhost';
-        }
+                content.appendChild(logDiv);
+                content.scrollTop = content.scrollHeight;
 
-        return window.location.origin;
-      };
+                // 최대 200개 로그 유지
+                while (content.children.length > 200) {
+                    content.removeChild(content.firstChild);
+                }
+            }
 
-      const API_BASE_URL = getApiBaseUrl();
-      let accessToken = localStorage.getItem('accessToken') || '';
-      let socket = null;
+            // API Base URL
+            const getApiBaseUrl = () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const forcedEnv = urlParams.get("env");
 
-      // 환경 배지 업데이트
-      const envBadge = document.getElementById('env-badge');
-      if (envBadge) {
-        const isLocal = API_BASE_URL.includes('localhost');
-        envBadge.textContent = isLocal ? '🔧 로컬' : '🚀 배포';
-        envBadge.style.background = isLocal
-          ? 'rgba(255, 193, 7, 0.3)'
-          : 'rgba(76, 175, 80, 0.3)';
-      }
+                // 직접 접근 모드 (포트 3000으로 직접 연결)
+                if (forcedEnv === "direct" || forcedEnv === "dev") {
+                    return "http://localhost:3000";
+                }
 
-      // Tab 전환
-      function switchTab(tabName) {
-        document
-          .querySelectorAll('.tab')
-          .forEach((tab) => tab.classList.remove('active'));
-        document
-          .querySelectorAll('.tab-content')
-          .forEach((content) => content.classList.remove('active'));
+                // 현재 페이지의 origin 사용 (CORS 문제 방지)
+                // BFF 서비스에서 제공되는 경우: http://localhost 또는 https://localhost
+                // 로컬 파일로 열린 경우: http://127.0.0.1:5500 -> http://localhost로 변환
+                const hostname = window.location.hostname;
+                const protocol = window.location.protocol;
+                const isLocalhost =
+                    hostname === "127.0.0.1" || hostname === "localhost" || hostname === "";
 
-        event.target.classList.add('active');
-        document.getElementById(`${tabName}-tab`).classList.add('active');
-      }
+                if (isLocalhost) {
+                    // 127.0.0.1에서 접근해도 localhost로 통일하여 CORS 문제 방지
+                    return protocol === "https:" ? "https://localhost" : "http://localhost";
+                }
 
-      // API 호출 헬퍼
-      async function apiCall(endpoint, options = {}) {
-        const url = `${API_BASE_URL}${endpoint}`;
-        const headers = {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        };
+                return window.location.origin;
+            };
 
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`;
-        }
+            const API_BASE_URL = getApiBaseUrl();
+            let accessToken = localStorage.getItem("accessToken") || "";
+            let socket = null;
+            let currentAudioElement = null; // 현재 재생 중인 오디오
+            let accumulatedText = ""; // Stream으로 받은 텍스트 누적
 
-        try {
-          const response = await fetch(url, {
-            ...options,
-            headers,
-          });
+            // TTS 스트리밍 버퍼/재생 상태 (대화 모드와 공유)
+            let ttsAudioBuffers = new Map(); // key -> { chunks: Uint8Array[], isFinal: boolean }
+            let ttsPlaybackQueue = [];
+            let ttsQueuedKeys = new Set();
+            let ttsIsPlaying = false;
+            let ttsDirectSeq = 0;
+            let ttsDirectCurrentKey = null;
+            let ttsAudioContext = null;
+            let ttsSourceNode = null;
 
-          const data = await response.json();
-          return { ok: response.ok, status: response.status, data };
-        } catch (error) {
-          return { ok: false, error: error.message };
-        }
-      }
+            // 🔄 ACK 기반 재시도 메커니즘 변수
+            const MAX_RETRIES = 1; // 최대 재시도 횟수 (많은 메시지 방지)
+            const RETRY_TIMEOUT = 10000; // ACK 대기 시간 (10초 - STT 처리 시간 고려)
+            let chunkIdCounter = 0; // 청크 ID 카운터
+            let sentCount = 0; // 전송 완료 카운터
+            let retryCount = 0; // 재전송 카운터
+            let pendingAcks = new Map(); // chunkId -> {payload, retryCount, timeoutId}
 
-      // Auth 테스트
-      async function testRegister() {
-        const email = document.getElementById('auth-email').value;
-        const password = document.getElementById('auth-password').value;
-        const nickname = document.getElementById('auth-nickname').value;
+            // 환경 배지 업데이트
+            const envBadge = document.getElementById("env-badge");
+            if (envBadge) {
+                const isLocal = API_BASE_URL.includes("localhost");
+                envBadge.textContent = isLocal ? "🔧 로컬" : "🚀 배포";
+                envBadge.style.background = isLocal
+                    ? "rgba(255, 193, 7, 0.3)"
+                    : "rgba(76, 175, 80, 0.3)";
+            }
 
-        if (!email || !password || !nickname) {
-          alert('모든 필드를 입력해주세요.');
-          return;
-        }
+            // Tab 전환
+            function switchTab(tabName, event) {
+                document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+                document
+                    .querySelectorAll(".tab-content")
+                    .forEach((content) => content.classList.remove("active"));
 
-        const result = await apiCall('/api/v1/auth/register', {
-          method: 'POST',
-          body: JSON.stringify({ email, password, nickname }),
-        });
+                if (event) {
+                    event.target.classList.add("active");
+                } else {
+                    // event가 없으면 탭 이름으로 직접 찾아서 활성화
+                    document
+                        .querySelector(`.tab[onclick*="'${tabName}'"]`)
+                        ?.classList.add("active");
+                }
+                document.getElementById(`${tabName}-tab`).classList.add("active");
+            }
 
-        const responseBox = document.getElementById('auth-response');
-        const tokenBox = document.getElementById('auth-token');
+            // API 호출 헬퍼
+            async function apiCall(endpoint, options = {}) {
+                const url = `${API_BASE_URL}${endpoint}`;
+                const headers = {
+                    "Content-Type": "application/json",
+                    ...options.headers,
+                };
 
-        responseBox.style.display = 'block';
-        responseBox.textContent = JSON.stringify(result, null, 2);
-        responseBox.className =
-          'response-box ' + (result.ok ? 'status success' : 'status error');
+                if (accessToken) {
+                    headers["Authorization"] = `Bearer ${accessToken}`;
+                }
 
-        if (result.ok && result.data.accessToken) {
-          accessToken = result.data.accessToken;
-          localStorage.setItem('accessToken', accessToken);
-          tokenBox.style.display = 'block';
-          tokenBox.textContent = `Access Token: ${accessToken.substring(0, 50)}...`;
-        }
-      }
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        headers,
+                    });
 
-      async function testLogin() {
-        const email = document.getElementById('auth-email').value;
-        const password = document.getElementById('auth-password').value;
+                    const data = await response.json();
+                    return { ok: response.ok, status: response.status, data };
+                } catch (error) {
+                    return { ok: false, error: error.message };
+                }
+            }
 
-        if (!email || !password) {
-          alert('이메일과 비밀번호를 입력해주세요.');
-          return;
-        }
+            // Auth 테스트
+            async function testRegister() {
+                const email = document.getElementById("auth-email").value;
+                const password = document.getElementById("auth-password").value;
+                const nickname = document.getElementById("auth-nickname").value;
 
-        const result = await apiCall('/api/v1/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password }),
-        });
+                if (!email || !password || !nickname) {
+                    alert("모든 필드를 입력해주세요.");
+                    return;
+                }
 
-        const responseBox = document.getElementById('auth-response');
-        const tokenBox = document.getElementById('auth-token');
+                const result = await apiCall("/api/v1/auth/register", {
+                    method: "POST",
+                    body: JSON.stringify({ email, password, nickname }),
+                });
 
-        responseBox.style.display = 'block';
-        responseBox.textContent = JSON.stringify(result, null, 2);
-        responseBox.className =
-          'response-box ' + (result.ok ? 'status success' : 'status error');
+                const responseBox = document.getElementById("auth-response");
+                const tokenBox = document.getElementById("auth-token");
 
-        if (result.ok && result.data.accessToken) {
-          accessToken = result.data.accessToken;
-          localStorage.setItem('accessToken', accessToken);
-          tokenBox.style.display = 'block';
-          tokenBox.textContent = `Access Token: ${accessToken.substring(0, 50)}...`;
-        }
-      }
+                responseBox.style.display = "block";
+                responseBox.textContent = JSON.stringify(result, null, 2);
+                responseBox.className =
+                    "response-box " + (result.ok ? "status success" : "status error");
 
-      async function testRefreshToken() {
-        const refreshToken = prompt('Refresh Token을 입력하세요:');
-        if (!refreshToken) return;
+                if (result.ok && result.data.accessToken) {
+                    accessToken = result.data.accessToken;
+                    localStorage.setItem("accessToken", accessToken);
+                    tokenBox.style.display = "block";
+                    tokenBox.textContent = `Access Token: ${accessToken.substring(0, 50)}...`;
+                }
+            }
 
-        const result = await apiCall('/api/v1/auth/refresh', {
-          method: 'POST',
-          body: JSON.stringify({ refreshToken }),
-        });
+            async function testLogin() {
+                const email = document.getElementById("auth-email").value;
+                const password = document.getElementById("auth-password").value;
 
-        const responseBox = document.getElementById('auth-response');
-        const tokenBox = document.getElementById('auth-token');
+                if (!email || !password) {
+                    alert("이메일과 비밀번호를 입력해주세요.");
+                    return;
+                }
 
-        responseBox.style.display = 'block';
-        responseBox.textContent = JSON.stringify(result, null, 2);
-        responseBox.className =
-          'response-box ' + (result.ok ? 'status success' : 'status error');
+                const result = await apiCall("/api/v1/auth/login", {
+                    method: "POST",
+                    body: JSON.stringify({ email, password }),
+                });
 
-        if (result.ok && result.data.accessToken) {
-          accessToken = result.data.accessToken;
-          localStorage.setItem('accessToken', accessToken);
-          tokenBox.style.display = 'block';
-          tokenBox.textContent = `Access Token: ${accessToken.substring(0, 50)}...`;
-        }
-      }
+                const responseBox = document.getElementById("auth-response");
+                const tokenBox = document.getElementById("auth-token");
 
-      // Resume 테스트
-      document
-        .getElementById('resume-file')
-        .addEventListener('change', function (e) {
-          const fileName = e.target.files[0]?.name || '';
-          document.getElementById('resume-file-name').textContent = fileName
-            ? `선택된 파일: ${fileName}`
-            : '';
-        });
+                responseBox.style.display = "block";
+                responseBox.textContent = JSON.stringify(result, null, 2);
+                responseBox.className =
+                    "response-box " + (result.ok ? "status success" : "status error");
 
-      async function testUploadResume() {
-        const fileInput = document.getElementById('resume-file');
-        const title =
-          document.getElementById('resume-title').value ||
-          fileInput.files[0]?.name ||
-          '이력서';
+                if (result.ok && result.data.accessToken) {
+                    accessToken = result.data.accessToken;
+                    localStorage.setItem("accessToken", accessToken);
+                    tokenBox.style.display = "block";
+                    tokenBox.textContent = `Access Token: ${accessToken.substring(0, 50)}...`;
+                }
+            }
 
-        if (!fileInput.files[0]) {
-          alert('파일을 선택해주세요.');
-          return;
-        }
+            async function testRefreshToken() {
+                const refreshToken = prompt("Refresh Token을 입력하세요:");
+                if (!refreshToken) return;
 
-        if (!accessToken) {
-          alert('먼저 로그인해주세요.');
-          return;
-        }
+                const result = await apiCall("/api/v1/auth/refresh", {
+                    method: "POST",
+                    body: JSON.stringify({ refreshToken }),
+                });
 
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        formData.append('title', title);
+                const responseBox = document.getElementById("auth-response");
+                const tokenBox = document.getElementById("auth-token");
 
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/api/v1/resumes/upload`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-              body: formData,
-            },
-          );
+                responseBox.style.display = "block";
+                responseBox.textContent = JSON.stringify(result, null, 2);
+                responseBox.className =
+                    "response-box " + (result.ok ? "status success" : "status error");
 
-          const data = await response.json();
-          const result = { ok: response.ok, status: response.status, data };
+                if (result.ok && result.data.accessToken) {
+                    accessToken = result.data.accessToken;
+                    localStorage.setItem("accessToken", accessToken);
+                    tokenBox.style.display = "block";
+                    tokenBox.textContent = `Access Token: ${accessToken.substring(0, 50)}...`;
+                }
+            }
 
-          const responseBox = document.getElementById('resume-response');
-          responseBox.style.display = 'block';
-          responseBox.textContent = JSON.stringify(result, null, 2);
-          responseBox.className =
-            'response-box ' + (result.ok ? 'status success' : 'status error');
-        } catch (error) {
-          const responseBox = document.getElementById('resume-response');
-          responseBox.style.display = 'block';
-          responseBox.textContent = JSON.stringify(
-            { ok: false, error: error.message },
-            null,
-            2,
-          );
-          responseBox.className = 'response-box status error';
-        }
-      }
+            // Resume 테스트
+            document.getElementById("resume-file").addEventListener("change", function (e) {
+                const fileName = e.target.files[0]?.name || "";
+                document.getElementById("resume-file-name").textContent = fileName
+                    ? `선택된 파일: ${fileName}`
+                    : "";
+            });
 
-      // Interview 테스트
-      async function testCreateInterview() {
-        const resumeId = parseInt(
-          document.getElementById('interview-resume-id').value,
-        );
-        const domain = document.getElementById('interview-domain').value;
-        const type = document.getElementById('interview-type').value;
-        const persona = document.getElementById('interview-persona').value;
-        const interviewerCount = parseInt(
-          document.getElementById('interview-count').value,
-        );
-        const targetDurationMinutes = parseInt(
-          document.getElementById('interview-duration').value,
-        );
-        const selfIntroduction =
-          document.getElementById('interview-intro').value;
+            async function testUploadResume() {
+                const fileInput = document.getElementById("resume-file");
+                const title =
+                    document.getElementById("resume-title").value ||
+                    fileInput.files[0]?.name ||
+                    "이력서";
 
-        if (!resumeId || !domain) {
-          alert('이력서 ID와 도메인을 입력해주세요.');
-          return;
-        }
+                if (!fileInput.files[0]) {
+                    alert("파일을 선택해주세요.");
+                    return;
+                }
 
-        const result = await apiCall('/api/v1/interviews', {
-          method: 'POST',
-          body: JSON.stringify({
-            resumeId,
-            domain,
-            type,
-            persona,
-            interviewerCount,
-            targetDurationMinutes,
-            selfIntroduction,
-          }),
-        });
+                if (!accessToken) {
+                    alert("먼저 로그인해주세요.");
+                    return;
+                }
 
-        const responseBox = document.getElementById('interview-response');
-        responseBox.style.display = 'block';
-        responseBox.textContent = JSON.stringify(result, null, 2);
-        responseBox.className =
-          'response-box ' + (result.ok ? 'status success' : 'status error');
-      }
+                const formData = new FormData();
+                formData.append("file", fileInput.files[0]);
+                formData.append("title", title);
 
-      // Socket 테스트
-      function getSocketUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const forcedEnv = urlParams.get('env');
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/v1/resumes/upload`, {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                        },
+                        body: formData,
+                    });
 
-        // 직접 접근 모드 (포트 4000으로 직접 연결)
-        if (forcedEnv === 'direct' || forcedEnv === 'dev') {
-          return 'http://localhost:4000';
-        }
+                    const data = await response.json();
+                    const result = { ok: response.ok, status: response.status, data };
 
-        // Ingress를 통한 접근 (기본값)
-        // Socket.io는 /socket.io 경로로 라우팅됨
-        const hostname = window.location.hostname;
-        const protocol = window.location.protocol;
-        const isLocalhost =
-          hostname === '127.0.0.1' ||
-          hostname === 'localhost' ||
-          hostname === '';
+                    const responseBox = document.getElementById("resume-response");
+                    responseBox.style.display = "block";
+                    responseBox.textContent = JSON.stringify(result, null, 2);
+                    responseBox.className =
+                        "response-box " + (result.ok ? "status success" : "status error");
+                } catch (error) {
+                    const responseBox = document.getElementById("resume-response");
+                    responseBox.style.display = "block";
+                    responseBox.textContent = JSON.stringify(
+                        { ok: false, error: error.message },
+                        null,
+                        2,
+                    );
+                    responseBox.className = "response-box status error";
+                }
+            }
 
-        if (isLocalhost) {
-          // Ingress는 80/443 포트 사용
-          // CORS 문제 방지를 위해 항상 localhost 사용 (127.0.0.1도 localhost로 변환)
-          // HTTP로 접근해도 HTTPS로 리다이렉트되므로, 가능하면 HTTPS 사용 권장
-          // 하지만 CORS preflight 문제를 피하기 위해 현재 프로토콜 유지
-          const currentProtocol = window.location.protocol;
-          return currentProtocol === 'https:'
-            ? 'https://localhost'
-            : 'http://localhost';
-        }
+            // Interview 테스트
+            async function testCreateInterview() {
+                const resumeId = parseInt(document.getElementById("interview-resume-id").value);
+                const domain = document.getElementById("interview-domain").value;
+                const type = document.getElementById("interview-type").value;
+                const persona = document.getElementById("interview-persona").value;
+                const interviewerCount = parseInt(document.getElementById("interview-count").value);
+                const targetDurationMinutes = parseInt(
+                    document.getElementById("interview-duration").value,
+                );
+                const selfIntroduction = document.getElementById("interview-intro").value;
 
-        return window.location.origin;
-      }
+                if (!resumeId || !domain) {
+                    alert("이력서 ID와 도메인을 입력해주세요.");
+                    return;
+                }
 
-      function connectSocket() {
-        if (socket && socket.connected) {
-          alert('이미 연결되어 있습니다.');
-          return;
-        }
+                const result = await apiCall("/api/v1/interviews", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        resumeId,
+                        domain,
+                        type,
+                        persona,
+                        interviewerCount,
+                        targetDurationMinutes,
+                        selfIntroduction,
+                    }),
+                });
 
-        // 토큰이 없으면 경고
-        if (!accessToken) {
-          alert('먼저 로그인하여 액세스 토큰을 받아주세요.');
-          return;
-        }
+                const responseBox = document.getElementById("interview-response");
+                responseBox.style.display = "block";
+                responseBox.textContent = JSON.stringify(result, null, 2);
+                responseBox.className =
+                    "response-box " + (result.ok ? "status success" : "status error");
+            }
 
-        const socketUrl = getSocketUrl();
-        socket = io(socketUrl, {
-          path: '/socket.io',
-          transports: ['polling', 'websocket'],
-          reconnection: true,
-          auth: {
-            token: accessToken,
-          },
-          // query 파라미터로도 전달 (서버가 auth 또는 query에서 토큰을 찾음)
-          query: {
-            token: accessToken,
-          },
-        });
+            // ========== 자연스러운 대화 모드 ==========
+            // 대화 상태 머신
+            const ConversationState = {
+                IDLE: "IDLE", // 대기 중
+                LISTENING: "LISTENING", // 녹음 중
+                PROCESSING: "PROCESSING", // STT/LLM 처리 중
+                SPEAKING: "SPEAKING", // TTS 재생 중
+            };
 
-        socket.on('connect', () => {
-          document.getElementById('socket-status').textContent = '연결됨';
-          document.getElementById('socket-status').className = 'status success';
-          addChatMessage('system', '서버에 연결되었습니다.');
-        });
+            let conversationState = ConversationState.IDLE;
+            let conversationModeEnabled = false; // 자연스러운 대화 모드 활성화 여부
+            let conversationAutoConnected = false; // 대화 모드에서 자동으로 소켓을 붙였는지 여부
+            let silenceStartTime = null; // 침묵 시작 시간
+            let hasSpeech = false; // 음성 감지 여부
 
-        socket.on('disconnect', () => {
-          document.getElementById('socket-status').textContent = '연결 끊김';
-          document.getElementById('socket-status').className = 'status error';
-          addChatMessage('system', '서버 연결이 끊어졌습니다.');
-        });
+            // 🎯 VAD 히스테리시스 설정 (배경 노이즈에 강인함)
+            const SPEECH_START_THRESHOLD = 0.05; // 음성 시작 임계값 (확실한 음성만)
+            const SPEECH_END_THRESHOLD = 0.035; // 음성 종료 임계값 (노이즈 0.025~0.030 고려)
+            const SILENCE_DURATION_MS = 800; // 침묵 지속 시간 (0.8초)
+            const MIN_SPEECH_DURATION_MS = 250; // 최소 음성 길이 (0.25초)
+            let speechStartTime = null; // 음성 시작 시간
 
-        socket.on('stream_chunk', (text) => {
-          document
-            .getElementById('typing-indicator')
-            .classList.remove('active');
-          let lastMsg = document.getElementById('chat-box').lastElementChild;
-          if (!lastMsg || !lastMsg.classList.contains('interviewer')) {
-            addChatMessage('interviewer', '');
-            lastMsg = document.getElementById('chat-box').lastElementChild;
-          }
-          lastMsg.textContent += text;
-          document.getElementById('chat-box').scrollTop =
-            document.getElementById('chat-box').scrollHeight;
-        });
+            // 대화 상태 변경 함수
+            function setConversationState(newState) {
+                const prevState = conversationState;
+                conversationState = newState;
 
-        socket.on('stream_end', () => {
-          document
-            .getElementById('typing-indicator')
-            .classList.remove('active');
-        });
+                // UI 업데이트
+                const stateDisplay = document.getElementById("conversation-state-display");
+                if (stateDisplay) {
+                    const stateLabels = {
+                        IDLE: "⏸️ 대기",
+                        LISTENING: "🎤 듣는 중",
+                        PROCESSING: "⚙️ 처리 중",
+                        SPEAKING: "🔊 말하는 중",
+                    };
+                    stateDisplay.textContent = stateLabels[newState] || newState;
+                    stateDisplay.className = `conversation-state state-${newState.toLowerCase()}`;
+                }
 
-        socket.on('error', (error) => {
-          addChatMessage('system', `오류: ${error}`);
-        });
-      }
+                addDebugLog(`상태 변경: ${prevState} → ${newState}`, "state");
+            }
 
-      function disconnectSocket() {
-        if (socket) {
-          socket.disconnect();
-          socket = null;
-          document.getElementById('socket-status').textContent = '연결 안됨';
-          document.getElementById('socket-status').className = 'status info';
-        }
-      }
+            // 자연스러운 대화 모드 토글
+            function toggleConversationMode() {
+                conversationModeEnabled = !conversationModeEnabled;
+                const btn = document.getElementById("conversation-mode-btn");
+                const status = document.getElementById("conversation-mode-status");
 
-      function sendSocketMessage() {
-        if (!socket || !socket.connected) {
-          alert('먼저 연결해주세요.');
-          return;
-        }
+                if (conversationModeEnabled) {
+                    btn.textContent = "🔴 대화 모드 종료";
+                    btn.style.background = "linear-gradient(135deg, #f44336 0%, #e91e63 100%)";
+                    status.textContent = "활성화";
+                    status.style.color = "#4caf50";
+                    addChatMessage("system", "🎙️ 자연스러운 대화 모드가 시작되었습니다.");
 
-        const input = document.getElementById('socket-input');
-        const message = input.value.trim();
-        if (!message) return;
+                    // 1. 소켓이 연결되어 있지 않으면 자동 연결
+                    if (!socket || !socket.connected) {
+                        addChatMessage("system", "🔌 소켓 연결 중...");
+                        connectSocket();
+                        conversationAutoConnected = true;
 
-        addChatMessage('user', message);
-        input.value = '';
+                        // 소켓 연결 완료 후 나머지 작업 진행
+                        socket.once("connect", () => {
+                            startConversationModeSequence();
+                        });
+                    } else {
+                        conversationAutoConnected = false;
+                        startConversationModeSequence();
+                    }
+                } else {
+                    btn.textContent = "🎙️ 대화 모드 시작";
+                    btn.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+                    status.textContent = "비활성화";
+                    status.style.color = "#999";
+                    addChatMessage("system", "🛑 자연스러운 대화 모드가 종료되었습니다.");
+                    setConversationState(ConversationState.IDLE);
 
-        document.getElementById('typing-indicator').classList.add('active');
-        socket.emit('send_answer', { answer: message });
-      }
+                    // 녹음 중지
+                    if (isRecording) {
+                        stopRecording();
+                    }
 
-      function addChatMessage(type, text) {
-        const chatBox = document.getElementById('chat-box');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.textContent = text;
-        chatBox.appendChild(messageDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }
+                    // 자동 연결한 소켓은 종료 시 함께 끊어 UX를 분리
+                    if (conversationAutoConnected && socket && socket.connected) {
+                        addChatMessage("system", "🔌 대화 모드 종료로 소켓 연결을 해제합니다.");
+                        disconnectSocket();
+                        conversationAutoConnected = false;
+                    }
+                }
+            }
 
-      // 페이지 로드 시 토큰 복원
-      window.addEventListener('load', () => {
-        if (accessToken) {
-          document.getElementById('auth-token').style.display = 'block';
-          document.getElementById('auth-token').textContent =
-            `Access Token: ${accessToken.substring(0, 50)}...`;
-        }
-      });
-    </script>
-  </body>
+            // 대화 모드 시작 시퀀스 (소켓 연결 후 실행)
+            function startConversationModeSequence() {
+                if (!socket || !socket.connected) {
+                    addChatMessage("system", "⚠️ 소켓이 연결되지 않았습니다. 다시 시도해주세요.");
+                    return;
+                }
+
+                // TTS 버퍼/큐 초기화
+                ttsAudioBuffers.clear();
+                ttsPlaybackQueue = [];
+                ttsQueuedKeys.clear();
+                ttsIsPlaying = false;
+                ttsDirectCurrentKey = null;
+
+                // 2. 환영 메시지 표시
+                const welcomeMessage = "안녕하세요. 간단하게 자기소개 부탁드립니다.";
+                addChatMessage("interviewer", welcomeMessage);
+
+                // 3. TTS 재생 요청
+                addChatMessage("system", "🎤 면접관 음성 생성 중...");
+
+                // 서버에 TTS 요청 (Socket.IO 이벤트)
+                const interviewId = document.getElementById("socket-interview-id").value;
+                const persona = document.getElementById("tts-persona").value;
+
+                socket.emit("text_to_speech", {
+                    text: welcomeMessage,
+                    interviewId: parseInt(interviewId, 10) || 1,
+                    persona: persona,
+                });
+
+                // TTS 재생 완료 후 자동으로 녹음 시작 (onTTSPlaybackComplete 콜백에서 처리)
+                setConversationState(ConversationState.SPEAKING);
+            }
+
+            // TTS 재생 완료 후 자동 녹음 시작
+            function onTTSPlaybackComplete() {
+                addDebugLog(
+                    `🎯 onTTSPlaybackComplete 호출됨 | 상태: ${conversationState} | 대화모드: ${conversationModeEnabled}`,
+                    "state",
+                );
+
+                if (!conversationModeEnabled) {
+                    addDebugLog("대화 모드 비활성화 - 녹음 시작 안함", "warn");
+                    return;
+                }
+
+                addDebugLog("상태를 IDLE로 변경 시도", "state");
+                setConversationState(ConversationState.IDLE);
+                addDebugLog(`상태 변경 후 확인: ${conversationState}`, "state");
+
+                // 잠시 대기 후 녹음 시작 (자연스러운 전환)
+                addDebugLog("500ms 후 녹음 시작 예약", "info");
+                setTimeout(() => {
+                    addDebugLog(
+                        `녹음 시작 체크 | enabled: ${conversationModeEnabled} | state: ${conversationState} | isIdle: ${conversationState === ConversationState.IDLE}`,
+                        "info",
+                    );
+                    if (conversationModeEnabled && conversationState === ConversationState.IDLE) {
+                        addDebugLog("✅ 조건 충족 - 녹음 시작!", "success");
+                        addChatMessage("system", "🎤 다시 듣고 있습니다...");
+                        startRecording();
+                    } else {
+                        addDebugLog(
+                            `❌ 녹음 시작 조건 불충족 | enabled: ${conversationModeEnabled} | state: ${conversationState}`,
+                            "error",
+                        );
+                    }
+                }, 500);
+            }
+
+            // VAD 기반 자동 전송 체크 (히스테리시스 방식)
+            function checkVADAutoSend(rms) {
+                // 디버그 로그: 매 2초마다 상태 출력
+                if (!checkVADAutoSend.lastLog || Date.now() - checkVADAutoSend.lastLog > 2000) {
+                    const currentThreshold = hasSpeech
+                        ? SPEECH_END_THRESHOLD
+                        : SPEECH_START_THRESHOLD;
+                    addDebugLog(
+                        `VAD | rms: ${rms.toFixed(4)} | th: ${currentThreshold.toFixed(3)} | speech: ${hasSpeech} | silence: ${silenceStartTime ? Date.now() - silenceStartTime : "-"}ms`,
+                        "info",
+                    );
+                    checkVADAutoSend.lastLog = Date.now();
+                }
+
+                if (!conversationModeEnabled) return;
+                if (conversationState !== ConversationState.LISTENING) return;
+
+                const now = Date.now();
+
+                // 🎯 히스테리시스 VAD 로직
+                if (!hasSpeech) {
+                    // 음성 미감지 상태: 높은 threshold(0.05) 넘어야 음성 시작
+                    if (rms > SPEECH_START_THRESHOLD) {
+                        hasSpeech = true;
+                        speechStartTime = now;
+                        silenceStartTime = null;
+                        addDebugLog(
+                            `🎤 음성 시작 감지 (rms: ${rms.toFixed(4)} > ${SPEECH_START_THRESHOLD})`,
+                            "success",
+                        );
+                    }
+                } else {
+                    // 음성 감지 상태: 낮은 threshold(0.025) 아래로 내려가야 침묵
+                    if (rms > SPEECH_END_THRESHOLD) {
+                        // 아직 음성 중 - 침묵 타이머 리셋
+                        silenceStartTime = null;
+                    } else {
+                        // 침묵 시작 또는 지속
+                        if (silenceStartTime === null) {
+                            silenceStartTime = now;
+                            addDebugLog(
+                                `🔇 침묵 시작 (rms: ${rms.toFixed(4)} < ${SPEECH_END_THRESHOLD})`,
+                                "info",
+                            );
+                        }
+
+                        const silenceDuration = now - silenceStartTime;
+                        const speechDuration = speechStartTime
+                            ? silenceStartTime - speechStartTime
+                            : 0;
+
+                        // 충분한 음성이 있고 침묵이 800ms 이상이면 자동 전송
+                        if (
+                            speechDuration >= MIN_SPEECH_DURATION_MS &&
+                            silenceDuration >= SILENCE_DURATION_MS
+                        ) {
+                            addDebugLog(
+                                `✅ VAD 자동 전송: 음성 ${speechDuration}ms, 침묵 ${silenceDuration}ms`,
+                                "success",
+                            );
+
+                            // 녹음 중지 및 처리
+                            stopRecording();
+                            setConversationState(ConversationState.PROCESSING);
+
+                            // VAD 상태 리셋
+                            hasSpeech = false;
+                            speechStartTime = null;
+                            silenceStartTime = null;
+                        }
+                    }
+                }
+            }
+
+            // Socket 테스트
+            let mediaRecorder = null;
+            let audioChunks = [];
+            let audioContext = null;
+            let analyser = null;
+            let microphone = null;
+            let processor = null;
+            let pcmChunks = [];
+            let chunkInterval = null;
+            let recordingStartTime = null;
+            let recordingInterval = null;
+            let lastRecordingPCM = null; // 마지막 녹음의 통합 PCM16 버퍼
+            let lastRecordingPCMChunks = []; // 녹음 중 수집한 PCM16 청크들
+            let isRecording = false; // 🔴 녹음 상태 플래그 (전역, toggleConversationMode에서 접근 가능)
+
+            // 🔄 백업 상태 업데이트 함수
+            function updateBackupStatus() {
+                document.getElementById("backupCount").textContent = pendingAcks.size;
+                document.getElementById("sentCount").textContent = sentCount;
+                document.getElementById("retryCount").textContent = retryCount;
+            }
+
+            // 🔄 ACK 타임아웃 처리 (재전송)
+            function handleAckTimeout(chunkId, retryData) {
+                if (!pendingAcks.has(chunkId)) return; // 이미 ACK 받음
+
+                retryData.retryCount++;
+
+                if (retryData.retryCount >= MAX_RETRIES) {
+                    // 최대 재시도 초과 - 디버그 패널에 로그
+                    addDebugLog(`ACK 타임아웃: ${chunkId}`, "error");
+                    pendingAcks.delete(chunkId);
+                    updateBackupStatus();
+                    return;
+                }
+
+                // 재전송
+                retryCount++;
+                addDebugLog(`재전송 (${retryData.retryCount}/${MAX_RETRIES}): ${chunkId}`, "warn");
+                socket.emit("audio_chunk", retryData.payload);
+
+                // 새 타임아웃 설정
+                retryData.timeoutId = setTimeout(() => {
+                    handleAckTimeout(chunkId, retryData);
+                }, RETRY_TIMEOUT);
+
+                updateBackupStatus();
+            }
+
+            // 🎧 마지막 녹음 재생 (로컬)
+            function playLastRecording() {
+                try {
+                    if (!lastRecordingPCM || lastRecordingPCM.length === 0) {
+                        addChatMessage("system", "ℹ️ 재생할 최근 녹음이 없습니다.");
+                        return;
+                    }
+                    const wavBlob = createWavFromPCM16(lastRecordingPCM, 16000);
+                    const url = URL.createObjectURL(wavBlob);
+                    if (currentAudioElement) {
+                        try {
+                            currentAudioElement.pause();
+                        } catch {}
+                    }
+                    currentAudioElement = new Audio(url);
+                    currentAudioElement.onended = () => {
+                        URL.revokeObjectURL(url);
+                        currentAudioElement = null;
+                    };
+                    currentAudioElement.play();
+                    document.getElementById("stop-audio-btn").disabled = false;
+                    addDebugLog(`내 음성 재생 (${(wavBlob.size / 1024).toFixed(1)}KB)`, "info");
+                } catch (e) {
+                    addChatMessage("system", `❌ 내 음성 재생 실패: ${e.message}`);
+                }
+            }
+
+            // PCM16 → WAV Blob 생성 (정규화 포함)
+            function createWavFromPCM16(pcmInt16, sampleRate) {
+                // 📊 PCM16 정규화 (재생 전 최종 조정)
+                let maxAbsSample = 0;
+                for (let i = 0; i < pcmInt16.length; i++) {
+                    const absVal = Math.abs(pcmInt16[i]);
+                    if (absVal > maxAbsSample) {
+                        maxAbsSample = absVal;
+                    }
+                }
+
+                // 피크가 0.9 범위가 되도록 정규화
+                let normalizeGain = 1.0;
+                if (maxAbsSample > 0) {
+                    normalizeGain = (0x7fff * 0.9) / maxAbsSample;
+                }
+
+                // WAV 생성 전 정규화 적용
+                const normalizedPCM = new Int16Array(pcmInt16.length);
+                for (let i = 0; i < pcmInt16.length; i++) {
+                    const normalized = pcmInt16[i] * normalizeGain;
+                    normalizedPCM[i] = Math.max(-0x8000, Math.min(0x7fff, Math.round(normalized)));
+                }
+
+                console.log(
+                    "[WAV] Normalized: max=" + maxAbsSample + ", gain=" + normalizeGain.toFixed(4),
+                );
+
+                const numChannels = 1;
+                const bytesPerSample = 2;
+                const blockAlign = numChannels * bytesPerSample;
+                const byteRate = sampleRate * blockAlign;
+                const dataSize = normalizedPCM.length * bytesPerSample;
+                const buffer = new ArrayBuffer(44 + dataSize);
+                const view = new DataView(buffer);
+
+                // RIFF header
+                writeString(view, 0, "RIFF");
+                view.setUint32(4, 36 + dataSize, true);
+                writeString(view, 8, "WAVE");
+                // fmt chunk
+                writeString(view, 12, "fmt ");
+                view.setUint32(16, 16, true); // PCM chunk size
+                view.setUint16(20, 1, true); // PCM format
+                view.setUint16(22, numChannels, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, byteRate, true);
+                view.setUint16(32, blockAlign, true);
+                view.setUint16(34, 16, true); // bits per sample
+                // data chunk
+                writeString(view, 36, "data");
+                view.setUint32(40, dataSize, true);
+                // PCM data
+                let offset = 44;
+                for (let i = 0; i < normalizedPCM.length; i++, offset += 2) {
+                    view.setInt16(offset, normalizedPCM[i], true);
+                }
+                return new Blob([view], { type: "audio/wav" });
+            }
+
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            // 페르소나 필드 토글
+            function togglePersonaField() {
+                const mode = document.getElementById("interview-mode").value;
+                const personaField = document.getElementById("persona-field");
+                const personaDisplay = document.getElementById("current-persona-display");
+
+                if (mode === "real") {
+                    personaField.style.display = "block";
+                    personaDisplay.style.display = "block";
+                } else {
+                    personaField.style.display = "none";
+                    personaDisplay.style.display = "none";
+                }
+
+                updateCurrentSettings();
+            }
+
+            // 현재 설정 정보 업데이트
+            function updateCurrentSettings() {
+                const mode = document.getElementById("interview-mode").value;
+                const persona = document.getElementById("tts-persona").value;
+
+                // 모드 표시
+                const modeDisplay = document.getElementById("current-mode-display");
+                if (mode === "practice") {
+                    modeDisplay.textContent = "연습 (무료)";
+                    modeDisplay.style.color = "#4caf50";
+                } else {
+                    modeDisplay.textContent = "실전 (유료)";
+                    modeDisplay.style.color = "#f44336";
+                }
+
+                // 페르소나 표시 (실전 모드만)
+                if (mode === "real") {
+                    const personaDisplay = document.getElementById("current-persona-display");
+                    const personaMap = {
+                        COMFORTABLE: "편안한 톤 (nova)",
+                        PRESSURE: "압박 톤 (onyx)",
+                        RANDOM: "중립 톤 (alloy)",
+                    };
+                    personaDisplay.querySelector("span").textContent = personaMap[persona];
+                }
+
+                // 비용 표시
+                const costDisplay = document.getElementById("current-cost-display");
+                if (mode === "practice") {
+                    costDisplay.textContent = "$0/회";
+                    costDisplay.style.color = "#4caf50";
+                } else {
+                    costDisplay.textContent = "~$0.075/회";
+                    costDisplay.style.color = "#ff9800";
+                }
+
+                // 📝 텍스트 표시 상태
+                const showText = document.getElementById("show-ai-text").checked;
+                const textDisplay = document.getElementById("current-text-display");
+                if (showText) {
+                    textDisplay.textContent = "ON (연습용)";
+                    textDisplay.style.color = "#2196f3";
+                } else {
+                    textDisplay.textContent = "OFF (실전 모드)";
+                    textDisplay.style.color = "#f44336";
+                }
+
+                // 🔄 Socket 연결 시 설정 서버에 전송
+                if (socket && socket.connected) {
+                    const interviewId = document.getElementById("socket-interview-id").value;
+                    socket.emit("set_settings", {
+                        interviewId: parseInt(interviewId, 10) || 1,
+                        mode: mode,
+                        persona: persona,
+                    });
+                    console.log("[set_settings] 서버에 설정 전송:", { mode, persona });
+                }
+            }
+
+            // 페이지 로드 시 이벤트 리스너 등록
+            document.addEventListener("DOMContentLoaded", () => {
+                document
+                    .getElementById("interview-mode")
+                    .addEventListener("change", updateCurrentSettings);
+                document
+                    .getElementById("tts-persona")
+                    .addEventListener("change", updateCurrentSettings);
+
+                // 📝 텍스트 표시 체크박스 이벤트 리스너
+                document
+                    .getElementById("show-ai-text")
+                    .addEventListener("change", updateCurrentSettings);
+
+                updateCurrentSettings(); // 초기 설정 표시
+            });
+
+            // TTS API 호출 (LLM 서비스)
+            async function playTextAsSpeech(text) {
+                const autoPlay = document.getElementById("auto-play-tts").checked;
+                if (!autoPlay) {
+                    addChatMessage("system", "🔇 음성 자동 재생이 비활성화되어 있습니다.");
+                    return;
+                }
+
+                const mode = document.getElementById("interview-mode").value;
+                const persona = document.getElementById("tts-persona").value;
+
+                addChatMessage(
+                    "system",
+                    `🔊 음성 생성 중... (모드: ${mode === "practice" ? "연습" : "실전"})`,
+                );
+
+                try {
+                    // BFF 프록시를 통한 TTS API 호출 (HTTPS Ingress 경유)
+                    const ttsUrl = `https://localhost/api/v1/interviews/tts`;
+
+                    const response = await fetch(ttsUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            text: text,
+                            mode: mode, // "practice" or "real"
+                            persona: persona, // "PRESSURE", "COMFORTABLE", "RANDOM"
+                            speed: 1.0,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`TTS API 오류: ${response.status}`);
+                    }
+
+                    // MP3 오디오 데이터를 Blob으로 받음
+                    const audioBlob = await response.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    // 기존 오디오 중지
+                    if (currentAudioElement) {
+                        currentAudioElement.pause();
+                        currentAudioElement = null;
+                    }
+
+                    // 새 오디오 재생
+                    currentAudioElement = new Audio(audioUrl);
+                    currentAudioElement.play();
+
+                    // 음성 중지 버튼 활성화
+                    document.getElementById("stop-audio-btn").disabled = false;
+
+                    const engine = response.headers.get("X-TTS-Engine") || mode;
+                    const cost = response.headers.get("X-TTS-Cost") || "N/A";
+
+                    addChatMessage(
+                        "system",
+                        `✅ 음성 재생 시작 (엔진: ${engine}, 비용: ${cost === "0" ? "무료" : cost})`,
+                    );
+
+                    currentAudioElement.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        currentAudioElement = null;
+                        document.getElementById("stop-audio-btn").disabled = true;
+                        addChatMessage("system", "🔇 음성 재생 완료");
+                    };
+
+                    currentAudioElement.onerror = (error) => {
+                        addChatMessage("system", `❌ 음성 재생 실패: ${error}`);
+                        URL.revokeObjectURL(audioUrl);
+                        currentAudioElement = null;
+                        document.getElementById("stop-audio-btn").disabled = true;
+                    };
+                } catch (error) {
+                    addChatMessage("system", `❌ TTS 오류: ${error.message}`);
+                    console.error("TTS Error:", error);
+                }
+            }
+
+            // 음성 재생 중지
+            function stopAudioPlayback() {
+                if (currentAudioElement) {
+                    currentAudioElement.pause();
+                    currentAudioElement = null;
+                    document.getElementById("stop-audio-btn").disabled = true;
+                    addChatMessage("system", "🔇 음성 재생이 중지되었습니다.");
+                }
+            }
+
+            function getSocketUrl() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const forcedEnv = urlParams.get("env");
+
+                // 직접 접근 모드 (포트 4000으로 직접 연결)
+                if (forcedEnv === "direct" || forcedEnv === "dev") {
+                    return "http://localhost:4000";
+                }
+
+                // Ingress를 통한 접근 (기본값)
+                // Socket.io는 /socket.io 경로로 라우팅됨
+                const hostname = window.location.hostname;
+                const protocol = window.location.protocol;
+                const isLocalhost =
+                    hostname === "127.0.0.1" || hostname === "localhost" || hostname === "";
+
+                if (isLocalhost) {
+                    // Ingress는 80/443 포트 사용
+                    // CORS 문제 방지를 위해 항상 localhost 사용 (127.0.0.1도 localhost로 변환)
+                    // HTTP로 접근해도 HTTPS로 리다이렉트되므로, 가능하면 HTTPS 사용 권장
+                    // 하지만 CORS preflight 문제를 피하기 위해 현재 프로토콜 유지
+                    const currentProtocol = window.location.protocol;
+                    return currentProtocol === "https:" ? "https://localhost" : "http://localhost";
+                }
+
+                return window.location.origin;
+            }
+
+            function connectSocket() {
+                if (socket && socket.connected) {
+                    alert("이미 연결되어 있습니다.");
+                    return;
+                }
+
+                // 토큰이 없으면 경고
+                if (!accessToken) {
+                    alert("먼저 로그인하여 액세스 토큰을 받아주세요.");
+                    return;
+                }
+
+                const interviewId = document.getElementById("socket-interview-id").value;
+                const socketUrl = getSocketUrl();
+                socket = io(socketUrl, {
+                    path: "/socket.io",
+                    transports: ["websocket"], // WebSocket만 사용 (Sticky Session 이슈 회피)
+                    reconnection: true,
+                    auth: {
+                        token: accessToken,
+                    },
+                    // query 파라미터로도 전달 (서버가 auth 또는 query에서 토큰을 찾음)
+                    query: {
+                        token: accessToken,
+                        interviewId: interviewId, // 음성 면접용 interviewId
+                    },
+                });
+
+                socket.on("connect", () => {
+                    document.getElementById("socket-status").textContent = "연결됨";
+                    document.getElementById("socket-status").className = "status success";
+                    addChatMessage("system", "서버에 연결되었습니다.");
+
+                    // 🔄 연결 후 현재 설정을 서버에 전송
+                    const mode = document.getElementById("interview-mode").value;
+                    const persona = document.getElementById("tts-persona").value;
+                    socket.emit("set_settings", {
+                        interviewId: parseInt(interviewId, 10) || 1,
+                        mode: mode,
+                        persona: persona,
+                    });
+                    console.log("[set_settings] 초기 설정 전송:", { mode, persona });
+                });
+
+                socket.on("disconnect", () => {
+                    document.getElementById("socket-status").textContent = "연결 끊김";
+                    document.getElementById("socket-status").className = "status error";
+                    addChatMessage("system", "서버 연결이 끊어졌습니다.");
+                });
+
+                socket.on("stream_chunk", (text) => {
+                    document.getElementById("typing-indicator").classList.remove("active");
+
+                    // 텍스트 누적 (음성 생성용)
+                    accumulatedText += text;
+
+                    // 📝 텍스트 표시 설정 확인
+                    const showText = document.getElementById("show-ai-text").checked;
+                    if (!showText) {
+                        // 텍스트 표시 안함 (실전 모드)
+                        return;
+                    }
+
+                    // 텍스트 표시 (연습 모드)
+                    let lastMsg = document.getElementById("chat-box").lastElementChild;
+                    if (!lastMsg || !lastMsg.classList.contains("interviewer")) {
+                        addChatMessage("interviewer", "");
+                        lastMsg = document.getElementById("chat-box").lastElementChild;
+                    }
+                    lastMsg.textContent += text;
+                    document.getElementById("chat-box").scrollTop =
+                        document.getElementById("chat-box").scrollHeight;
+                });
+
+                socket.on("stream_end", () => {
+                    document.getElementById("typing-indicator").classList.remove("active");
+
+                    // 📝 텍스트 표시 설정 확인
+                    const showText = document.getElementById("show-ai-text").checked;
+                    if (!showText) {
+                        // 텍스트 표시 안함 (실전 모드) - 음성 생성만 표시
+                        addDebugLog("AI 응답 TTS 생성 중", "info");
+                    } else {
+                        // 텍스트 표시 (연습 모드) - 텍스트와 음성 모두
+                        addDebugLog("AI 응답 TTS 생성 중", "info");
+                    }
+
+                    // 서버에서 자동으로 TTS 생성 (audio_chunk, audio_end 이벤트로 수신)
+                    // 자연스러운 대화 모드에서는 중복 TTS 방지를 위해 무시
+                    if (conversationModeEnabled) {
+                        addDebugLog("자연스러운 대화 모드: stream_end TTS 재생은 무시", "info");
+                    }
+                });
+
+                // 🔊 오디오 청크 수신 (면접관 음성 스트리밍)
+                let audioChunks = [];
+                socket.on("audio_chunk", (chunk) => {
+                    if (conversationModeEnabled) {
+                        return; // 자연스러운 대화 모드에서는 legacy TTS 무시
+                    }
+                    audioChunks.push(new Uint8Array(chunk));
+                });
+
+                // 🔊 오디오 스트리밍 완료
+                socket.on("audio_end", async () => {
+                    if (conversationModeEnabled) {
+                        return; // 자연스러운 대화 모드에서는 legacy TTS 무시
+                    }
+                    try {
+                        const audioBlob = new Blob(audioChunks, { type: "audio/mpeg" });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        await audio.play();
+
+                        addChatMessage(
+                            "system",
+                            `🔊 면접관 음성 재생 중 (${(audioBlob.size / 1024).toFixed(1)}KB)`,
+                        );
+
+                        audio.onended = () => {
+                            URL.revokeObjectURL(audioUrl);
+                            audioChunks = [];
+                            accumulatedText = ""; // 누적 텍스트 초기화
+                            addChatMessage("system", "✅ 음성 재생 완료");
+                        };
+                    } catch (error) {
+                        addChatMessage("system", `❌ 오디오 재생 실패: ${error.message}`);
+                        audioChunks = [];
+                        accumulatedText = ""; // 에러 시에도 초기화
+                    }
+                });
+
+                // 음성 인식 결과 수신 (Phase 3)
+                socket.on("text_received", (data) => {
+                    console.log("Text received from STT:", data);
+
+                    // STT 실패 처리: isEmpty 플래그 또는 "[음성 인식 실패]" 텍스트 확인
+                    const isFailed =
+                        data.isEmpty === true ||
+                        data.text.startsWith("[음성 인식 실패") ||
+                        data.text === "[empty]" ||
+                        !data.text ||
+                        data.text.trim() === "";
+
+                    if (isFailed) {
+                        // 🔍 실패 원인 상세 메시지 표시
+                        let failureMessage = "❌ 음성 인식에 실패했습니다.";
+
+                        if (data.failureDetails && data.failureDetails.message) {
+                            failureMessage += "\n📋 원인: " + data.failureDetails.message;
+
+                            // 추가 힌트가 있으면 표시
+                            if (data.failureDetails.hint) {
+                                failureMessage += "\n💡 " + data.failureDetails.hint;
+                            }
+
+                            // 기술적 세부사항 (디버깅용)
+                            if (data.failureReason) {
+                                failureMessage += `\n🔧 오류 코드: ${data.failureReason}`;
+                            }
+                        } else {
+                            failureMessage += " 다시 녹음해주세요.";
+                        }
+
+                        addChatMessage("system", failureMessage);
+
+                        // 🎙️ 자연스러운 대화 모드: 실패 시 다시 녹음
+                        if (conversationModeEnabled) {
+                            setConversationState(ConversationState.IDLE);
+                            setTimeout(() => {
+                                if (conversationModeEnabled) {
+                                    addChatMessage("system", "🎤 다시 말씀해주세요...");
+                                    startRecording();
+                                }
+                            }, 1000);
+                        }
+                        return; // 자동 전송하지 않음
+                    }
+
+                    // STT 성공: 인식 완료 메시지만 표시 (실제 메시지는 sendSocketMessage에서 표시)
+                    addDebugLog(`STT 완료: ${data.text.length}자`, "success");
+
+                    // 🎙️ 자연스러운 대화 모드: STT 완료 → PROCESSING 상태
+                    if (conversationModeEnabled) {
+                        setConversationState(ConversationState.PROCESSING);
+                    }
+
+                    // 자동으로 send_answer 이벤트 전송 (기존 면접 흐름과 통합)
+                    setTimeout(() => {
+                        document.getElementById("socket-input").value = data.text;
+                        sendSocketMessage();
+                    }, 500);
+                });
+
+                // 🆕 AI 응답 텍스트 수신 (BotQuestion 이벤트)
+                socket.on("ai_response_text", (data) => {
+                    console.log("AI response text received:", data);
+
+                    document.getElementById("typing-indicator").classList.remove("active");
+
+                    // 📝 텍스트 표시 설정 확인
+                    const showText = document.getElementById("show-ai-text").checked;
+                    if (showText) {
+                        // 텍스트 표시 모드: 즉시 화면에 표시
+                        addChatMessage("interviewer", data.text);
+                        document.getElementById("chat-box").scrollTop =
+                            document.getElementById("chat-box").scrollHeight;
+                    }
+
+                    // TTS 오디오는 별도 이벤트(ai_response_audio_chunk)로 수신됨
+                });
+
+                // 🆕 AI 응답 TTS 오디오 청크 수신 (BotQuestion 이벤트)
+                function getOrCreateTtsEntry(key) {
+                    if (!ttsAudioBuffers.has(key)) {
+                        ttsAudioBuffers.set(key, { chunks: [], isFinal: false });
+                    }
+                    return ttsAudioBuffers.get(key);
+                }
+
+                function enqueueTtsForPlayback(key) {
+                    const entry = ttsAudioBuffers.get(key);
+                    if (!entry || !entry.isFinal) return;
+                    if (ttsQueuedKeys.has(key)) return;
+                    ttsQueuedKeys.add(key);
+                    ttsPlaybackQueue.push(key);
+                    playNextTtsFromQueue();
+                }
+
+                async function playNextTtsFromQueue() {
+                    if (ttsIsPlaying) return;
+                    const nextKey = ttsPlaybackQueue.shift();
+                    if (!nextKey) return;
+                    ttsQueuedKeys.delete(nextKey);
+
+                    const entry = ttsAudioBuffers.get(nextKey);
+                    if (!entry || entry.chunks.length === 0) {
+                        ttsAudioBuffers.delete(nextKey);
+                        playNextTtsFromQueue();
+                        return;
+                    }
+
+                    ttsIsPlaying = true;
+                    if (conversationModeEnabled) {
+                        addDebugLog("TTS 재생 시작 - 상태를 SPEAKING으로 변경", "state");
+                        setConversationState(ConversationState.SPEAKING);
+                    }
+
+                    await playTTSAudioGapless(entry.chunks, () => {
+                        ttsIsPlaying = false;
+                        ttsAudioBuffers.delete(nextKey);
+
+                        if (ttsPlaybackQueue.length > 0) {
+                            playNextTtsFromQueue();
+                        } else {
+                            onTTSPlaybackComplete();
+                        }
+                    });
+                }
+
+                socket.on("ai_response_audio_chunk", (data) => {
+                    // 서버에서 audioChunk로 보냄 (tts_chunk는 chunk로 보냄)
+                    const chunkData = data.audioChunk || data.chunk;
+                    addDebugLog(
+                        `🔊 ai_response_audio_chunk 수신 | size: ${chunkData?.length || 0} | isFinal: ${data.isFinal}`,
+                        "success",
+                    );
+                    console.log("TTS audio chunk received:", {
+                        size: chunkData?.length,
+                        isFinal: data.isFinal,
+                        hasAudioChunk: !!data.audioChunk,
+                        hasChunk: !!data.chunk,
+                    });
+
+                    if (!chunkData) {
+                        addDebugLog("❌ TTS 청크 데이터 없음!", "error");
+                        return;
+                    }
+
+                    const sentenceKey =
+                        data.sentenceIndex !== undefined && data.sentenceIndex !== null
+                            ? `ai-${data.sentenceIndex}`
+                            : `ai-${Date.now()}`;
+                    const entry = getOrCreateTtsEntry(sentenceKey);
+
+                    if (entry.isFinal && data.isFinal) {
+                        addDebugLog("⚠️ 중복 isFinal 청크 수신 - 무시", "warn");
+                        return;
+                    }
+
+                    // Base64 디코딩 후 저장
+                    const binaryString = atob(chunkData);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    entry.chunks.push(bytes);
+                    addDebugLog(
+                        `TTS 청크 저장됨: ${entry.chunks.length}개, ${bytes.length} bytes`,
+                        "info",
+                    );
+
+                    // 마지막 청크 수신 시 오디오 재생
+                    if (data.isFinal) {
+                        entry.isFinal = true;
+                        addDebugLog("AI 응답 TTS 마지막 청크 - 재생 대기열 추가", "state");
+                        enqueueTtsForPlayback(sentenceKey);
+                    }
+                });
+
+                // 🆕 직접 TTS 요청에 대한 오디오 청크 수신 (대화 모드 시작용)
+                socket.on("tts_chunk", (data) => {
+                    console.log("Direct TTS chunk received:", {
+                        size: data.chunk.length,
+                        isFinal: data.isFinal,
+                    });
+
+                    if (!ttsDirectCurrentKey) {
+                        ttsDirectCurrentKey = `direct-${++ttsDirectSeq}`;
+                    }
+                    const entry = getOrCreateTtsEntry(ttsDirectCurrentKey);
+
+                    // Base64 디코딩 후 저장
+                    const binaryString = atob(data.chunk);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    entry.chunks.push(bytes);
+
+                    // 마지막 청크 수신 시 오디오 재생
+                    if (data.isFinal) {
+                        entry.isFinal = true;
+                        enqueueTtsForPlayback(ttsDirectCurrentKey);
+                        ttsDirectCurrentKey = null;
+                    }
+                });
+
+                // ⚡ Gapless TTS 오디오 재생 함수 (Web Audio API)
+                async function playTTSAudioGapless(chunks, onComplete) {
+                    if (!chunks || chunks.length === 0) {
+                        console.warn("No TTS audio chunks to play");
+                        if (typeof onComplete === "function") {
+                            onComplete();
+                        }
+                        return;
+                    }
+
+                    try {
+                        // AudioContext 생성 (재사용)
+                        if (!ttsAudioContext) {
+                            ttsAudioContext = new (
+                                window.AudioContext || window.webkitAudioContext
+                            )();
+                        }
+
+                        // suspended 상태면 resume
+                        if (ttsAudioContext.state === "suspended") {
+                            await ttsAudioContext.resume();
+                        }
+
+                        // Blob 생성
+                        const audioBlob = new Blob(chunks, { type: "audio/mpeg" });
+                        const arrayBuffer = await audioBlob.arrayBuffer();
+
+                        addDebugLog(
+                            `TTS 재생 중 (${(audioBlob.size / 1024).toFixed(1)}KB)`,
+                            "info",
+                        );
+
+                        // 오디오 디코딩
+                        const audioBuffer = await ttsAudioContext.decodeAudioData(arrayBuffer);
+
+                        // AudioBufferSourceNode 생성 및 스케줄링
+                        const source = ttsAudioContext.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(ttsAudioContext.destination);
+
+                        // 현재 시간에 즉시 시작
+                        source.start(0);
+
+                        // 재생 완료 콜백 (onended + setTimeout 백업)
+                        let playbackCompleted = false;
+                        const onPlaybackComplete = () => {
+                            if (playbackCompleted) return;
+                            playbackCompleted = true;
+                            addDebugLog("🔊 TTS 재생 완료 (onPlaybackComplete 콜백)", "success");
+                            addChatMessage("system", "✅ 음성 재생 완료");
+                            if (typeof onComplete === "function") {
+                                onComplete();
+                            }
+                        };
+
+                        source.onended = () => {
+                            addDebugLog("source.onended 이벤트 발생", "info");
+                            onPlaybackComplete();
+                        };
+
+                        // 백업: duration + 0.5초 후에도 완료 처리 (onended가 안 불릴 경우 대비)
+                        const backupDelay = (audioBuffer.duration + 0.5) * 1000;
+                        addDebugLog(`백업 타이머 설정: ${backupDelay.toFixed(0)}ms 후`, "info");
+                        setTimeout(() => {
+                            addDebugLog("백업 타이머 발동", "info");
+                            onPlaybackComplete();
+                        }, backupDelay);
+
+                        ttsSourceNode = source;
+                    } catch (error) {
+                        console.error("Failed to play TTS audio (Gapless):", error);
+                        addChatMessage("system", `❌ 오디오 재생 실패: ${error.message}`);
+                        if (typeof onComplete === "function") {
+                            onComplete();
+                        }
+                    }
+                }
+
+                // 레거시 재생 함수 (폴백용)
+                async function playTTSAudio(chunks, onComplete) {
+                    if (!chunks || chunks.length === 0) {
+                        console.warn("No TTS audio chunks to play");
+                        if (typeof onComplete === "function") {
+                            onComplete();
+                        }
+                        return;
+                    }
+
+                    try {
+                        const audioBlob = new Blob(chunks, { type: "audio/mpeg" });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+
+                        addDebugLog(
+                            `레거시 TTS 재생 중 (${(audioBlob.size / 1024).toFixed(1)}KB)`,
+                            "info",
+                        );
+
+                        await audio.play();
+
+                        audio.onended = () => {
+                            URL.revokeObjectURL(audioUrl);
+                            addDebugLog("레거시 TTS 재생 완료", "success");
+                            if (typeof onComplete === "function") {
+                                onComplete();
+                            }
+                        };
+
+                        audio.onerror = (error) => {
+                            console.error("Audio playback error:", error);
+                            addChatMessage("system", "❌ 오디오 재생 실패");
+                            URL.revokeObjectURL(audioUrl);
+                            if (typeof onComplete === "function") {
+                                onComplete();
+                            }
+                        };
+                    } catch (error) {
+                        console.error("Failed to play TTS audio:", error);
+                        addChatMessage("system", `❌ 오디오 재생 실패: ${error.message}`);
+                        if (typeof onComplete === "function") {
+                            onComplete();
+                        }
+                    }
+                }
+
+                // 🔄 ACK 수신 (Safe Path 성공)
+                socket.on("audio_ack", (data) => {
+                    const chunkId = data.chunkId;
+                    const isFinal = data.isFinal || false;
+
+                    // 🔴 isFinal ACK 수신 시 특별 로깅
+                    if (isFinal) {
+                        addDebugLog(`🏁 isFinal ACK 수신! chunkId: ${chunkId}`, "success");
+                        console.log("[isFinal ACK]", data);
+                    }
+
+                    // 백업에서 제거 (성공적으로 저장됨)
+                    if (chunkId && pendingAcks.has(chunkId)) {
+                        const pending = pendingAcks.get(chunkId);
+                        clearTimeout(pending.timeoutId);
+                        pendingAcks.delete(chunkId);
+                        updateBackupStatus();
+                        addDebugLog(`ACK 수신: ${chunkId}${isFinal ? " (FINAL)" : ""}`, "success");
+                    } else {
+                        addDebugLog(`ACK 불일치: ${chunkId} (대기: ${pendingAcks.size}개)`, "warn");
+                    }
+                });
+
+                socket.on("error", (error) => {
+                    addChatMessage("system", `오류: ${error}`);
+                });
+            }
+
+            // 🎵 고품질 리샘플링 함수 (OfflineAudioContext 사용)
+            // 브라우저 네이티브 필터링으로 에일리어싱 방지, 선형 보간보다 품질 우수
+            async function resampleAudioOffline(samples, fromSampleRate, toSampleRate) {
+                // 이미 목표 샘플레이트면 그대로 반환
+                if (fromSampleRate === toSampleRate) {
+                    return samples;
+                }
+
+                try {
+                    // OfflineAudioContext 생성 (리샘플링 용)
+                    const duration = samples.length / fromSampleRate;
+                    const offlineContext = new OfflineAudioContext(
+                        1, // 채널 수
+                        Math.ceil(duration * toSampleRate), // 출력 샘플 수
+                        toSampleRate, // 목표 샘플 레이트
+                    );
+
+                    // AudioBuffer 생성
+                    const audioBuffer = offlineContext.createBuffer(
+                        1, // 채널 수
+                        samples.length,
+                        fromSampleRate,
+                    );
+                    audioBuffer.copyToChannel(samples, 0);
+
+                    // BufferSource 생성 및 연결
+                    const source = offlineContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(offlineContext.destination);
+                    source.start(0);
+
+                    // 오프라인 렌더링 실행
+                    const renderedBuffer = await offlineContext.startRendering();
+
+                    // 결과 추출
+                    return renderedBuffer.getChannelData(0);
+                } catch (error) {
+                    console.warn(
+                        "[Resampling] OfflineAudioContext 실패, 선형 보간으로 폴백:",
+                        error,
+                    );
+
+                    // 폴백: 선형 보간 (실패 시)
+                    const ratio = fromSampleRate / toSampleRate;
+                    const newLength = Math.floor(samples.length / ratio);
+                    const resampled = new Float32Array(newLength);
+
+                    for (let i = 0; i < newLength; i++) {
+                        const srcIndex = i * ratio;
+                        const srcIndexInt = Math.floor(srcIndex);
+                        const srcIndexFrac = srcIndex - srcIndexInt;
+                        const sample1 = samples[Math.min(srcIndexInt, samples.length - 1)];
+                        const sample2 = samples[Math.min(srcIndexInt + 1, samples.length - 1)];
+                        resampled[i] = sample1 + (sample2 - sample1) * srcIndexFrac;
+                    }
+
+                    return resampled;
+                }
+            }
+
+            // 음성 녹음 시작
+            async function startRecording() {
+                if (!socket || !socket.connected) {
+                    alert("먼저 서버에 연결해주세요.");
+                    return;
+                }
+
+                // 대화 상태 업데이트
+                if (conversationModeEnabled) {
+                    setConversationState(ConversationState.LISTENING);
+                    hasSpeech = false;
+                    speechStartTime = null;
+                    silenceStartTime = null;
+                }
+
+                try {
+                    // 🎙️ Mac Pro 고품질 오디오 입력 설정
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: false, // Mac의 HD 마이크는 이미 우수함
+                            noiseSuppression: false, // 기본 노이즈 필터 해제 (서버에서 처리)
+                            autoGainControl: false, // 수동 게인 조정 (입력-게인 슬라이더로 제어)
+                            sampleRate: 44100, // Mac 기본 샘플링 레이트 (재샘플링 미니멈)
+                            sampleSize: 16, // 16-bit 오디오
+                            echoCancellationType: "system", // 필요시만 시스템 EC 사용
+                        },
+                    });
+
+                    // MediaRecorder 설정 (주로 로깅용, 실제는 AudioWorklet 사용)
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: "audio/webm",
+                    });
+                    audioChunks = [];
+
+                    // 🎚️ 음성 레벨 분석기 설정 (마이크 모니터링)
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 256; // FFT 크기 (음성 대역폭에 최적)
+                    analyser.smoothingTimeConstant = 0.3; // 평활화 계수
+
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    microphone.connect(analyser);
+
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+
+                    // 음성 레벨 게이지 표시
+                    document.getElementById("voice-level-container").style.display = "block";
+
+                    // 녹음 시간 기록 시작
+                    recordingStartTime = Date.now();
+                    let chunkCount = 0;
+                    let maxPeak = 0;
+
+                    // 실시간 음성 레벨 업데이트
+                    const updateVoiceLevel = () => {
+                        if (!isRecording) return;
+
+                        analyser.getByteFrequencyData(dataArray);
+
+                        // 평균 볼륨 계산
+                        const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                        const normalized = Math.min(100, (average / 128) * 100);
+
+                        // dB 계산 (간략화된 버전)
+                        const db = 20 * Math.log10(average / 255);
+
+                        // 피크 레벨 추적
+                        if (normalized > maxPeak) {
+                            maxPeak = normalized;
+                        }
+
+                        // UI 업데이트
+                        const bar = document.getElementById("voice-level-bar");
+                        const text = document.getElementById("voice-level-text");
+                        const volumeText = document.getElementById("voice-volume");
+                        const peakText = document.getElementById("voice-peak");
+                        const chunksText = document.getElementById("voice-chunks");
+
+                        bar.style.width = normalized + "%";
+                        text.textContent = Math.round(normalized) + "%";
+                        volumeText.textContent = (isFinite(db) ? db.toFixed(1) : -60) + " dB";
+                        peakText.textContent = Math.round(maxPeak) + "%";
+                        chunksText.textContent = chunkCount;
+
+                        // 녹음 시간 업데이트
+                        const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                        const minutes = Math.floor(elapsed / 60)
+                            .toString()
+                            .padStart(2, "0");
+                        const seconds = (elapsed % 60).toString().padStart(2, "0");
+                        document.getElementById("recording-time").textContent =
+                            `${minutes}:${seconds}`;
+
+                        // 🎙️ 자연스러운 대화 모드: VAD 체크 (RMS 기반)
+                        const rms = normalized / 100; // 0~1 범위로 변환
+                        checkVADAutoSend(rms);
+
+                        requestAnimationFrame(updateVoiceLevel);
+                    };
+
+                    // 🔥 AudioWorklet으로 실시간 PCM 캡처 (최신 API)
+                    pcmChunks = [];
+
+                    // AudioWorklet 인라인 정의 (sampleRate 주입 + 최적화)
+                    const currentSampleRate = audioContext.sampleRate;
+                    const workletCode = `
+            class PCMCaptureProcessor extends AudioWorkletProcessor {
+              constructor() {
+                super();
+                // ⚡ 버퍼 크기 최적화: 지연 감소 (44.1kHz 기준 약 93ms)
+                this.bufferSize = 4096;  // 8192 → 4096 (레이턴시 감소)
+                this.buffer = new Float32Array(this.bufferSize);
+                this.bufferIndex = 0;
+                this.sampleRate = ${currentSampleRate};
+                console.log('[AudioWorklet] Initialized, sampleRate:', this.sampleRate, 'Hz, bufferSize:', this.bufferSize);
+              }
+              
+              process(inputs, outputs, parameters) {
+                const input = inputs[0];
+                if (!input || !input[0]) return true;
+                
+                const samples = input[0]; // 첫 번째 채널 (Mono)
+                
+                // 버퍼에 샘플 추가
+                for (let i = 0; i < samples.length; i++) {
+                  this.buffer[this.bufferIndex++] = samples[i];
+                  
+                  // 버퍼가 가득 차면 메인 스레드로 전송
+                  if (this.bufferIndex >= this.bufferSize) {
+                    this.port.postMessage({
+                      samples: this.buffer.slice(0, this.bufferIndex),
+                      sampleRate: this.sampleRate
+                    });
+                    this.bufferIndex = 0;
+                  }
+                }
+                
+                return true; // Keep processor alive
+              }
+            }
+            
+            registerProcessor('pcm-capture-processor', PCMCaptureProcessor);
+          `;
+
+                    // Blob URL로 AudioWorklet 등록 (에러 처리 추가)
+                    try {
+                        const blob = new Blob([workletCode], {
+                            type: "application/javascript",
+                        });
+                        const workletUrl = URL.createObjectURL(blob);
+
+                        await audioContext.audioWorklet.addModule(workletUrl);
+                        URL.revokeObjectURL(workletUrl);
+
+                        console.log("[AudioWorklet] Module loaded successfully");
+                    } catch (error) {
+                        console.error("[AudioWorklet] Failed to load module:", error);
+                        alert("AudioWorklet 로드 실패: " + error.message);
+                        return;
+                    }
+
+                    // AudioWorkletNode 생성
+                    const workletNode = new AudioWorkletNode(audioContext, "pcm-capture-processor");
+
+                    // Microphone → WorkletNode 연결
+                    microphone.connect(workletNode);
+                    workletNode.connect(audioContext.destination);
+
+                    console.log("[Audio] AudioWorkletNode connected");
+
+                    let receivedChunks = 0;
+                    // isRecording은 전역 변수 (라인 1398에서 선언됨)
+
+                    // WorkletNode에서 데이터 수신
+                    workletNode.port.onmessage = async (event) => {
+                        if (!isRecording) return;
+
+                        const { samples, sampleRate: currentSampleRate } = event.data;
+                        receivedChunks++;
+
+                        if (receivedChunks === 1) {
+                            console.log(
+                                "[AudioWorklet] First chunk received:",
+                                samples.length,
+                                "samples at",
+                                currentSampleRate,
+                                "Hz",
+                            );
+                        }
+
+                        // 🎵 고품질 리샘플링 (OfflineAudioContext 사용)
+                        // 44100Hz → 16000Hz 변환 (Mac 기본 샘플 레이트)
+                        // 선형 보간 대신 브라우저 네이티브 고품질 리샘플링 (에일리어싱 방지)
+                        const targetSampleRate = 16000;
+                        const resampled = await resampleAudioOffline(
+                            samples,
+                            audioContext.sampleRate,
+                            targetSampleRate,
+                        );
+
+                        // 📊 리샘플링 통계
+                        if (receivedChunks === 1) {
+                            console.log(
+                                "[Resampling] Input:",
+                                samples.length,
+                                "samples @",
+                                currentSampleRate,
+                                "Hz → Output:",
+                                resampled.length,
+                                "samples @ 16000Hz (OfflineAudioContext)",
+                            );
+                        }
+
+                        // 🎚️ 입력 증폭(Gain) 적용 및 임계점(Threshold) 처리
+                        const inputGain = parseFloat(document.getElementById("input-gain").value);
+                        const threshold =
+                            parseFloat(document.getElementById("voice-threshold").value) / 100.0;
+
+                        // ⚡ 리샘플된 샘플 정규화 (피크 감지 + 게인 자동 조정)
+                        let maxAbsSample = 0;
+                        for (let i = 0; i < resampled.length; i++) {
+                            const absVal = Math.abs(resampled[i]);
+                            if (absVal > maxAbsSample) {
+                                maxAbsSample = absVal;
+                            }
+                        }
+
+                        // 피크가 0.9~1.0 범위가 되도록 자동 정규화
+                        let normalizeGain = 1.0;
+                        if (maxAbsSample > 0.001) {
+                            normalizeGain = 0.95 / maxAbsSample; // 0.95는 클리핑 여유
+                        }
+
+                        // Float32 → Int16 변환 (Gain & Threshold & Normalization 적용)
+                        const pcm16 = new Int16Array(resampled.length);
+                        for (let i = 0; i < resampled.length; i++) {
+                            let sample = resampled[i] * inputGain * normalizeGain; // 게인 + 정규화
+
+                            // Threshold 이하는 무음 처리 (노이즈 제거)
+                            if (Math.abs(sample) < threshold) {
+                                sample = 0;
+                            }
+
+                            // Clipping 방지 (±1.0 범위 보장)
+                            const s = Math.max(-1, Math.min(1, sample));
+                            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+                        }
+
+                        // 디버그 로그
+                        if (receivedChunks % 10 === 0) {
+                            // 10번째 청크마다만 로그
+                            console.log(
+                                "[PCM16] Max:",
+                                maxAbsSample.toFixed(4),
+                                "Norm Gain:",
+                                normalizeGain.toFixed(4),
+                                "Threshold:",
+                                threshold.toFixed(4),
+                            );
+                        }
+
+                        // 청크에 추가
+                        pcmChunks.push(pcm16);
+                    };
+
+                    // WorkletNode를 전역으로 저장 (정리용)
+                    processor = workletNode;
+
+                    // 500ms마다 청크 전송
+                    chunkInterval = setInterval(() => {
+                        if (!isRecording) return;
+                        if (pcmChunks.length === 0) return;
+
+                        // 모든 청크를 합침
+                        const totalLength = pcmChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                        const combined = new Int16Array(totalLength);
+                        let offset = 0;
+                        for (const chunk of pcmChunks) {
+                            combined.set(chunk, offset);
+                            offset += chunk.length;
+                        }
+
+                        // 로컬 재생용 청크 누적
+                        lastRecordingPCMChunks.push(combined);
+
+                        // ⚡ 바이너리 전송 (Base64 인코딩 제거 - 33% 오버헤드 절감)
+                        // ArrayBuffer를 직접 전송 (Socket.IO는 바이너리를 자동으로 처리)
+                        const pcmBuffer = combined.buffer;
+
+                        const interviewId = parseInt(
+                            document.getElementById("socket-interview-id").value,
+                        );
+
+                        // Socket.io로 PCM 청크 전송 (바이너리 모드)
+                        const inputGain = parseFloat(document.getElementById("input-gain").value);
+                        const threshold = parseFloat(
+                            document.getElementById("voice-threshold").value,
+                        );
+
+                        const chunkId = `chunk-${++chunkIdCounter}`;
+                        const payload = {
+                            chunk: pcmBuffer, // ⚡ 바이너리 ArrayBuffer 직접 전송 (Base64 제거)
+                            interviewId: interviewId,
+                            isFinal: false,
+                            format: "pcm16",
+                            sampleRate: 16000,
+                            inputGain: inputGain,
+                            threshold: threshold,
+                            chunkId: chunkId,
+                            timestamp: new Date().toISOString(),
+                        };
+
+                        // 백업에 추가 (ACK 대기)
+                        const retryData = {
+                            payload: payload,
+                            retryCount: 0,
+                            timeoutId: null,
+                        };
+
+                        // ACK 타임아웃 설정
+                        retryData.timeoutId = setTimeout(() => {
+                            handleAckTimeout(chunkId, retryData);
+                        }, RETRY_TIMEOUT);
+
+                        pendingAcks.set(chunkId, retryData);
+
+                        socket.emit("audio_chunk", payload);
+                        sentCount++;
+                        updateBackupStatus();
+
+                        chunkCount++;
+                        addDebugLog(`청크 전송 #${chunkCount}: ${combined.length} samples`, "info");
+
+                        // 청크 초기화
+                        pcmChunks = [];
+                    }, 500);
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        isRecording = false; // 녹음 중지 플래그
+                        clearInterval(chunkInterval);
+
+                        // 마지막 청크 전송
+                        if (pcmChunks.length > 0) {
+                            const totalLength = pcmChunks.reduce(
+                                (sum, chunk) => sum + chunk.length,
+                                0,
+                            );
+                            const combined = new Int16Array(totalLength);
+                            let offset = 0;
+                            for (const chunk of pcmChunks) {
+                                combined.set(chunk, offset);
+                                offset += chunk.length;
+                            }
+
+                            // 로컬 재생용 청크 누적 (마지막 잔여 청크 포함)
+                            lastRecordingPCMChunks.push(combined);
+
+                            const base64PCM = arrayBufferToBase64(combined.buffer);
+                            const interviewId = parseInt(
+                                document.getElementById("socket-interview-id").value,
+                            );
+
+                            const inputGain = parseFloat(
+                                document.getElementById("input-gain").value,
+                            );
+                            const threshold = parseFloat(
+                                document.getElementById("voice-threshold").value,
+                            );
+
+                            // ACK 기반 재시도 메커니즘 적용
+                            const chunkId = `chunk-${++chunkIdCounter}`;
+                            const payload = {
+                                chunk: base64PCM,
+                                interviewId: interviewId,
+                                isFinal: false,
+                                format: "pcm16",
+                                sampleRate: 16000,
+                                inputGain: inputGain,
+                                threshold: threshold,
+                                chunkId: chunkId,
+                                timestamp: new Date().toISOString(),
+                            };
+
+                            const retryData = {
+                                payload: payload,
+                                retryCount: 0,
+                                timeoutId: null,
+                            };
+
+                            retryData.timeoutId = setTimeout(() => {
+                                handleAckTimeout(chunkId, retryData);
+                            }, RETRY_TIMEOUT);
+
+                            pendingAcks.set(chunkId, retryData);
+                            socket.emit("audio_chunk", payload);
+                            sentCount++;
+                            updateBackupStatus();
+
+                            chunkCount++;
+                        }
+
+                        const interviewId = parseInt(
+                            document.getElementById("socket-interview-id").value,
+                        );
+
+                        const inputGain = parseFloat(document.getElementById("input-gain").value);
+                        const threshold = parseFloat(
+                            document.getElementById("voice-threshold").value,
+                        );
+
+                        // 최종 신호 전송 (ACK 기반)
+                        const finalChunkId = `chunk-final-${++chunkIdCounter}`;
+                        const finalPayload = {
+                            chunk: "",
+                            interviewId: interviewId,
+                            isFinal: true,
+                            format: "pcm16",
+                            sampleRate: 16000,
+                            inputGain: inputGain,
+                            threshold: threshold,
+                            chunkId: finalChunkId,
+                            timestamp: new Date().toISOString(),
+                        };
+
+                        const finalRetryData = {
+                            payload: finalPayload,
+                            retryCount: 0,
+                            timeoutId: null,
+                        };
+
+                        finalRetryData.timeoutId = setTimeout(() => {
+                            handleAckTimeout(finalChunkId, finalRetryData);
+                        }, RETRY_TIMEOUT);
+
+                        pendingAcks.set(finalChunkId, finalRetryData);
+
+                        // 🔴 isFinal 청크 전송 전 로그
+                        addDebugLog(`📤 isFinal 청크 전송 시작: ${finalChunkId}`, "warn");
+                        console.log("[isFinal] 전송:", finalPayload);
+
+                        socket.emit("audio_chunk", finalPayload);
+
+                        addDebugLog(`✅ isFinal 청크 emit 완료: ${finalChunkId}`, "success");
+                        sentCount++;
+                        updateBackupStatus();
+
+                        const totalSize = audioChunks.reduce((sum, chunk) => sum + chunk.size, 0);
+                        addDebugLog(
+                            `녹음 완료: ${totalSize} bytes, ${chunkCount} 청크, 피크: ${Math.round(maxPeak)}%`,
+                            "success",
+                        );
+
+                        // 전체 PCM16 조립 및 즉시 재생 (옵션)
+                        try {
+                            if (lastRecordingPCMChunks.length > 0) {
+                                const allSamples = lastRecordingPCMChunks.reduce(
+                                    (sum, c) => sum + c.length,
+                                    0,
+                                );
+                                lastRecordingPCM = new Int16Array(allSamples);
+                                let off = 0;
+                                for (const c of lastRecordingPCMChunks) {
+                                    lastRecordingPCM.set(c, off);
+                                    off += c.length;
+                                }
+                            }
+                            // 🎧 설정에 따라 내 목소리 즉시 재생
+                            if (
+                                document.getElementById("play-mic-local").checked &&
+                                lastRecordingPCM &&
+                                lastRecordingPCM.length > 0
+                            ) {
+                                playLastRecording();
+                            }
+                        } catch (e) {
+                            addChatMessage("system", `❌ 내 음성 재생 실패: ${e.message}`);
+                        }
+                        // 누적 청크 초기화
+                        lastRecordingPCMChunks = [];
+
+                        // ACK 대기 후 상태 확인
+                        setTimeout(() => {
+                            if (pendingAcks.size === 0) {
+                                addDebugLog("모든 청크 전송 완료", "success");
+                            } else {
+                                addDebugLog(`${pendingAcks.size}개 청크 ACK 대기 중`, "warn");
+                            }
+                        }, 1500);
+
+                        // 음성 레벨 게이지 숨기기
+                        document.getElementById("voice-level-container").style.display = "none";
+
+                        // Processor 정리
+                        if (processor) {
+                            processor.disconnect();
+                        }
+
+                        // AudioContext 정리
+                        if (audioContext) {
+                            audioContext.close();
+                            audioContext = null;
+                        }
+
+                        // 스트림 종료
+                        stream.getTracks().forEach((track) => track.stop());
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true; // 녹음 시작 플래그
+                    updateVoiceLevel(); // 음성 레벨 애니메이션 시작
+
+                    document.getElementById("start-record-btn").disabled = true;
+                    document.getElementById("stop-record-btn").disabled = false;
+                    addDebugLog("녹음 시작", "success");
+                } catch (error) {
+                    alert("마이크 권한이 필요합니다: " + error.message);
+                }
+            }
+
+            // 음성 녹음 중지
+            function stopRecording() {
+                if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    mediaRecorder.stop();
+                    document.getElementById("start-record-btn").disabled = false;
+                    document.getElementById("stop-record-btn").disabled = true;
+                    addDebugLog("녹음 중지, 처리 중", "info");
+
+                    // 🎙️ 대화 모드에서 수동 중지 시 상태 업데이트
+                    if (
+                        conversationModeEnabled &&
+                        conversationState === ConversationState.LISTENING
+                    ) {
+                        setConversationState(ConversationState.PROCESSING);
+                    }
+                }
+            }
+
+            function disconnectSocket() {
+                if (socket) {
+                    socket.disconnect();
+                    socket = null;
+                    document.getElementById("socket-status").textContent = "연결 안됨";
+                    document.getElementById("socket-status").className = "status info";
+
+                    // ACK 관련 상태 초기화
+                    pendingAcks.forEach((pending) => {
+                        clearTimeout(pending.timeoutId);
+                    });
+                    pendingAcks.clear();
+                    chunkIdCounter = 0;
+                    sentCount = 0;
+                    retryCount = 0;
+                    updateBackupStatus();
+                }
+            }
+
+            function sendSocketMessage() {
+                if (!socket || !socket.connected) {
+                    alert("먼저 연결해주세요.");
+                    return;
+                }
+
+                const input = document.getElementById("socket-input");
+                const message = input.value.trim();
+                if (!message) return;
+
+                addChatMessage("user", message);
+                input.value = "";
+
+                document.getElementById("typing-indicator").classList.add("active");
+                socket.emit("send_answer", { answer: message });
+            }
+
+            function addChatMessage(type, text) {
+                const chatBox = document.getElementById("chat-box");
+                const messageDiv = document.createElement("div");
+                messageDiv.className = `message ${type}`;
+                messageDiv.textContent = text;
+                chatBox.appendChild(messageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            // PCM 16-bit 변환 헬퍼 함수
+            function convertToPCM16(audioBuffer) {
+                // Mono로 변환 (여러 채널이면 평균)
+                let mono = audioBuffer.getChannelData(0);
+                if (audioBuffer.numberOfChannels > 1) {
+                    const channel2 = audioBuffer.getChannelData(1);
+                    mono = new Float32Array(mono.length);
+                    for (let i = 0; i < mono.length; i++) {
+                        mono[i] = (audioBuffer.getChannelData(0)[i] + channel2[i]) / 2;
+                    }
+                }
+
+                // 16kHz로 리샘플링
+                const targetSampleRate = 16000;
+                const ratio = audioBuffer.sampleRate / targetSampleRate;
+                const newLength = Math.round(mono.length / ratio);
+                const resampled = new Float32Array(newLength);
+
+                for (let i = 0; i < newLength; i++) {
+                    const srcIndex = Math.round(i * ratio);
+                    resampled[i] = mono[srcIndex];
+                }
+
+                // Float32 [-1, 1] → Int16 [-32768, 32767]
+                const pcm16 = new Int16Array(resampled.length);
+                for (let i = 0; i < resampled.length; i++) {
+                    const s = Math.max(-1, Math.min(1, resampled[i]));
+                    pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+                }
+
+                return pcm16;
+            }
+
+            // ArrayBuffer → Base64
+            function arrayBufferToBase64(buffer) {
+                let binary = "";
+                const bytes = new Uint8Array(buffer);
+                const len = bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return window.btoa(binary);
+            }
+
+            // 페이지 로드 시 토큰 복원
+            window.addEventListener("load", () => {
+                if (accessToken) {
+                    document.getElementById("auth-token").style.display = "block";
+                    document.getElementById("auth-token").textContent =
+                        `Access Token: ${accessToken.substring(0, 50)}...`;
+                }
+            });
+        </script>
+    </body>
 </html>
