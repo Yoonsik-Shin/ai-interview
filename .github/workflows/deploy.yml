@@ -14,7 +14,10 @@ jobs:
       core: ${{ steps.filter.outputs.core }}
       bff: ${{ steps.filter.outputs.bff }}
       socket: ${{ steps.filter.outputs.socket }}
-      inference: ${{ steps.filter.outputs.inference }}
+      llm: ${{ steps.filter.outputs.llm }}
+      stt: ${{ steps.filter.outputs.stt }}
+      tts: ${{ steps.filter.outputs.tts }}
+      storage: ${{ steps.filter.outputs.storage }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,8 +35,14 @@ jobs:
               - 'services/bff/**'
             socket:
               - 'services/socket/**'
-            inference:
-              - 'services/inference/**'
+            llm:
+              - 'services/llm/**'
+            stt:
+              - 'services/stt/**'
+            tts:
+              - 'services/tts/**'
+            storage:
+              - 'services/storage/**'
 
   deploy-prod:
     runs-on: ubuntu-latest
@@ -42,6 +51,9 @@ jobs:
     env:
       IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
       IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+      REPO_STT: ${{ vars.REPO_STT || 'unbrdn-krn-ocir-stt' }}
+      REPO_TTS: ${{ vars.REPO_TTS || 'unbrdn-krn-ocir-tts' }}
+      REPO_STORAGE: ${{ vars.REPO_STORAGE || 'unbrdn-krn-ocir-storage' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -137,20 +149,52 @@ jobs:
           OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
           SUPPRESS_LABEL_WARNING: "True"
         run: |
-          kubectl apply --validate=false -f k8s/infra/redis -n unbrdn || true
+          # Redis: Bitnami Helm Chart 배포
+          helm repo add bitnami https://charts.bitnami.com/bitnami || true
+          helm repo update || true
+          if helm list -n unbrdn | grep -q "^redis "; then
+            helm upgrade redis bitnami/redis \
+              --namespace unbrdn \
+              --values k8s/infra/redis/helm/prod/values.yaml \
+              --wait \
+              --timeout 5m || true
+          else
+            # Helm 미관리 Redis 리소스 정리 (과거 YAML 잔여물)
+            for r in svc/redis-headless svc/redis configmap/redis-config; do
+              kind="${r%%/*}" name="${r##*/}"
+              if kubectl get "$kind" "$name" -n unbrdn &>/dev/null; then
+                m=$(kubectl get "$kind" "$name" -n unbrdn -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || echo "")
+                [ "$m" = "Helm" ] || { echo "기존 Redis 제거: $kind/$name"; kubectl delete "$kind" "$name" -n unbrdn --ignore-not-found --wait=false || true; }
+              fi
+            done
+            if kubectl get statefulset redis -n unbrdn &>/dev/null; then
+              m=$(kubectl get statefulset redis -n unbrdn -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || echo "")
+              if [ "$m" != "Helm" ]; then
+                echo "기존 Redis StatefulSet 제거"
+                kubectl delete statefulset redis -n unbrdn --cascade=orphan --ignore-not-found || true
+                kubectl delete pods -n unbrdn -l app=redis --ignore-not-found --grace-period=0 --force || true
+              fi
+            fi
+            sleep 2
+            helm install redis bitnami/redis \
+              --namespace unbrdn \
+              --create-namespace \
+              --values k8s/infra/redis/helm/prod/values.yaml \
+              --wait \
+              --timeout 5m || true
+          fi
+
           # Kafka: Strimzi 사용 (고가용성)
-          # Kafka 네임스페이스 생성
           kubectl create namespace kafka --dry-run=client -o yaml | kubectl apply -f - || true
-          # Strimzi Operator 설치 확인
           if ! kubectl get deployment strimzi-cluster-operator -n kafka &>/dev/null; then
             echo "📦 Strimzi Operator 설치 중..."
             kubectl apply -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka || true
             sleep 10
           fi
-          # Kafka 클러스터 배포
-          kubectl apply --validate=false -f k8s/infra/kafka/kafka-configmap-prod.yaml --namespace=kafka || true
-          kubectl apply --validate=false -f k8s/infra/kafka/kafka-nodepool-prod.yaml --namespace=kafka || true
-          kubectl apply --validate=false -f k8s/infra/kafka/strimzi-kafka-prod.yaml --namespace=kafka || true
+          # Kafka: common(ConfigMap, Kafka CR) → prod(NodePool 등)
+          kubectl apply --validate=false -f k8s/infra/kafka/common/ || true
+          kubectl apply --validate=false -f k8s/infra/kafka/prod/ --namespace=kafka || true
+
           # Monitoring: unbrdn namespace 파일만 적용 (kube-system namespace 파일 제외)
           kubectl apply --validate=false -f k8s/infra/monitoring/grafana-deployment.yaml -n unbrdn || true
           kubectl apply --validate=false -f k8s/infra/monitoring/kafka-exporter-deployment.yaml -n unbrdn || true
@@ -160,40 +204,69 @@ jobs:
           # Promtail RBAC (Kubernetes API 접근 권한)
           kubectl apply --validate=false -f k8s/infra/monitoring/promtail-rbac.yaml || true
           kubectl apply --validate=false -f k8s/infra/monitoring/promtail-daemonset.yaml -n unbrdn || true
-          kubectl apply --validate=false -f k8s/infra/monitoring/redis-exporter-deployment.yaml -n unbrdn || true
+
           # Ingress (Grafana 접근 경로 포함)
-          kubectl apply --validate=false -f k8s/common/ingress/ingress-prod.yaml -n unbrdn || true
+          kubectl apply --validate=false -f k8s/common/ingress/prod/ -n unbrdn || true
 
       - name: Apply app manifests
         env:
           OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
           SUPPRESS_LABEL_WARNING: "True"
         run: |
-          # ConfigMap 및 Secret 배포
-          kubectl apply --validate=false -f k8s/apps/bff/configmap-prod.yaml -n unbrdn || true
-          kubectl apply --validate=false -f k8s/apps/core/configmap-prod.yaml -n unbrdn || true
-          kubectl apply --validate=false -f k8s/apps/inference/configmap-prod.yaml -n unbrdn || true
-          # Secret 파일이 존재하는 경우에만 적용 (gitignore에 포함되어 있을 수 있음)
-          if [ -f "k8s/apps/inference/secret-prod.yaml" ]; then
-            kubectl apply --validate=false -f k8s/apps/inference/secret-prod.yaml -n unbrdn || true
-          else
-            echo "⚠️  secret-prod.yaml 파일이 없습니다. Secret은 수동으로 생성해야 합니다."
-            echo "   kubectl create secret generic inference-secrets \\"
+          # ConfigMap 및 Secret 배포 (프로덕션 폴더)
+          kubectl apply --validate=false -f k8s/apps/bff/prod/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/core/prod/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/llm/prod/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/socket/prod/ -n unbrdn || true
+          [ -d "k8s/apps/stt/prod" ] && kubectl apply --validate=false -f k8s/apps/stt/prod/ -n unbrdn || true
+          [ -d "k8s/apps/tts/prod" ] && kubectl apply --validate=false -f k8s/apps/tts/prod/ -n unbrdn || true
+          [ -d "k8s/apps/storage/prod" ] && kubectl apply --validate=false -f k8s/apps/storage/prod/ -n unbrdn || true
+          [ -d "k8s/apps/frontend/common" ] && kubectl apply --validate=false -f k8s/apps/frontend/common/ -n unbrdn || true
+          [ -d "k8s/apps/frontend/prod" ] && kubectl apply --validate=false -f k8s/apps/frontend/prod/ -n unbrdn || true
+
+          # Secret 파일 확인 (gitignore에 포함되어 있을 수 있음)
+          if [ ! -f "k8s/apps/llm/prod/secret.yaml" ]; then
+            echo "⚠️  (옵션) Triton inference secret.yaml 파일이 없습니다. 이 경로는 기본 배포에 포함되지 않으며 GPU 테스트 시에만 사용합니다."
+            echo "   kubectl create secret generic llm-secrets \\"
             echo "     --from-literal=OPENAI_API_KEY='your-api-key' \\"
             echo "     --namespace=unbrdn \\"
             echo "     --dry-run=client -o yaml | kubectl apply -f -"
           fi
-          kubectl apply --validate=false -f k8s/apps/socket/configmap-prod.yaml -n unbrdn || true
-          # Deployment 배포
-          envsubst < k8s/apps/core/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
-          envsubst < k8s/apps/bff/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
-          envsubst < k8s/apps/socket/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
-          envsubst < k8s/apps/inference/deployment-prod.yaml | kubectl apply --validate=false -f - -n unbrdn
-          # Service 배포
-          kubectl apply --validate=false -f k8s/apps/core/service.yaml -n unbrdn || true
-          kubectl apply --validate=false -f k8s/apps/bff/service.yaml -n unbrdn || true
-          kubectl apply --validate=false -f k8s/apps/socket/service.yaml -n unbrdn || true
-          kubectl apply --validate=false -f k8s/apps/inference/service.yaml -n unbrdn || true
+
+          # Deployment 배포 (환경 변수 치환)
+          if grep -q '\$' k8s/apps/core/prod/deployment.yaml 2>/dev/null; then
+            envsubst < k8s/apps/core/prod/deployment.yaml | kubectl apply --validate=false -f - -n unbrdn
+          else
+            kubectl apply --validate=false -f k8s/apps/core/prod/deployment.yaml -n unbrdn
+          fi
+
+          if grep -q '\$' k8s/apps/bff/prod/deployment.yaml 2>/dev/null; then
+            envsubst < k8s/apps/bff/prod/deployment.yaml | kubectl apply --validate=false -f - -n unbrdn
+          else
+            kubectl apply --validate=false -f k8s/apps/bff/prod/deployment.yaml -n unbrdn
+          fi
+
+          if grep -q '\$' k8s/apps/socket/prod/deployment.yaml 2>/dev/null; then
+            envsubst < k8s/apps/socket/prod/deployment.yaml | kubectl apply --validate=false -f - -n unbrdn
+          else
+            kubectl apply --validate=false -f k8s/apps/socket/prod/deployment.yaml -n unbrdn
+          fi
+
+          if grep -q '\$' k8s/apps/llm/prod/deployment.yaml 2>/dev/null; then
+            envsubst < k8s/apps/llm/prod/deployment.yaml | kubectl apply --validate=false -f - -n unbrdn
+          else
+            kubectl apply --validate=false -f k8s/apps/llm/prod/deployment.yaml -n unbrdn
+          fi
+
+          # Service 배포 (공통 폴더)
+          kubectl apply --validate=false -f k8s/apps/core/common/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/bff/common/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/socket/common/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/llm/common/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/stt/common/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/tts/common/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/storage/common/ -n unbrdn || true
+          kubectl apply --validate=false -f k8s/apps/frontend/common/ -n unbrdn || true
 
       - name: Update Core image
         if: needs.detect-changes.outputs.core == 'true'
@@ -248,19 +321,85 @@ jobs:
             kubectl rollout status deployment/socket -n unbrdn --timeout=5m
           fi
 
-      - name: Update Inference image
-        if: needs.detect-changes.outputs.inference == 'true'
+      - name: Update LLM image
+        if: needs.detect-changes.outputs.llm == 'true'
         env:
           IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
-          IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:${IMAGE_TAG}"
-          echo "🔄 Inference 이미지 업데이트 시도: ${IMAGE_NAME}"
-          kubectl set image deployment/inference inference=${IMAGE_NAME} -n unbrdn
-          if kubectl rollout status deployment/inference -n unbrdn --timeout=30s 2>&1; then
+          IMAGE_NAME="${IMAGE_REGISTRY}/unbrdn-krn-ocir-llm:${IMAGE_TAG}"
+          echo "🔄 LLM 이미지 업데이트 시도: ${IMAGE_NAME}"
+          kubectl set image deployment/llm llm=${IMAGE_NAME} -n unbrdn
+          if kubectl rollout status deployment/llm -n unbrdn --timeout=30s 2>&1; then
             echo "✅ 롤아웃 완료: ${IMAGE_NAME}"
           else
             echo "⚠️  롤아웃 실패 또는 이미지 pull 실패. latest 태그로 폴백..."
-            kubectl set image deployment/inference inference=${IMAGE_REGISTRY}/unbrdn-krn-ocir-inference:latest -n unbrdn
-            kubectl rollout status deployment/inference -n unbrdn --timeout=5m
+            kubectl set image deployment/llm llm=${IMAGE_REGISTRY}/unbrdn-krn-ocir-llm:latest -n unbrdn
+            kubectl rollout status deployment/llm -n unbrdn --timeout=5m
+          fi
+
+      - name: Update STT image
+        if: needs.detect-changes.outputs.stt == 'true'
+        env:
+          IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+          REPO_STT: ${{ vars.REPO_STT || 'unbrdn-krn-ocir-stt' }}
+        run: |
+          if ! kubectl get deployment stt -n unbrdn >/dev/null 2>&1; then
+            echo "⚠️  stt deployment가 없습니다. 이미지 업데이트를 건너뜁니다."
+            exit 0
+          fi
+          IMAGE_NAME="${IMAGE_REGISTRY}/${REPO_STT}:${IMAGE_TAG}"
+          echo "🔄 STT 이미지 업데이트 시도: ${IMAGE_NAME}"
+          kubectl set image deployment/stt stt=${IMAGE_NAME} -n unbrdn
+          if kubectl rollout status deployment/stt -n unbrdn --timeout=30s 2>&1; then
+            echo "✅ 롤아웃 완료: ${IMAGE_NAME}"
+          else
+            echo "⚠️  롤아웃 실패 또는 이미지 pull 실패. latest 태그로 폴백..."
+            kubectl set image deployment/stt stt=${IMAGE_REGISTRY}/${REPO_STT}:latest -n unbrdn
+            kubectl rollout status deployment/stt -n unbrdn --timeout=5m
+          fi
+
+      - name: Update TTS image
+        if: needs.detect-changes.outputs.tts == 'true'
+        env:
+          IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+          REPO_TTS: ${{ vars.REPO_TTS || 'unbrdn-krn-ocir-tts' }}
+        run: |
+          if ! kubectl get deployment tts -n unbrdn >/dev/null 2>&1; then
+            echo "⚠️  tts deployment가 없습니다. 이미지 업데이트를 건너뜁니다."
+            exit 0
+          fi
+          IMAGE_NAME="${IMAGE_REGISTRY}/${REPO_TTS}:${IMAGE_TAG}"
+          echo "🔄 TTS 이미지 업데이트 시도: ${IMAGE_NAME}"
+          kubectl set image deployment/tts tts=${IMAGE_NAME} -n unbrdn
+          if kubectl rollout status deployment/tts -n unbrdn --timeout=30s 2>&1; then
+            echo "✅ 롤아웃 완료: ${IMAGE_NAME}"
+          else
+            echo "⚠️  롤아웃 실패 또는 이미지 pull 실패. latest 태그로 폴백..."
+            kubectl set image deployment/tts tts=${IMAGE_REGISTRY}/${REPO_TTS}:latest -n unbrdn
+            kubectl rollout status deployment/tts -n unbrdn --timeout=5m
+          fi
+
+      - name: Update Storage image
+        if: needs.detect-changes.outputs.storage == 'true'
+        env:
+          IMAGE_REGISTRY: ${{ secrets.OCI_REGISTRY }}
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+          REPO_STORAGE: ${{ vars.REPO_STORAGE || 'unbrdn-krn-ocir-storage' }}
+        run: |
+          if ! kubectl get deployment storage -n unbrdn >/dev/null 2>&1; then
+            echo "⚠️  storage deployment가 없습니다. 이미지 업데이트를 건너뜁니다."
+            exit 0
+          fi
+          IMAGE_NAME="${IMAGE_REGISTRY}/${REPO_STORAGE}:${IMAGE_TAG}"
+          echo "🔄 Storage 이미지 업데이트 시도: ${IMAGE_NAME}"
+          kubectl set image deployment/storage storage=${IMAGE_NAME} -n unbrdn
+          if kubectl rollout status deployment/storage -n unbrdn --timeout=30s 2>&1; then
+            echo "✅ 롤아웃 완료: ${IMAGE_NAME}"
+          else
+            echo "⚠️  롤아웃 실패 또는 이미지 pull 실패. latest 태그로 폴백..."
+            kubectl set image deployment/storage storage=${IMAGE_REGISTRY}/${REPO_STORAGE}:latest -n unbrdn
+            kubectl rollout status deployment/storage -n unbrdn --timeout=5m
           fi
