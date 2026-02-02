@@ -1,86 +1,125 @@
 package me.unbrdn.core.auth.adapter.in.grpc;
 
-import me.unbrdn.core.adapter.in.grpc.GlobalGrpcExceptionHandler;
-import me.unbrdn.core.auth.application.port.in.AuthenticateUserUseCase;
-import me.unbrdn.core.auth.application.port.in.RegisterUserUseCase;
-import me.unbrdn.core.auth.application.service.AuthenticateUserCommand;
-import me.unbrdn.core.auth.application.service.AuthenticateUserResult;
-import me.unbrdn.core.auth.application.service.RegisterUserCommand;
-import me.unbrdn.core.grpc.AuthProto.ValidateUserRequest;
-import me.unbrdn.core.grpc.AuthProto.ValidateUserResponse;
-import me.unbrdn.core.grpc.AuthProto.SignupRequest;
-import me.unbrdn.core.grpc.AuthProto.SignupResponse;
-import me.unbrdn.core.grpc.AuthServiceGrpc.AuthServiceImplBase;
-
 import io.grpc.stub.StreamObserver;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import me.unbrdn.core.auth.application.interactor.dto.command.AuthenticateUserCommand;
+import me.unbrdn.core.auth.application.interactor.dto.command.RefreshTokenCommand;
+import me.unbrdn.core.auth.application.interactor.dto.command.RegisterCandidateCommand;
+import me.unbrdn.core.auth.application.interactor.dto.command.RegisterRecruiterCommand;
+import me.unbrdn.core.auth.application.interactor.dto.result.AuthenticateUserResult;
+import me.unbrdn.core.auth.application.interactor.dto.result.RefreshTokenResult;
+import me.unbrdn.core.auth.application.port.in.AuthenticateUserUseCase;
+import me.unbrdn.core.auth.application.port.in.RefreshTokenUseCase;
+import me.unbrdn.core.auth.application.port.in.RegisterCandidateUseCase;
+import me.unbrdn.core.auth.application.port.in.RegisterRecruiterUseCase;
+import me.unbrdn.core.grpc.AuthProto.AuthenticateUserRequest;
+import me.unbrdn.core.grpc.AuthProto.AuthenticateUserResponse;
+import me.unbrdn.core.grpc.AuthProto.RefreshTokenRequest;
+import me.unbrdn.core.grpc.AuthProto.RefreshTokenResponse;
+import me.unbrdn.core.grpc.AuthProto.RegisterCandidateRequest;
+import me.unbrdn.core.grpc.AuthProto.RegisterRecruiterRequest;
+import me.unbrdn.core.grpc.AuthProto.RegisterResponse;
+import me.unbrdn.core.grpc.AuthProto.User;
+import me.unbrdn.core.grpc.AuthServiceGrpc;
 import net.devh.boot.grpc.server.service.GrpcService;
 
-/**
- * Auth gRPC Controller
- * 
- * Input Adapter: gRPC 요청을 받아 Application Layer의 UseCase를 호출합니다.
- * 
- * AuthServiceImplBase: gRPC 코드 생성 시 proto 파일로부터 자동 생성되는 베이스 클래스입니다. 이 클래스를 상속하여
- * RPC 메서드를 구현합니다.
- */
 @Slf4j
 @GrpcService
 @RequiredArgsConstructor
-public class AuthGrpcController extends AuthServiceImplBase {
+public class AuthGrpcController extends AuthServiceGrpc.AuthServiceImplBase {
 
-  private final RegisterUserUseCase registerUserUseCase;
-  private final AuthenticateUserUseCase authenticateUserUseCase;
+    private final RegisterCandidateUseCase registerCandidateUseCase;
+    private final RegisterRecruiterUseCase registerRecruiterUseCase;
+    private final AuthenticateUserUseCase authenticateUserUseCase;
+    private final RefreshTokenUseCase refreshTokenUseCase;
 
-  @Override
-  public void signup(SignupRequest request, StreamObserver<SignupResponse> responseObserver) {
-    log.info("gRPC 요청 수신: Signup - email={}", request.getEmail());
+    @Override
+    public void authenticateUser(
+            AuthenticateUserRequest request,
+            StreamObserver<AuthenticateUserResponse> responseObserver) {
+        AuthenticateUserCommand command =
+                AuthenticateUserCommand.builder()
+                        .email(request.getEmail())
+                        .password(request.getPassword())
+                        .build();
 
-    try {
-      // 1. Command 생성
-      RegisterUserCommand command = RegisterUserCommand.builder().email(request.getEmail())
-          .password(request.getPassword()).nickname(request.getNickname()).build();
+        AuthenticateUserResult result = authenticateUserUseCase.execute(command);
 
-      // 2. UseCase 실행
-      Long userId = registerUserUseCase.execute(command);
+        User user =
+                User.newBuilder()
+                        .setId(result.getUser().getId().toString())
+                        .setEmail(result.getUser().getEmail())
+                        .setNickname(
+                                result.getUser().getNickname() != null
+                                        ? result.getUser().getNickname()
+                                        : "")
+                        .setRole(result.getUser().getRole())
+                        .build();
 
-      // 3. 응답 생성 및 전송
-      SignupResponse response = SignupResponse.newBuilder().setUserId(userId).build();
-
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
-      log.info("gRPC 응답 전송 완료: userId={}", userId);
-
-    } catch (Exception e) {
-      io.grpc.Status status = GlobalGrpcExceptionHandler.toGrpcStatus(e);
-      responseObserver.onError(status.asRuntimeException());
+        AuthenticateUserResponse response =
+                AuthenticateUserResponse.newBuilder()
+                        .setAccessToken(result.getAccessToken())
+                        .setRefreshToken(result.getRefreshToken())
+                        .setUser(user)
+                        .build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
-  }
 
-  @Override
-  public void validateUser(ValidateUserRequest request, StreamObserver<ValidateUserResponse> responseObserver) {
-    log.info("gRPC 요청 수신: ValidateUser - email={}", request.getEmail());
+    @Override
+    public void registerCandidate(
+            RegisterCandidateRequest request, StreamObserver<RegisterResponse> responseObserver) {
+        RegisterCandidateCommand command =
+                RegisterCandidateCommand.builder()
+                        .email(request.getEmail())
+                        .password(request.getPassword())
+                        .nickname(request.getNickname())
+                        .phoneNumber(request.getPhoneNumber())
+                        .build();
 
-    try {
-      // 1. Command 생성
-      AuthenticateUserCommand command = AuthenticateUserCommand.builder().email(request.getEmail())
-          .password(request.getPassword()).build();
+        UUID userId = registerCandidateUseCase.execute(command);
 
-      // 2. UseCase 실행
-      AuthenticateUserResult result = authenticateUserUseCase.execute(command);
-
-      // 3. 응답 생성 및 전송
-      ValidateUserResponse response = ValidateUserResponse.newBuilder().setUserId(result.getUserId())
-          .setEmail(result.getEmail()).setNickname(result.getNickname()).setRole(result.getRole().name()).build();
-
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
-      log.info("gRPC 응답 전송 완료: userId={}", result.getUserId());
-
-    } catch (Exception e) {
-      io.grpc.Status status = GlobalGrpcExceptionHandler.toGrpcStatus(e);
-      responseObserver.onError(status.asRuntimeException());
+        RegisterResponse response =
+                RegisterResponse.newBuilder().setUserId(userId.toString()).build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
-  }
+
+    @Override
+    public void registerRecruiter(
+            RegisterRecruiterRequest request, StreamObserver<RegisterResponse> responseObserver) {
+        RegisterRecruiterCommand command =
+                RegisterRecruiterCommand.builder()
+                        .email(request.getEmail())
+                        .password(request.getPassword())
+                        .nickname(request.getNickname())
+                        .companyCode(request.getCompanyCode())
+                        .phoneNumber(request.getPhoneNumber())
+                        .build();
+
+        UUID userId = registerRecruiterUseCase.execute(command);
+
+        RegisterResponse response =
+                RegisterResponse.newBuilder().setUserId(userId.toString()).build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void refreshToken(
+            RefreshTokenRequest request, StreamObserver<RefreshTokenResponse> responseObserver) {
+        RefreshTokenCommand command =
+                RefreshTokenCommand.builder().refreshToken(request.getRefreshToken()).build();
+        RefreshTokenResult result = refreshTokenUseCase.execute(command);
+
+        RefreshTokenResponse response =
+                RefreshTokenResponse.newBuilder()
+                        .setAccessToken(result.getAccessToken())
+                        .setRefreshToken(result.getRefreshToken())
+                        .build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
 }
