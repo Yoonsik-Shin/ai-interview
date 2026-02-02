@@ -1,0 +1,47 @@
+# 프로덕션 의존성 (런타임에 필요한 패키지만)
+redis
+fastapi==0.127.0
+uvicorn==0.40.0
+faster-whisper==1.1.0
+edge-tts>=6.1.12
+openai==2.14.0
+kafka-python==2.0.2
+python-dotenv==1.2.1
+numpy==1.26.4
+grpcio==1.62.0
+grpcio-tools==1.62.0
+
+# FastAPI 의존성
+pydantic==2.12.5
+pydantic_core==2.41.5
+starlette==0.50.0
+anyio==4.12.0
+sniffio==1.3.1
+typing_extensions==4.15.0
+
+# HTTP 클라이언트
+httpx==0.28.1
+httpcore==1.0.9
+h11==0.16.0
+requests==2.32.5
+urllib3==2.6.2
+
+# 유틸리티
+click==8.3.1
+tqdm==4.67.1
+distro==1.9.0
+
+# 오디오 처리
+pydub==0.25.1
+ffmpeg-python==0.2.0
+
+# 인증서 및 인코딩
+certifi==2025.11.12
+charset-normalizer==3.4.4
+idna==3.11
+
+# 타입 지원
+annotated-doc==0.0.4
+annotated-types==0.7.0
+jiter==0.12.0
+typing-inspection==0.4.2

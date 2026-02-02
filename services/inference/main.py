@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse, Response
 from datetime import datetime
-from fastapi.responses import StreamingResponse
 import time
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -8,6 +8,12 @@ import os
 from pydantic import BaseModel
 import json
 from uuid import uuid4
+from typing import Literal
+import socket
+import redis
+
+# TTS 서비스 임포트
+from tts_service import generate_tts_openai, generate_tts_edge, get_random_filler
 
 
 # .env 파일 로드
@@ -18,12 +24,21 @@ app = FastAPI()
 # OpenAI 클라이언트 생성
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Kafka 설정
+KAFKA_BROKER = os.getenv('KAFKA_BROKER', 'kafka:29092')
+GRPC_PORT = os.getenv('GRPC_PORT', '50051')
+
+# Redis 설정 (STT 서비스용)
+REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
+REDIS_DB = int(os.getenv('REDIS_DB', '1'))  # STT는 DB 1 사용
+
 def log_json(event: str, **fields) -> None:
     """
     JSON 포맷으로 표준화된 로그를 출력합니다.
     """
     base = {
-        "service": "inference",
+        "service": "llm",
         "event": event,
         "timestamp": datetime.now().isoformat(),
     }
@@ -139,9 +154,80 @@ async def get_ping():
     }
 
 
+def check_tcp_port(host: str, port: int, timeout: float = 2.0) -> bool:
+    """지정된 호스트와 포트에 TCP 연결을 시도합니다."""
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        return False
+
+
 @app.get("/health")
 async def get_health():
-    return {"status": "ok"}
+    start_time = time.time()
+    checks = {}
+    overall_status = "healthy"
+
+    # 1. FastAPI 서버 자체는 이 엔드포인트가 응답하면 OK
+    checks["fastapi"] = "ok"
+
+    # 2. gRPC 서버 포트 확인
+    grpc_host = "localhost"  # supervisord.conf에 따라 같은 Pod 내에서 실행
+    grpc_port = int(GRPC_PORT)
+    if check_tcp_port(grpc_host, grpc_port):
+        checks["grpc_server"] = "ok"
+    else:
+        checks["grpc_server"] = "port_closed"
+        overall_status = "degraded"
+        log_json("health_check_grpc_failed", reason="port_closed", host=grpc_host, port=grpc_port)
+
+    # 3. Kafka 연결 확인
+    kafka_status = "ok"
+    try:
+        # Kafka 브로커 주소 파싱 (host:port 형태)
+        kafka_host, kafka_port_str = KAFKA_BROKER.split(':')
+        kafka_port = int(kafka_port_str)
+        if not check_tcp_port(kafka_host, kafka_port):
+            kafka_status = "unreachable"
+            overall_status = "degraded"
+            log_json("health_check_kafka_failed", reason="unreachable", broker=KAFKA_BROKER)
+    except ValueError:
+        kafka_status = "invalid_config"
+        overall_status = "degraded"
+        log_json("health_check_kafka_failed", reason="invalid_config", broker=KAFKA_BROKER)
+    except Exception as e:
+        kafka_status = f"error: {str(e)}"
+        overall_status = "degraded"
+        log_json("health_check_kafka_failed", reason="exception", error=str(e), broker=KAFKA_BROKER)
+    checks["kafka_broker"] = kafka_status
+
+    # 4. Redis 연결 확인 (STT 서비스용)
+    redis_status = "ok"
+    try:
+        # Redis 클라이언트 생성 시 timeout 설정
+        redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, socket_connect_timeout=2.0)
+        redis_client.ping()  # 연결 확인
+        checks["redis_stt"] = "ok"
+    except redis.exceptions.ConnectionError as e:
+        redis_status = "unreachable"
+        overall_status = "degraded"
+        log_json("health_check_redis_failed", reason="unreachable", host=REDIS_HOST, port=REDIS_PORT, error=str(e))
+    except Exception as e:
+        redis_status = f"error: {str(e)}"
+        overall_status = "degraded"
+        log_json("health_check_redis_failed", reason="exception", error=str(e), host=REDIS_HOST, port=REDIS_PORT)
+    checks["redis_stt"] = redis_status
+
+    response_time_ms = int((time.time() - start_time) * 1000)
+    log_json("health_check_completed", status=overall_status, checks=checks, latencyMs=response_time_ms)
+
+    return {
+        "status": overall_status,
+        "timestamp": datetime.now().isoformat(),
+        "service": "llm",
+        "checks": checks
+    }
 
 @app.get("/stream")
 def stream_response():
@@ -159,3 +245,149 @@ def fake_ai_generator():
     for char in text:
         yield char  # ✅ 한 글자씩 '문자열'로 뱉어야 합니다.
         time.sleep(0.1) # 0.1초 딜레이 (이게 없으면 너무 빨라서 한 번에 뜬 것처럼 보임)
+
+
+# =============================================================================
+# TTS (Text-to-Speech) API
+# =============================================================================
+
+class TTSRequest(BaseModel):
+    text: str
+    mode: Literal["practice", "real"] = "practice"  # 연습 or 실전
+    persona: Literal["PRESSURE", "COMFORTABLE", "RANDOM"] = "COMFORTABLE"
+    speed: float = 1.0
+
+
+@app.post("/tts")
+async def text_to_speech(request: TTSRequest, http_request: Request):
+    """
+    텍스트를 음성으로 변환하는 하이브리드 TTS 엔드포인트
+    
+    - 실전 면접 (mode=real): OpenAI TTS API (감정 표현, 페르소나)
+    - 연습 모드 (mode=practice): Edge-TTS (무료, MS Azure급 품질)
+    """
+    trace_id = get_trace_id(http_request)
+    
+    log_json(
+        "tts_request_received",
+        traceId=trace_id,
+        mode=request.mode,
+        persona=request.persona,
+        textLength=len(request.text),
+    )
+    
+    try:
+        if request.mode == "real":
+            # 실전 면접: OpenAI TTS
+            audio_bytes = generate_tts_openai(
+                text=request.text,
+                persona=request.persona,
+                speed=request.speed
+            )
+            
+            return Response(
+                content=audio_bytes,
+                media_type="audio/mpeg",
+                headers={
+                    "X-TTS-Engine": "openai",
+                    "X-TTS-Persona": request.persona,
+                    "X-Trace-Id": trace_id,
+                }
+            )
+        else:
+            # 연습 모드: Edge-TTS (실패 시 OpenAI Fallback)
+            try:
+                audio_bytes = await generate_tts_edge(
+                    text=request.text,
+                    voice="ko-KR-SunHiNeural",
+                )
+                
+                return Response(
+                    content=audio_bytes,
+                    media_type="audio/mpeg",
+                    headers={
+                        "X-TTS-Engine": "edge-tts",
+                        "X-TTS-Cost": "0",
+                        "X-Trace-Id": trace_id,
+                    }
+                )
+            except Exception as edge_error:
+                # Edge-TTS 실패 시 OpenAI로 Fallback
+                log_json(
+                    "edge_tts_fallback_to_openai",
+                    traceId=trace_id,
+                    error=str(edge_error),
+                    reason="Edge-TTS 403 or network issue"
+                )
+                
+                audio_bytes = generate_tts_openai(
+                    text=request.text,
+                    persona="COMFORTABLE",  # 연습 모드는 편안한 톤
+                    speed=request.speed
+                )
+                
+                return Response(
+                    content=audio_bytes,
+                    media_type="audio/mpeg",
+                    headers={
+                        "X-TTS-Engine": "openai-fallback",
+                        "X-TTS-Cost": "fallback",
+                        "X-Trace-Id": trace_id,
+                        "X-Warning": "Edge-TTS unavailable, using OpenAI"
+                    }
+                )
+    
+    except Exception as e:
+        log_json(
+            "tts_request_failed",
+            traceId=trace_id,
+            error=str(e),
+            mode=request.mode,
+        )
+        return Response(
+            content=json.dumps({"error": str(e)}),
+            status_code=500,
+            media_type="application/json"
+        )
+
+
+@app.get("/tts/filler")
+async def get_filler_word(http_request: Request):
+    """
+    랜덤 필러 워드 반환 (즉각 반응용)
+    캐싱된 오디오 파일명을 반환하거나, 즉시 생성
+    """
+    trace_id = get_trace_id(http_request)
+    
+    filler_text = get_random_filler()
+    
+    log_json(
+        "filler_word_requested",
+        traceId=trace_id,
+        fillerText=filler_text,
+    )
+    
+    return {
+        "text": filler_text,
+        "audioUrl": f"/assets/tts/filler_{hash(filler_text) % 1000}.mp3",
+        "traceId": trace_id,
+    }
+
+
+@app.get("/tts/voices")
+async def list_voices():
+    """
+    사용 가능한 TTS 음성 목록 반환
+    """
+    return {
+        "openai": {
+            "PRESSURE": "onyx",
+            "COMFORTABLE": "nova",
+            "RANDOM": "alloy",
+        },
+        "edge": {
+            "female_formal": "ko-KR-SunHiNeural",
+            "male_formal": "ko-KR-InJoonNeural",
+            "female_casual": "ko-KR-SoonBokMultilingualNeural",
+        }
+    }
