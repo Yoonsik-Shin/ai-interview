@@ -27,13 +27,14 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
 
         // Domain logic - Entity의 transition 메서드 호출
         switch (command.newStage()) {
-        case GREETING_PROMPT -> session.transitionToGreetingPrompt();
         case GREETING -> session.transitionToGreeting();
+        case CANDIDATE_GREETING -> session.transitionToCandidateGreeting();
         case INTERVIEWER_INTRO -> {
             session.transitionToInterviewerIntro();
             // INTERVIEWER_INTRO 단계 진입 시 면접관 소개 자동 발화 트리거
             triggerInterviewerIntro(session);
         }
+        case SELF_INTRO_PROMPT -> session.transitionToSelfIntroPrompt();
         case SELF_INTRO -> session.transitionToSelfIntro();
         case IN_PROGRESS -> session.transitionToInProgress();
         case COMPLETED -> session.transitionToCompleted();

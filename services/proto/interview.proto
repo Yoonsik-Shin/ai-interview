@@ -40,12 +40,13 @@ enum InterviewStatusProto {
 enum InterviewStageProto {
   INTERVIEW_STAGE_UNSPECIFIED = 0;
   WAITING = 1;
-  GREETING_PROMPT = 2;
-  GREETING = 3;
-  INTERVIEWER_INTRO = 4;
-  SELF_INTRO = 5;
-  IN_PROGRESS_STAGE = 6;  // IN_PROGRESS와 구분하기 위해 _STAGE 접미사
-  COMPLETED_STAGE = 7;
+  GREETING = 2;                // 면접관 인사 (녹음 음성)
+  CANDIDATE_GREETING = 3;      // 면접자 인사 (첫 발화 감지)
+  INTERVIEWER_INTRO = 4;       // 면접관 자기소개 (LLM)
+  SELF_INTRO_PROMPT = 5;       // 1분 자기소개 요청 (녹음 음성)
+  SELF_INTRO = 6;              // 면접자 1분 자기소개
+  IN_PROGRESS_STAGE = 7;       // 본 면접 진행 (IN_PROGRESS와 구분하기 위해 _STAGE 접미사)
+  COMPLETED_STAGE = 8;         // 면접 완료
 }
 
 // === 메시지 정의 (DTO) ===

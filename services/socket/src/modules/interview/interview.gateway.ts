@@ -33,11 +33,11 @@ export class InterviewGateway {
     ): Promise<void> {
         this.logger.log(client, "stage_ready_received", payload);
 
-        if (payload.currentStage === InterviewStage.GREETING_PROMPT) {
-            // GREETING_PROMPT → GREETING 전환
+        if (payload.currentStage === InterviewStage.GREETING) {
+            // GREETING -> CANDIDATE_GREETING 전환 (면접관 인사 완료)
             const nextStage = await this.stageService.transitionStage(
                 payload.interviewSessionId,
-                InterviewStage.GREETING,
+                InterviewStage.CANDIDATE_GREETING,
             );
             client.emit("interview:stage_changed", {
                 interviewSessionId: payload.interviewSessionId,
@@ -45,7 +45,18 @@ export class InterviewGateway {
                 currentStage: nextStage,
             });
         } else if (payload.currentStage === InterviewStage.INTERVIEWER_INTRO) {
-            // INTERVIEWER_INTRO → SELF_INTRO 전환
+            // INTERVIEWER_INTRO -> SELF_INTRO_PROMPT 전환
+            const nextStage = await this.stageService.transitionStage(
+                payload.interviewSessionId,
+                InterviewStage.SELF_INTRO_PROMPT,
+            );
+            client.emit("interview:stage_changed", {
+                interviewSessionId: payload.interviewSessionId,
+                previousStage: payload.currentStage,
+                currentStage: nextStage,
+            });
+        } else if (payload.currentStage === InterviewStage.SELF_INTRO_PROMPT) {
+            // SELF_INTRO_PROMPT -> SELF_INTRO 전환 (자기소개 요청 완료)
             const nextStage = await this.stageService.transitionStage(
                 payload.interviewSessionId,
                 InterviewStage.SELF_INTRO,
@@ -77,8 +88,8 @@ export class InterviewGateway {
 
             // Stage별 처리
             switch (stage) {
-                case InterviewStage.GREETING:
-                    await this.processGreeting(client, payload);
+                case InterviewStage.CANDIDATE_GREETING:
+                    await this.processCandidateGreeting(client, payload);
                     break;
 
                 case InterviewStage.SELF_INTRO:
@@ -90,8 +101,9 @@ export class InterviewGateway {
                     break;
 
                 case InterviewStage.WAITING:
-                case InterviewStage.GREETING_PROMPT:
+                case InterviewStage.GREETING:
                 case InterviewStage.INTERVIEWER_INTRO:
+                case InterviewStage.SELF_INTRO_PROMPT:
                     // 이 단계에서는 오디오 처리하지 않음
                     this.logger.debug(client, "audio_chunk_ignored_in_stage", {
                         interviewSessionId: payload.interviewSessionId,
@@ -122,20 +134,20 @@ export class InterviewGateway {
     }
 
     /**
-     * GREETING Stage: 인사 처리
+     * CANDIDATE_GREETING Stage: 면접자 인사 처리
      * - 짧게 인사만 받고 다음 단계로 전환
      */
-    private async processGreeting(client: Socket, payload: AudioChunkDto): Promise<void> {
+    private async processCandidateGreeting(client: Socket, payload: AudioChunkDto): Promise<void> {
         // 일반 오디오 처리 (STT)
         await this.processAudioService.processAudio(client, payload);
 
         // isFinal인 경우 다음 stage로 전환 (면접관 자기소개)
         if (payload.isFinal) {
-            this.logger.log(client, "greeting_completed", {
+            this.logger.log(client, "candidate_greeting_completed", {
                 interviewSessionId: payload.interviewSessionId,
             });
 
-            // GREETING → INTERVIEWER_INTRO 전환
+            // CANDIDATE_GREETING -> INTERVIEWER_INTRO 전환
             const nextStage = await this.stageService.transitionStage(
                 payload.interviewSessionId,
                 InterviewStage.INTERVIEWER_INTRO,
@@ -143,7 +155,7 @@ export class InterviewGateway {
 
             client.emit("interview:stage_changed", {
                 interviewSessionId: payload.interviewSessionId,
-                previousStage: InterviewStage.GREETING,
+                previousStage: InterviewStage.CANDIDATE_GREETING,
                 currentStage: nextStage,
             });
         }

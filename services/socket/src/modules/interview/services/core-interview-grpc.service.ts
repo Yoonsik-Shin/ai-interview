@@ -8,9 +8,10 @@ import { SocketLoggingService } from "../../../core/logging/socket-logging.servi
  */
 export enum InterviewStage {
     WAITING = "WAITING",
-    GREETING_PROMPT = "GREETING_PROMPT",
     GREETING = "GREETING",
+    CANDIDATE_GREETING = "CANDIDATE_GREETING",
     INTERVIEWER_INTRO = "INTERVIEWER_INTRO",
+    SELF_INTRO_PROMPT = "SELF_INTRO_PROMPT",
     SELF_INTRO = "SELF_INTRO",
     IN_PROGRESS = "IN_PROGRESS",
     COMPLETED = "COMPLETED",
@@ -22,12 +23,13 @@ export enum InterviewStage {
 enum InterviewStageProto {
     INTERVIEW_STAGE_UNSPECIFIED = 0,
     WAITING = 1,
-    GREETING_PROMPT = 2,
-    GREETING = 3,
+    GREETING = 2,
+    CANDIDATE_GREETING = 3,
     INTERVIEWER_INTRO = 4,
-    SELF_INTRO = 5,
-    IN_PROGRESS_STAGE = 6,
-    COMPLETED_STAGE = 7,
+    SELF_INTRO_PROMPT = 5,
+    SELF_INTRO = 6,
+    IN_PROGRESS_STAGE = 7,
+    COMPLETED_STAGE = 8,
 }
 
 /**
@@ -141,12 +143,14 @@ export class CoreInterviewGrpcService implements OnModuleInit {
         switch (proto) {
             case InterviewStageProto.WAITING:
                 return InterviewStage.WAITING;
-            case InterviewStageProto.GREETING_PROMPT:
-                return InterviewStage.GREETING_PROMPT;
             case InterviewStageProto.GREETING:
                 return InterviewStage.GREETING;
+            case InterviewStageProto.CANDIDATE_GREETING:
+                return InterviewStage.CANDIDATE_GREETING;
             case InterviewStageProto.INTERVIEWER_INTRO:
                 return InterviewStage.INTERVIEWER_INTRO;
+            case InterviewStageProto.SELF_INTRO_PROMPT:
+                return InterviewStage.SELF_INTRO_PROMPT;
             case InterviewStageProto.SELF_INTRO:
                 return InterviewStage.SELF_INTRO;
             case InterviewStageProto.IN_PROGRESS_STAGE:
@@ -165,12 +169,14 @@ export class CoreInterviewGrpcService implements OnModuleInit {
         switch (stage) {
             case InterviewStage.WAITING:
                 return InterviewStageProto.WAITING;
-            case InterviewStage.GREETING_PROMPT:
-                return InterviewStageProto.GREETING_PROMPT;
             case InterviewStage.GREETING:
                 return InterviewStageProto.GREETING;
+            case InterviewStage.CANDIDATE_GREETING:
+                return InterviewStageProto.CANDIDATE_GREETING;
             case InterviewStage.INTERVIEWER_INTRO:
                 return InterviewStageProto.INTERVIEWER_INTRO;
+            case InterviewStage.SELF_INTRO_PROMPT:
+                return InterviewStageProto.SELF_INTRO_PROMPT;
             case InterviewStage.SELF_INTRO:
                 return InterviewStageProto.SELF_INTRO;
             case InterviewStage.IN_PROGRESS:

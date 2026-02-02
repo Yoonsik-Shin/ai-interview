@@ -1,5 +1,43 @@
 # Changelog
 
+## [2026-02-02] 면접 흐름 개선: 단계별 음성 안내 및 자연스러운 전환
+
+### 수정
+
+- **InterviewStage Enum 재구성**:
+  - `GREETING_PROMPT` 제거
+  - `GREETING` 추가: 면접관 인사 단계 (녹음된 음성 파일 재생)
+  - `CANDIDATE_GREETING` 추가: 면접자 인사 단계 (첫 발화 감지)
+  - `SELF_INTRO_PROMPT` 추가: 1분 자기소개 요청 단계 (녹음된 음성 파일 재생)
+  - 새로운 흐름: `WAITING → GREETING → CANDIDATE_GREETING → INTERVIEWER_INTRO → SELF_INTRO_PROMPT → SELF_INTRO → IN_PROGRESS → COMPLETED`
+
+- **Core 서비스**:
+  - `InterviewStage.java`: Enum 값 수정 및 주석 개선
+  - `InterviewSession.java`: 상태 전이 메서드 수정 (`transitionToGreeting`, `transitionToCandidateGreeting`, `transitionToSelfIntroPrompt` 추가)
+  - `InterviewGrpcController.java`: gRPC Proto 매핑 메서드 수정
+  - `TransitionInterviewStageInteractor.java`: switch 문 수정
+  - `interview.proto`: InterviewStageProto Enum 수정
+
+- **Socket 서비스**:
+  - `core-interview-grpc.service.ts`: InterviewStage Enum 및 Proto 매핑 수정
+  - `interview-connection.listener.ts`: 최초 연결 시 `WAITING → GREETING` 전환
+  - `interview.gateway.ts`:
+    - `stage_ready` 핸들러 수정 (GREETING, INTERVIEWER_INTRO, SELF_INTRO_PROMPT 처리)
+    - 오디오 처리 로직 수정 (`processCandidateGreeting` 메서드 추가)
+
+- **Frontend**:
+  - `useInterviewSocket.ts`: InterviewStage Enum 수정
+  - `Interview.tsx`:
+    - GREETING 단계에서 면접관 인사 음성 재생
+    - SELF_INTRO_PROMPT 단계에서 자기소개 요청 음성 재생
+    - 녹음 자동 시작 스테이지 수정 (`CANDIDATE_GREETING`, `SELF_INTRO`, `IN_PROGRESS`)
+
+### 개선 사항
+
+- **자연스러운 면접 흐름**: 면접관 인사 → 면접자 인사 → 면접관 자기소개 → 자기소개 요청 → 면접자 자기소개 → 본 면접
+- **명확한 단계 구분**: 각 단계가 명확하게 구분되어 사용자 경험 개선
+- **음성 안내 강화**: GREETING과 SELF_INTRO_PROMPT 단계에서 녹음된 음성 파일 재생
+
 ## [2026-02-02] OKE 환경 구성: Oracle ATP 및 Object Storage 전환
 
 ### 추가

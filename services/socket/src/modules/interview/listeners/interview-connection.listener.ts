@@ -60,16 +60,16 @@ export class InterviewConnectionListener {
                         await this.stageService.getStage(interviewSessionId);
 
                     if (currentStage === InterviewStage.WAITING) {
-                        // 최초 진입: WAITING -> GREETING_PROMPT 전환
+                        // 최초 진입: WAITING -> GREETING 전환 (면접관 인사)
                         await this.stageService.transitionStage(
                             interviewSessionId,
-                            InterviewStage.GREETING_PROMPT,
+                            InterviewStage.GREETING,
                         );
                         // 클라이언트에 상태 변경 알림
                         client.emit("interview:stage_changed", {
                             interviewSessionId,
                             previousStage: InterviewStage.WAITING,
-                            currentStage: InterviewStage.GREETING_PROMPT,
+                            currentStage: InterviewStage.GREETING,
                         });
                     } else {
                         // 재접속(Resumption): 현재 상태 동기화

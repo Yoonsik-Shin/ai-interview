@@ -341,7 +341,7 @@ export function Interview() {
 
     const shouldResumeRecording = () => {
       const allowedStages = [
-        InterviewStage.GREETING,
+        InterviewStage.CANDIDATE_GREETING,
         InterviewStage.SELF_INTRO,
         InterviewStage.IN_PROGRESS,
       ];
@@ -513,21 +513,40 @@ export function Interview() {
       console.log(`Stage changed: ${e.previousStage} -> ${e.currentStage}`);
       setCurrentStage(e.currentStage);
 
-      if (e.currentStage === InterviewStage.GREETING_PROMPT) {
+      if (e.currentStage === InterviewStage.GREETING) {
+        // 면접관 인사 음성 재생
         setTimeout(() => {
           const personaKey = interviewMeta?.persona || "RANDOM";
           const audioPath = `/audio/greeting_${personaKey}_edge.mp3`;
           if (audioRef.current) {
             audioRef.current.src = audioPath;
             audioRef.current.onended = () => {
-              notifyStageReady(InterviewStage.GREETING_PROMPT);
+              notifyStageReady(InterviewStage.GREETING);
             };
             audioRef.current.play().catch((err) => {
               console.error("인사말 재생 실패:", err);
-              notifyStageReady(InterviewStage.GREETING_PROMPT);
+              notifyStageReady(InterviewStage.GREETING);
             });
           }
         }, 1500);
+      } else if (e.currentStage === InterviewStage.SELF_INTRO_PROMPT) {
+        // 1분 자기소개 요청 음성 재생
+        setTimeout(() => {
+          const personaKey = interviewMeta?.persona || "RANDOM";
+          const engineKey =
+            interviewMeta?.type === "PRACTICE" ? "edge" : "openai";
+          const audioPath = `/audio/self_intro_prompt_${personaKey}_${engineKey}.mp3`;
+          if (audioRef.current) {
+            audioRef.current.src = audioPath;
+            audioRef.current.onended = () => {
+              notifyStageReady(InterviewStage.SELF_INTRO_PROMPT);
+            };
+            audioRef.current.play().catch((err) => {
+              console.error("자기소개 요청 재생 실패:", err);
+              notifyStageReady(InterviewStage.SELF_INTRO_PROMPT);
+            });
+          }
+        }, 1000);
       } else if (e.currentStage === InterviewStage.SELF_INTRO) {
         setTimeLeft(90);
       } else if (e.currentStage === InterviewStage.IN_PROGRESS) {
@@ -599,7 +618,7 @@ export function Interview() {
     if (!micOn || manualPaused || ttsPlayingRef.current) return;
 
     const autoRecordStages = [
-      InterviewStage.GREETING,
+      InterviewStage.CANDIDATE_GREETING,
       InterviewStage.SELF_INTRO,
       InterviewStage.IN_PROGRESS,
     ];

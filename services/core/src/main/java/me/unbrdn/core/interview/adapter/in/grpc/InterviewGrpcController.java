@@ -26,33 +26,21 @@ import net.devh.boot.grpc.server.service.GrpcService;
 public class InterviewGrpcController extends InterviewServiceGrpcGrpc.InterviewServiceGrpcImplBase {
 
     private final CreateInterviewUseCase createInterviewUseCase;
-    private final me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase
-            getInterviewStageUseCase;
-    private final me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase
-            transitionInterviewStageUseCase;
+    private final me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase getInterviewStageUseCase;
+    private final me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase transitionInterviewStageUseCase;
 
     @Override
-    public void createInterview(
-            CreateInterviewRequest request,
+    public void createInterview(CreateInterviewRequest request,
             StreamObserver<CreateInterviewResponse> responseObserver) {
         log.info("gRPC request received: CreateInterview userId={}", request.getUserId());
 
-        CreateInterviewCommand command =
-                CreateInterviewCommand.builder()
-                        .userId(UUID.fromString(request.getUserId()))
-                        // resumeId가 빈 문자열이면 null로 처리
-                        .resumeId(
-                                Optional.ofNullable(
-                                        hasResumeId(request)
-                                                ? UUID.fromString(request.getResumeId())
-                                                : null))
-                        .type(toDomainInterviewType(request.getType()))
-                        .persona(toDomainInterviewPersona(request.getPersona()))
-                        .interviewerCount(request.getInterviewerCount())
-                        .domain(request.getDomain())
-                        .targetDurationMinutes(request.getTargetDurationMinutes())
-                        .selfIntroduction(request.getSelfIntroduction())
-                        .build();
+        CreateInterviewCommand command = CreateInterviewCommand.builder().userId(UUID.fromString(request.getUserId()))
+                // resumeId가 빈 문자열이면 null로 처리
+                .resumeId(Optional.ofNullable(hasResumeId(request) ? UUID.fromString(request.getResumeId()) : null))
+                .type(toDomainInterviewType(request.getType())).persona(toDomainInterviewPersona(request.getPersona()))
+                .interviewerCount(request.getInterviewerCount()).domain(request.getDomain())
+                .targetDurationMinutes(request.getTargetDurationMinutes())
+                .selfIntroduction(request.getSelfIntroduction()).build();
 
         CreateInterviewResult result = createInterviewUseCase.execute(command);
         CreateInterviewResponse response = buildResponse(result);
@@ -63,12 +51,9 @@ public class InterviewGrpcController extends InterviewServiceGrpcGrpc.InterviewS
     }
 
     private CreateInterviewResponse buildResponse(CreateInterviewResult result) {
-        InterviewSessionStatus status =
-                result.getStatus() == null ? InterviewSessionStatus.READY : result.getStatus();
-        return CreateInterviewResponse.newBuilder()
-                .setInterviewId(result.getInterviewId().toString())
-                .setStatus(toProtoInterviewStatus(status))
-                .build();
+        InterviewSessionStatus status = result.getStatus() == null ? InterviewSessionStatus.READY : result.getStatus();
+        return CreateInterviewResponse.newBuilder().setInterviewId(result.getInterviewId().toString())
+                .setStatus(toProtoInterviewStatus(status)).build();
     }
 
     private boolean hasResumeId(CreateInterviewRequest request) {
@@ -77,58 +62,48 @@ public class InterviewGrpcController extends InterviewServiceGrpcGrpc.InterviewS
 
     private static InterviewType toDomainInterviewType(InterviewTypeProto proto) {
         return switch (proto) {
-            case REAL -> InterviewType.REAL;
-            case PRACTICE -> InterviewType.PRACTICE;
-            default -> InterviewType.PRACTICE;
+        case REAL -> InterviewType.REAL;
+        case PRACTICE -> InterviewType.PRACTICE;
+        default -> InterviewType.PRACTICE;
         };
     }
 
     private static InterviewPersona toDomainInterviewPersona(InterviewPersonaProto proto) {
         return switch (proto) {
-            case PRESSURE -> InterviewPersona.PRESSURE;
-            case COMFORTABLE -> InterviewPersona.COMFORTABLE;
-            case RANDOM -> InterviewPersona.RANDOM;
-            default -> InterviewPersona.COMFORTABLE;
+        case PRESSURE -> InterviewPersona.PRESSURE;
+        case COMFORTABLE -> InterviewPersona.COMFORTABLE;
+        case RANDOM -> InterviewPersona.RANDOM;
+        default -> InterviewPersona.COMFORTABLE;
         };
     }
 
     private static InterviewStatusProto toProtoInterviewStatus(InterviewSessionStatus status) {
         return switch (status) {
-            case READY -> InterviewStatusProto.READY;
-            case IN_PROGRESS -> InterviewStatusProto.IN_PROGRESS;
-            case COMPLETED -> InterviewStatusProto.COMPLETED;
-            case CANCELLED -> InterviewStatusProto.CANCELLED;
+        case READY -> InterviewStatusProto.READY;
+        case IN_PROGRESS -> InterviewStatusProto.IN_PROGRESS;
+        case COMPLETED -> InterviewStatusProto.COMPLETED;
+        case CANCELLED -> InterviewStatusProto.CANCELLED;
         };
     }
 
     // ==================== Stage Management RPCs ====================
 
     @Override
-    public void getInterviewStage(
-            me.unbrdn.core.grpc.InterviewProto.GetInterviewStageRequest request,
-            StreamObserver<me.unbrdn.core.grpc.InterviewProto.GetInterviewStageResponse>
-                    responseObserver) {
-        log.info(
-                "gRPC request received: GetInterviewStage interviewSessionId={}",
-                request.getInterviewSessionId());
+    public void getInterviewStage(me.unbrdn.core.grpc.InterviewProto.GetInterviewStageRequest request,
+            StreamObserver<me.unbrdn.core.grpc.InterviewProto.GetInterviewStageResponse> responseObserver) {
+        log.info("gRPC request received: GetInterviewStage interviewSessionId={}", request.getInterviewSessionId());
 
         try {
             UUID interviewSessionId = UUID.fromString(request.getInterviewSessionId());
-            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase
-                            .GetInterviewStageQuery
-                    query =
-                            new me.unbrdn.core.interview.application.port.in
-                                    .GetInterviewStageUseCase.GetInterviewStageQuery(
-                                    interviewSessionId);
+            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery query = new me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery(
+                    interviewSessionId);
 
-            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase
-                            .InterviewStageResult
-                    result = getInterviewStageUseCase.execute(query);
+            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.InterviewStageResult result = getInterviewStageUseCase
+                    .execute(query);
 
-            me.unbrdn.core.grpc.InterviewProto.GetInterviewStageResponse.Builder responseBuilder =
-                    me.unbrdn.core.grpc.InterviewProto.GetInterviewStageResponse.newBuilder()
-                            .setStage(toProtoInterviewStage(result.stage()))
-                            .setSelfIntroElapsedSeconds(result.selfIntroElapsedSeconds());
+            me.unbrdn.core.grpc.InterviewProto.GetInterviewStageResponse.Builder responseBuilder = me.unbrdn.core.grpc.InterviewProto.GetInterviewStageResponse
+                    .newBuilder().setStage(toProtoInterviewStage(result.stage()))
+                    .setSelfIntroElapsedSeconds(result.selfIntroElapsedSeconds());
 
             if (result.persona() != null) {
                 responseBuilder.setPersona(result.persona());
@@ -145,102 +120,76 @@ public class InterviewGrpcController extends InterviewServiceGrpcGrpc.InterviewS
             log.info("gRPC response sent: stage={}", result.stage());
         } catch (Exception e) {
             log.error("Error in getInterviewStage", e);
-            responseObserver.onError(
-                    io.grpc.Status.INTERNAL
-                            .withDescription("Failed to get interview stage: " + e.getMessage())
-                            .asRuntimeException());
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Failed to get interview stage: " + e.getMessage()).asRuntimeException());
         }
     }
 
     @Override
-    public void transitionStage(
-            me.unbrdn.core.grpc.InterviewProto.TransitionStageRequest request,
-            StreamObserver<me.unbrdn.core.grpc.InterviewProto.TransitionStageResponse>
-                    responseObserver) {
-        log.info(
-                "gRPC request received: TransitionStage interviewSessionId={}, newStage={}",
-                request.getInterviewSessionId(),
-                request.getNewStage());
+    public void transitionStage(me.unbrdn.core.grpc.InterviewProto.TransitionStageRequest request,
+            StreamObserver<me.unbrdn.core.grpc.InterviewProto.TransitionStageResponse> responseObserver) {
+        log.info("gRPC request received: TransitionStage interviewSessionId={}, newStage={}",
+                request.getInterviewSessionId(), request.getNewStage());
 
         try {
             UUID interviewSessionId = UUID.fromString(request.getInterviewSessionId());
-            me.unbrdn.core.interview.domain.enums.InterviewStage newStage =
-                    toDomainInterviewStage(request.getNewStage());
+            me.unbrdn.core.interview.domain.enums.InterviewStage newStage = toDomainInterviewStage(
+                    request.getNewStage());
 
-            me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase
-                            .TransitionStageCommand
-                    command =
-                            new me.unbrdn.core.interview.application.port.in
-                                    .TransitionInterviewStageUseCase.TransitionStageCommand(
-                                    interviewSessionId, newStage);
+            me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase.TransitionStageCommand command = new me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase.TransitionStageCommand(
+                    interviewSessionId, newStage);
 
             transitionInterviewStageUseCase.execute(command);
 
             // 다시 조회해서 현재 stage 반환
-            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase
-                            .GetInterviewStageQuery
-                    query =
-                            new me.unbrdn.core.interview.application.port.in
-                                    .GetInterviewStageUseCase.GetInterviewStageQuery(
-                                    interviewSessionId);
-            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase
-                            .InterviewStageResult
-                    result = getInterviewStageUseCase.execute(query);
+            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery query = new me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery(
+                    interviewSessionId);
+            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.InterviewStageResult result = getInterviewStageUseCase
+                    .execute(query);
 
-            me.unbrdn.core.grpc.InterviewProto.TransitionStageResponse response =
-                    me.unbrdn.core.grpc.InterviewProto.TransitionStageResponse.newBuilder()
-                            .setCurrentStage(toProtoInterviewStage(result.stage()))
-                            .build();
+            me.unbrdn.core.grpc.InterviewProto.TransitionStageResponse response = me.unbrdn.core.grpc.InterviewProto.TransitionStageResponse
+                    .newBuilder().setCurrentStage(toProtoInterviewStage(result.stage())).build();
 
             responseObserver.onNext(response);
             responseObserver.onCompleted();
             log.info("gRPC response sent: currentStage={}", result.stage());
         } catch (IllegalArgumentException e) {
             log.error("Invalid stage transition", e);
-            responseObserver.onError(
-                    io.grpc.Status.INVALID_ARGUMENT
-                            .withDescription(e.getMessage())
-                            .asRuntimeException());
+            responseObserver
+                    .onError(io.grpc.Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
         } catch (Exception e) {
             log.error("Error in transitionStage", e);
-            responseObserver.onError(
-                    io.grpc.Status.INTERNAL
-                            .withDescription("Failed to transition stage: " + e.getMessage())
-                            .asRuntimeException());
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Failed to transition stage: " + e.getMessage()).asRuntimeException());
         }
     }
 
     private static me.unbrdn.core.grpc.InterviewProto.InterviewStageProto toProtoInterviewStage(
             me.unbrdn.core.interview.domain.enums.InterviewStage stage) {
         return switch (stage) {
-            case WAITING -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.WAITING;
-            case GREETING_PROMPT -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto
-                    .GREETING_PROMPT;
-            case GREETING -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.GREETING;
-            case INTERVIEWER_INTRO -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto
-                    .INTERVIEWER_INTRO;
-            case SELF_INTRO -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.SELF_INTRO;
-            case IN_PROGRESS -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto
-                    .IN_PROGRESS_STAGE;
-            case COMPLETED -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto
-                    .COMPLETED_STAGE;
+        case WAITING -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.WAITING;
+        case GREETING -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.GREETING;
+        case CANDIDATE_GREETING -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.CANDIDATE_GREETING;
+        case INTERVIEWER_INTRO -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.INTERVIEWER_INTRO;
+        case SELF_INTRO_PROMPT -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.SELF_INTRO_PROMPT;
+        case SELF_INTRO -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.SELF_INTRO;
+        case IN_PROGRESS -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.IN_PROGRESS_STAGE;
+        case COMPLETED -> me.unbrdn.core.grpc.InterviewProto.InterviewStageProto.COMPLETED_STAGE;
         };
     }
 
     private static me.unbrdn.core.interview.domain.enums.InterviewStage toDomainInterviewStage(
             me.unbrdn.core.grpc.InterviewProto.InterviewStageProto proto) {
         return switch (proto) {
-            case WAITING -> me.unbrdn.core.interview.domain.enums.InterviewStage.WAITING;
-            case GREETING_PROMPT -> me.unbrdn.core.interview.domain.enums.InterviewStage
-                    .GREETING_PROMPT;
-            case GREETING -> me.unbrdn.core.interview.domain.enums.InterviewStage.GREETING;
-            case INTERVIEWER_INTRO -> me.unbrdn.core.interview.domain.enums.InterviewStage
-                    .INTERVIEWER_INTRO;
-            case SELF_INTRO -> me.unbrdn.core.interview.domain.enums.InterviewStage.SELF_INTRO;
-            case IN_PROGRESS_STAGE -> me.unbrdn.core.interview.domain.enums.InterviewStage
-                    .IN_PROGRESS;
-            case COMPLETED_STAGE -> me.unbrdn.core.interview.domain.enums.InterviewStage.COMPLETED;
-            default -> throw new IllegalArgumentException("Unknown stage proto: " + proto);
+        case WAITING -> me.unbrdn.core.interview.domain.enums.InterviewStage.WAITING;
+        case GREETING -> me.unbrdn.core.interview.domain.enums.InterviewStage.GREETING;
+        case CANDIDATE_GREETING -> me.unbrdn.core.interview.domain.enums.InterviewStage.CANDIDATE_GREETING;
+        case INTERVIEWER_INTRO -> me.unbrdn.core.interview.domain.enums.InterviewStage.INTERVIEWER_INTRO;
+        case SELF_INTRO_PROMPT -> me.unbrdn.core.interview.domain.enums.InterviewStage.SELF_INTRO_PROMPT;
+        case SELF_INTRO -> me.unbrdn.core.interview.domain.enums.InterviewStage.SELF_INTRO;
+        case IN_PROGRESS_STAGE -> me.unbrdn.core.interview.domain.enums.InterviewStage.IN_PROGRESS;
+        case COMPLETED_STAGE -> me.unbrdn.core.interview.domain.enums.InterviewStage.COMPLETED;
+        default -> throw new IllegalArgumentException("Unknown stage proto: " + proto);
         };
     }
 }

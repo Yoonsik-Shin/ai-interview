@@ -23,17 +23,21 @@ import me.unbrdn.core.user.domain.entity.Candidate;
 /**
  * 면접 세션 엔티티
  *
- * <p>Snapshot: interview_session 테이블 - session_id (PK, UUID String으로 변경 권장) - candidate_id (FK to
- * candidate): 면접자 - resume_id (FK to resumes, nullable): 참고 이력서 - persona: 면접관 성격 (PRESSURE,
- * COMFORTABLE, RANDOM) - type: 면접 유형 (PRACTICE, REAL) - status: 세션 상태 (READY, IN_PROGRESS,
- * COMPLETED, CANCELLED) - started_at: 면접 시작 시각 - ended_at: 면접 종료 시각 - created_at: 세션 생성 시각 -
+ * <p>
+ * Snapshot: interview_session 테이블 - session_id (PK, UUID String으로 변경 권장) -
+ * candidate_id (FK to candidate): 면접자 - resume_id (FK to resumes, nullable): 참고
+ * 이력서 - persona: 면접관 성격 (PRESSURE, COMFORTABLE, RANDOM) - type: 면접 유형
+ * (PRACTICE, REAL) - status: 세션 상태 (READY, IN_PROGRESS, COMPLETED, CANCELLED) -
+ * started_at: 면접 시작 시각 - ended_at: 면접 종료 시각 - created_at: 세션 생성 시각 -
  * updated_at: 상태 변경 시각
  *
- * <p>관련 엔티티 (MongoDB): - InterviewMessage: 면접 중 주고받은 메시지 - InterviewQAPair: 질문-답변 쌍 -
- * InterviewQAPairEvaluation: 답변 평가 데이터
+ * <p>
+ * 관련 엔티티 (MongoDB): - InterviewMessage: 면접 중 주고받은 메시지 - InterviewQAPair: 질문-답변
+ * 쌍 - InterviewQAPairEvaluation: 답변 평가 데이터
  *
- * <p>비즈니스 규칙: - 세션은 생성 후 24시간 이내에 시작해야 함 (만료 정책) - 면접 완료 후 즉시 평가 프로세스 시작 - MongoDB에 실시간 메시지 저장,
- * RDB에는 메타데이터만 저장
+ * <p>
+ * 비즈니스 규칙: - 세션은 생성 후 24시간 이내에 시작해야 함 (만료 정책) - 면접 완료 후 즉시 평가 프로세스 시작 -
+ * MongoDB에 실시간 메시지 저장, RDB에는 메타데이터만 저장
  */
 @Entity
 @Table(name = "interview_session")
@@ -41,7 +45,9 @@ import me.unbrdn.core.user.domain.entity.Candidate;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class InterviewSession extends BaseTimeEntity {
 
-    /** MongoDB에서 동일한 세션을 참조할 수 있도록 UUID 문자열 사용 향후 마이그레이션: PK를 String(UUID)로 변경 권장 */
+    /**
+     * MongoDB에서 동일한 세션을 참조할 수 있도록 UUID 문자열 사용 향후 마이그레이션: PK를 String(UUID)로 변경 권장
+     */
     @Column(name = "session_uuid", nullable = false, unique = true, length = 36)
     private String sessionUuid;
 
@@ -90,15 +96,8 @@ public class InterviewSession extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT")
     private String selfIntroduction;
 
-    private InterviewSession(
-            String sessionUuid,
-            Candidate candidate,
-            Resumes resume,
-            InterviewPersona persona,
-            InterviewType type,
-            String domain,
-            int interviewerCount,
-            int targetDurationMinutes,
+    private InterviewSession(String sessionUuid, Candidate candidate, Resumes resume, InterviewPersona persona,
+            InterviewType type, String domain, int interviewerCount, int targetDurationMinutes,
             String selfIntroduction) {
         this.sessionUuid = sessionUuid;
         this.candidate = candidate;
@@ -114,26 +113,11 @@ public class InterviewSession extends BaseTimeEntity {
     }
 
     /** 새로운 면접 세션 생성 */
-    public static InterviewSession create(
-            String sessionUuid,
-            Candidate candidate,
-            Resumes resume,
-            InterviewPersona persona,
-            InterviewType type,
-            String domain,
-            int interviewerCount,
-            int targetDurationMinutes,
-            String selfIntroduction) {
-        return new InterviewSession(
-                sessionUuid,
-                candidate,
-                resume,
-                persona,
-                type,
-                domain,
-                interviewerCount,
-                targetDurationMinutes,
-                selfIntroduction);
+    public static InterviewSession create(String sessionUuid, Candidate candidate, Resumes resume,
+            InterviewPersona persona, InterviewType type, String domain, int interviewerCount,
+            int targetDurationMinutes, String selfIntroduction) {
+        return new InterviewSession(sessionUuid, candidate, resume, persona, type, domain, interviewerCount,
+                targetDurationMinutes, selfIntroduction);
     }
 
     /** 면접 시작 */
@@ -175,53 +159,57 @@ public class InterviewSession extends BaseTimeEntity {
 
     // ==================== Stage Transition Methods ====================
 
-    /** WAITING → GREETING_PROMPT */
-    public void transitionToGreetingPrompt() {
+    /** WAITING → GREETING (면접관 인사) */
+    public void transitionToGreeting() {
         if (this.stage != InterviewStage.WAITING) {
             throw new IllegalStateException(
-                    "Can only transition to GREETING_PROMPT from WAITING, current stage: "
-                            + this.stage);
-        }
-        this.stage = InterviewStage.GREETING_PROMPT;
-    }
-
-    /** GREETING_PROMPT → GREETING */
-    public void transitionToGreeting() {
-        if (this.stage != InterviewStage.GREETING_PROMPT) {
-            throw new IllegalStateException(
-                    "Can only transition to GREETING from GREETING_PROMPT, current stage: "
-                            + this.stage);
+                    "Can only transition to GREETING from WAITING, current stage: " + this.stage);
         }
         this.stage = InterviewStage.GREETING;
     }
 
-    /** GREETING → INTERVIEWER_INTRO */
-    public void transitionToInterviewerIntro() {
+    /** GREETING → CANDIDATE_GREETING (면접자 인사) */
+    public void transitionToCandidateGreeting() {
         if (this.stage != InterviewStage.GREETING) {
             throw new IllegalStateException(
-                    "Can only transition to INTERVIEWER_INTRO from GREETING, current stage: "
-                            + this.stage);
+                    "Can only transition to CANDIDATE_GREETING from GREETING, current stage: " + this.stage);
+        }
+        this.stage = InterviewStage.CANDIDATE_GREETING;
+    }
+
+    /** CANDIDATE_GREETING → INTERVIEWER_INTRO (면접관 자기소개) */
+    public void transitionToInterviewerIntro() {
+        if (this.stage != InterviewStage.CANDIDATE_GREETING) {
+            throw new IllegalStateException(
+                    "Can only transition to INTERVIEWER_INTRO from CANDIDATE_GREETING, current stage: " + this.stage);
         }
         this.stage = InterviewStage.INTERVIEWER_INTRO;
     }
 
-    /** INTERVIEWER_INTRO → SELF_INTRO */
-    public void transitionToSelfIntro() {
+    /** INTERVIEWER_INTRO → SELF_INTRO_PROMPT (1분 자기소개 요청) */
+    public void transitionToSelfIntroPrompt() {
         if (this.stage != InterviewStage.INTERVIEWER_INTRO) {
             throw new IllegalStateException(
-                    "Can only transition to SELF_INTRO from INTERVIEWER_INTRO, current stage: "
-                            + this.stage);
+                    "Can only transition to SELF_INTRO_PROMPT from INTERVIEWER_INTRO, current stage: " + this.stage);
+        }
+        this.stage = InterviewStage.SELF_INTRO_PROMPT;
+    }
+
+    /** SELF_INTRO_PROMPT → SELF_INTRO (면접자 1분 자기소개) */
+    public void transitionToSelfIntro() {
+        if (this.stage != InterviewStage.SELF_INTRO_PROMPT) {
+            throw new IllegalStateException(
+                    "Can only transition to SELF_INTRO from SELF_INTRO_PROMPT, current stage: " + this.stage);
         }
         this.stage = InterviewStage.SELF_INTRO;
         this.selfIntroStartTime = LocalDateTime.now();
     }
 
-    /** SELF_INTRO → IN_PROGRESS (90초 경과 또는 자연스러운 전환) */
+    /** SELF_INTRO → IN_PROGRESS (본 면접 진행) */
     public void transitionToInProgress() {
-        if (this.stage != InterviewStage.SELF_INTRO && this.stage != InterviewStage.GREETING) {
+        if (this.stage != InterviewStage.SELF_INTRO) {
             throw new IllegalStateException(
-                    "Can only transition to IN_PROGRESS from SELF_INTRO or GREETING, current stage: "
-                            + this.stage);
+                    "Can only transition to IN_PROGRESS from SELF_INTRO, current stage: " + this.stage);
         }
         this.stage = InterviewStage.IN_PROGRESS;
         if (this.status == InterviewSessionStatus.READY) {
@@ -234,8 +222,7 @@ public class InterviewSession extends BaseTimeEntity {
     public void transitionToCompleted() {
         if (this.stage != InterviewStage.IN_PROGRESS) {
             throw new IllegalStateException(
-                    "Can only transition to COMPLETED from IN_PROGRESS, current stage: "
-                            + this.stage);
+                    "Can only transition to COMPLETED from IN_PROGRESS, current stage: " + this.stage);
         }
         this.stage = InterviewStage.COMPLETED;
         this.status = InterviewSessionStatus.COMPLETED;
@@ -247,8 +234,7 @@ public class InterviewSession extends BaseTimeEntity {
         if (this.selfIntroStartTime == null) {
             return 0;
         }
-        return java.time.Duration.between(this.selfIntroStartTime, LocalDateTime.now())
-                .getSeconds();
+        return java.time.Duration.between(this.selfIntroStartTime, LocalDateTime.now()).getSeconds();
     }
 
     /** 자기소개 90초 경과 여부 */
