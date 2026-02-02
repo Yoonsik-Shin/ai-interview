@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package llm;
+
+option java_package = "me.unbrdn.core.grpc.llm";
+option java_outer_classname = "LlmProto";
+
+service LlmService {
+  rpc GenerateResponse(GenerateRequest) returns (stream TokenChunk);
+  rpc TextToSpeech(TTSRequest) returns (stream TTSChunk);
+}
+
+enum InterviewStageProto {
+  WAITING = 0;
+  GREETING_PROMPT = 1;
+  GREETING = 2;
+  INTERVIEWER_INTRO = 3;
+  SELF_INTRO = 4;
+  IN_PROGRESS_STAGE = 5;
+  COMPLETED_STAGE = 6;
+}
+
+message GenerateRequest {
+  string interview_id = 1;
+  string user_id = 2;
+  string user_text = 3;
+  string persona = 4;
+  repeated ConversationHistory history = 5;
+  InterviewStageProto stage = 6;
+  optional int32 interviewer_count = 7;
+  optional string domain = 8;
+}
+
+message ConversationHistory {
+  string role = 1;
+  string content = 2;
+}
+
+message TokenChunk {
+  string token = 1;
+  bool is_final = 2;
+  bool is_sentence_end = 3;
+  string thinking = 4;  // LangGraph 노드 실행 정보
+}
+
+message TTSRequest {
+  string text = 1;
+  string mode = 2;
+  string persona = 3;
+  double speed = 4;
+}
+
+message TTSChunk {
+  bytes audio_data = 1;
+  bool is_final = 2;
+}
+
+// Ensure all required messages for Java import
+// TokenChunk, GenerateRequest, ConversationHistory are already defined above

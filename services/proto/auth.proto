@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package auth;
+
+option java_package = "me.unbrdn.core.grpc";
+option java_outer_classname = "AuthProto";
+
+
+service AuthService {
+  // 면접자 회원가입
+  rpc RegisterCandidate (RegisterCandidateRequest) returns (RegisterResponse);
+  // 채용담당자 회원가입
+  rpc RegisterRecruiter (RegisterRecruiterRequest) returns (RegisterResponse);
+  // 로그인
+  rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthenticateUserResponse);
+  // 토큰 재발급
+  rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse);
+}
+
+message RegisterCandidateRequest {
+  string email = 1;
+  string password = 2;
+  string role = 3;
+  string nickname = 4;
+  optional string phone_number = 5;
+}
+
+message RegisterRecruiterRequest {
+  string email = 1;
+  string password = 2;
+  string role = 3;
+  string nickname = 4;
+  optional string phoneNumber = 5;
+  optional string company_code = 6;
+}
+
+message RegisterResponse {
+    // 생성된 ID 반환 (UUID)
+    string userId = 1; 
+}
+
+message ValidateUserRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message ValidateUserResponse {
+  string id = 1; // UUID
+  string email = 2;
+  string nickname = 3;
+  string role = 4;
+}
+
+message AuthenticateUserRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message AuthenticateUserResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  User user = 3;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message User {
+  string id = 1; // UUID
+  string email = 2;
+  string nickname = 3;
+  string role = 4;
+}

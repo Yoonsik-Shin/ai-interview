@@ -1,0 +1,32 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: java_package_prefix
+      value: me.unbrdn.core.grpc
+    - file_option: java_multiple_files
+      value: true
+plugins:
+  # Java (Core Service)
+  - remote: buf.build/protocolbuffers/java
+    out: ../core/src/main/java
+  - remote: buf.build/grpc/java
+    out: ../core/src/main/java
+
+  # TypeScript (BFF & Socket Services)
+  - remote: buf.build/community/stephenh-ts-proto
+    out: ../bff/src/generated
+    opt:
+      - nestJs=true
+      - addGrpcMetadata=true
+  - remote: buf.build/community/stephenh-ts-proto
+    out: ../socket/src/generated
+    opt:
+      - nestJs=true
+      - addGrpcMetadata=true
+
+  # Python (LLM Service)
+  - remote: buf.build/protocolbuffers/python
+    out: ../llm/generated
+  - remote: buf.build/grpc/python
+    out: ../llm/generated

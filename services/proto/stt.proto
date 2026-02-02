@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package stt;
+
+service SttService {
+  // STT (Speech-to-Text) 서비스 - 스트리밍
+  rpc SpeechToText(stream AudioChunk) returns (STTResponse);
+}
+
+message AudioChunk {
+  bytes audio_data = 1;          // Base64 오디오 데이터
+  string interview_id = 2;       // 인터뷰 ID (UUID)
+  string user_id = 3;            // 사용자 ID
+  bool is_final = 4;             // 마지막 청크 여부
+  string audio_format = 5;       // "pcm16" or "webm"
+  int32 sample_rate = 6;         // 샘플 레이트 (기본 16000)
+  double input_gain = 7;         // 입력 게인 (기본 1.0)
+  double threshold = 8;          // 임계값 (기본 5.0)
+  string timestamp = 9;          // ISO 8601 타임스탬프
+  string trace_id = 10;          // 추적 ID
+  string mode = 11;              // "practice" (로컬 Whisper) or "real" (OpenAI API)
+}
+
+message STTResponse {
+  string text = 1;               // 변환된 텍스트
+  string interview_id = 2;       // 인터뷰 ID (UUID)
+  string user_id = 3;            // 사용자 ID
+  bool is_empty = 4;             // 빈 응답 여부
+  string engine = 5;             // "faster-whisper"
+  string trace_id = 6;           // 추적 ID
+  string timestamp = 7;          // ISO 8601 타임스탬프
+}
