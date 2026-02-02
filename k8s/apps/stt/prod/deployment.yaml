@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stt
+  namespace: unbrdn
+  labels:
+    app: stt
+    environment: prod
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: stt
+  template:
+    metadata:
+      labels:
+        app: stt
+        environment: prod
+    spec:
+      # 고가용성: STT 워크로드를 최대한 넓게 분산 배치
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: stt
+      # AI 전용 노드에 배치
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: stt
+                topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-pool
+                    operator: In
+                    values:
+                      - main
+      imagePullSecrets:
+        - name: ocir-secret
+      containers:
+        - name: stt
+          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-stt:${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 50052
+              protocol: TCP
+              name: grpc
+          # 헬스 체크
+          readinessProbe:
+            grpc:
+              port: 50052
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            grpc:
+              port: 50052
+            initialDelaySeconds: 45
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          # 환경 변수: ConfigMap/Secret에서 가져오기
+          envFrom:
+            - configMapRef:
+                name: stt-config
+            - secretRef:
+                name: stt-secrets
+          resources:
+            requests:
+              cpu: "1000m" # Whisper CPU 집약적
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          # 캐시 볼륨: Whisper 모델 저장
+          volumeMounts:
+            - name: whisper-cache
+              mountPath: /home/appuser/.cache/huggingface
+      volumes:
+        - name: whisper-cache
+          emptyDir:
+            sizeLimit: 2Gi
+      restartPolicy: Always

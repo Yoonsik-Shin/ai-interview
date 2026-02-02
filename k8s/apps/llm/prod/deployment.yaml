@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm
+  namespace: unbrdn
+  labels:
+    app: llm
+    environment: prod
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: llm
+  template:
+    metadata:
+      labels:
+        app: llm
+        environment: prod
+    spec:
+      # 고가용성(HA): LLM 워크로드를 최대한 넓게 분산 배치
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: llm
+      # Main 노드에만 배치 (안정성 확보 - Langchain/RAG)
+      # 참고: STT/TTS/벡터화는 향후 별도 서비스로 분리하여 Preemptible 노드에서 실행
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: llm
+                topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-pool
+                    operator: In
+                    values:
+                      - main
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-pool
+                    operator: In
+                    values:
+                      - main
+      imagePullSecrets:
+        - name: ocir-secret
+      containers:
+        - name: llm
+          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-llm:${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 50051
+              name: grpc
+              protocol: TCP
+          readinessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 45
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          envFrom:
+            - secretRef:
+                name: llm-secrets
+            - configMapRef:
+                name: llm-config
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+      restartPolicy: Always

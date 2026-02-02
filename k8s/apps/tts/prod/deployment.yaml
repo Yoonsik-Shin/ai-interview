@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tts
+  namespace: unbrdn
+  labels:
+    app: tts
+    environment: prod
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: tts
+  template:
+    metadata:
+      labels:
+        app: tts
+        environment: prod
+    spec:
+      # 고가용성: TTS 워크로드 분산 배치
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: tts
+      # AI 전용 노드에 배치
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: tts
+                topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-pool
+                    operator: In
+                    values:
+                      - main
+      imagePullSecrets:
+        - name: ocir-secret
+      containers:
+        - name: tts
+          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-tts:${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 50053
+              protocol: TCP
+              name: grpc
+          # 헬스 체크
+          readinessProbe:
+            grpc:
+              port: 50053
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            grpc:
+              port: 50053
+            initialDelaySeconds: 25
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          # 환경 변수: ConfigMap/Secret에서 가져오기
+          envFrom:
+            - configMapRef:
+                name: tts-config
+            - secretRef:
+                name: tts-secrets
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+      restartPolicy: Always
