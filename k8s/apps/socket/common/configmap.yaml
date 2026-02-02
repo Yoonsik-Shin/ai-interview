@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: socket-config
+  namespace: unbrdn
+  labels:
+    app: socket
+data:
+  PORT: "4000"
+
+  REDIS_SENTINEL_HOSTS: "redis-node-0.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-1.redis-headless.unbrdn.svc.cluster.local:26379"
+  REDIS_SENTINEL_HOST: "redis-node-0.redis-headless.unbrdn.svc.cluster.local"
+  REDIS_SENTINEL_PORT: "26379"
+  REDIS_SENTINEL_NAME: "mymaster"
+  REDIS_DB: "0"
+  REDIS_HOST: "redis.unbrdn.svc.cluster.local"
+  REDIS_PORT: "6379"
+
+  KAFKA_BROKER: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  STT_GRPC_URL: "stt.unbrdn.svc.cluster.local:50052"
+  CORE_GRPC_URL: "core.unbrdn.svc.cluster.local:9090"
+
+  JWT_JWKS_URI: "http://core.unbrdn.svc.cluster.local:8081/.well-known/jwks.json"
+  JWT_JWKS_CACHE_MAX_AGE_MS: "300000"
+  JWT_JWKS_REQUESTS_PER_MINUTE: "10"
+  JWT_JWKS_TIMEOUT_MS: "30000"

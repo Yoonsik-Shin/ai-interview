@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-config
+  namespace: unbrdn
+data:
+  # Server
+  SERVER_PORT: "8081"
+  CORE_GRPC_PORT: "9090"
+
+  # Kafka
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  SPRING_KAFKA_CONSUMER_GROUP_ID: "core-streaming-group"
+  SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: "latest"
+
+  # gRPC Client (LLM Service)
+  LLM_GRPC_URL: "static://llm.unbrdn.svc.cluster.local:50051"
+
+  # Redis (대화 맥락 저장)
+  REDIS_HOST: "redis.unbrdn.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_DB: "2"
+
+  # JPA
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  SPRING_JPA_SHOW_SQL: "false"
+  SPRING_JPA_FORMAT_SQL: "false"
+
+  # Logging
+  LOG_LEVEL: "INFO"
+  LOG_LEVEL_CORE: "DEBUG"
