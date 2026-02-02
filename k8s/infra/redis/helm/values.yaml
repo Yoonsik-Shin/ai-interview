@@ -1,0 +1,149 @@
+# Bitnami Redis Helm Chart
+# Chart: bitnami/redis
+# Repository: https://charts.bitnami.com/bitnami
+# 로컬(Kind) 및 프로덕션(OCI OKE) 공통 사용
+
+# Release 이름을 redis로 설정 (기존 서비스 이름과 호환)
+fullnameOverride: redis
+
+# 전역 설정
+global:
+    redis:
+        password: "" # 필요시 Secret에서 관리
+
+# 인증 설정 (필요시 활성화)
+auth:
+    enabled: false # 필요시 true로 변경하고 password 설정
+
+# 아키텍처: Sentinel 모드에서는 replication 필수
+architecture: replication
+
+# Sentinel 모드 활성화
+sentinel:
+    enabled: true
+    quorum: 2
+    resources:
+        requests:
+            memory: "128Mi"
+            cpu: "100m"
+        limits:
+            memory: "256Mi"
+            cpu: "200m"
+    configuration: |
+        bind 0.0.0.0
+        port 26379
+        sentinel down-after-milliseconds mymaster 10000
+        sentinel parallel-syncs mymaster 1
+        sentinel failover-timeout mymaster 10000
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+    service:
+        enabled: true
+        type: ClusterIP
+        ports:
+            redis: 6379
+            sentinel: 26379
+        annotations: {}
+        headless:
+            enabled: true
+            annotations: {}
+
+# Master 설정
+master:
+    count: 1
+    persistence:
+        enabled: true
+        # storageClass 미지정: 클러스터 default StorageClass 사용
+        size: 10Gi
+    resources:
+        requests:
+            memory: "512Mi"
+            cpu: "200m"
+        limits:
+            memory: "1Gi"
+            cpu: "500m"
+    configuration: |
+        bind 0.0.0.0
+        port 6379
+        tcp-keepalive 60
+        timeout 0
+        repl-timeout 60
+        appendonly yes
+        appendfsync everysec
+        save 900 1
+        save 300 10
+        save 60 10000
+        min-replicas-to-write 1
+        min-replicas-max-lag 10
+    affinity:
+        podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                      matchExpressions:
+                          - key: app.kubernetes.io/name
+                            operator: In
+                            values:
+                                - redis
+                          - key: app.kubernetes.io/component
+                            operator: In
+                            values:
+                                - master
+                  topologyKey: "kubernetes.io/hostname"
+        nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                    - matchExpressions:
+                          - key: node-pool
+                            operator: In
+                            values:
+                                - main
+
+# Replica 설정
+replica:
+    replicaCount: 3
+    persistence:
+        enabled: true
+        # storageClass 미지정: 클러스터 default StorageClass 사용
+        size: 10Gi
+    resources:
+        requests:
+            memory: "512Mi"
+            cpu: "200m"
+        limits:
+            memory: "1Gi"
+            cpu: "500m"
+    configuration: |
+        bind 0.0.0.0
+        port 6379
+        tcp-keepalive 60
+        timeout 0
+        repl-timeout 60
+        appendonly yes
+        appendfsync everysec
+        replica-read-only yes
+    affinity:
+        podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                      matchExpressions:
+                          - key: app.kubernetes.io/name
+                            operator: In
+                            values:
+                                - redis
+                          - key: app.kubernetes.io/component
+                            operator: In
+                            values:
+                                - replica
+                  topologyKey: "kubernetes.io/hostname"
+        nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                    - matchExpressions:
+                          - key: node-pool
+                            operator: In
+                            values:
+                                - main
+
+# 메트릭 (Helm Chart가 자동 관리)
+metrics:
+    enabled: true # 각 Redis Pod에 exporter 사이드카 자동 추가

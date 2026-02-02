@@ -1,0 +1,46 @@
+# 로컬 전용. 프론트엔드 정적 파일용 MinIO 버킷 생성.
+# 프로덕션은 OCI Object Storage 사용 (k8s/apps/frontend/prod/).
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-create-frontend-bucket
+  namespace: unbrdn
+  labels:
+    app: minio
+spec:
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: minio/mc:latest
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  key: MINIO_ROOT_PASSWORD
+            - name: MINIO_ALIAS
+              value: local
+            - name: MINIO_BUCKET
+              value: frontend
+            - name: MINIO_ENDPOINT
+              value: http://minio.unbrdn.svc.cluster.local:9000
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              /usr/bin/mc alias set "$MINIO_ALIAS" "$MINIO_ENDPOINT" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+              /usr/bin/mc mb --ignore-existing "$MINIO_ALIAS/$MINIO_BUCKET"
+              /usr/bin/mc policy set public "$MINIO_ALIAS/$MINIO_BUCKET"
+              echo "✅ Frontend bucket 생성 완료: $MINIO_BUCKET"

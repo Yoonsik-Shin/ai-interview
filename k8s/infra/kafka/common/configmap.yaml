@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-config
+  namespace: kafka
+  labels:
+    app: kafka
+data:
+  bootstrap-servers: "kafka-cluster-kafka-bootstrap.kafka:9092"
