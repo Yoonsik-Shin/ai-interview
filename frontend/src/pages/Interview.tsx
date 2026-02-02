@@ -374,7 +374,7 @@ export function Interview() {
         // TTS 큐가 비어있을 때만 알림
         if (
           currentStageRef.current === InterviewStage.INTERVIEWER_INTRO &&
-          ttsQueue.length === 0
+          ttsQueueRef.current.length === 0
         ) {
           notifyStageReady(InterviewStage.INTERVIEWER_INTRO);
         }
