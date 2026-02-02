@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: unbrdn-resource-quota
+  namespace: unbrdn
+spec:
+  hard:
+    # CPU 총합 제한 (2 vCPU 8GB × 3 노드 = 6 vCPU 기준)
+    requests.cpu: "6"
+    limits.cpu: "12"
+
+    # 메모리 총합 제한 (2 vCPU 8GB × 3 노드 = 24GB 기준)
+    requests.memory: "24Gi"
+    limits.memory: "48Gi"
+
+    # 스토리지 총합 제한 (디스크 부족 방지) - 강화됨
+    requests.storage: "30Gi"
+    persistentvolumeclaims: "10"
+
+    # Pod 수 제한 (리소스 과다 사용 방지)
+    pods: "50"
+    services: "20"
+
+    # 임시 스토리지 제한 (디스크 압박 방지) - 강화됨
+    requests.ephemeral-storage: "10Gi"
+    limits.ephemeral-storage: "20Gi"

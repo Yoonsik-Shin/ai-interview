@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: unbrdn-limit-range
+  namespace: unbrdn
+spec:
+  limits:
+    # Pod 전체 제한
+    - type: Pod
+      max:
+        cpu: "4"
+        memory: "8Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+
+    # 컨테이너별 제한
+    - type: Container
+      max:
+        cpu: "2"
+        memory: "4Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+      default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+
+    # PVC (디스크) 제한
+    - type: PersistentVolumeClaim
+      max:
+        storage: "10Gi"
+      min:
+        storage: "1Gi"

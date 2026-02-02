@@ -4,24 +4,34 @@ metadata:
   name: main-ingress
   namespace: unbrdn
   labels:
-    environment: local
+    environment: prod
   annotations:
+    # OCI Load Balancer 설정
+    oci.oraclecloud.com/load-balancer-type: "lb"
+    # Cert-Manager 설정
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Nginx Ingress Controller 설정
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "route"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
     nginx.ingress.kubernetes.io/websocket-services: "socket"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
-    # HTTP to HTTPS 자동 리다이렉션 (로컬 개발용으로 비활성화)
-    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    # CORS preflight 요청에서 리다이렉트 방지
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
-    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
-    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/connection-upgrade: "$connection_upgrade"
+    nginx.ingress.kubernetes.io/upgrade: "$http_upgrade"
+    # HTTP to HTTPS 자동 리다이렉션
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - unbrdn.me
+      secretName: tls-secret
   rules:
-    - host: localhost
+    - host: unbrdn.me
       http:
         paths:
           - path: /admin
@@ -36,9 +46,10 @@ spec:
             backend:
               service:
                 name: grafana
+                namespace: monitoring
                 port:
                   number: 3000
-          - path: /socket.io
+          - path: /socket.io/
             pathType: Prefix
             backend:
               service:
@@ -56,6 +67,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: bff
+                name: frontend
                 port:
-                  number: 3000
+                  number: 80
