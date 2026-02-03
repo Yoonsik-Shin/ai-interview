@@ -75,13 +75,12 @@ export function Interview() {
     sendAudioChunk,
     notifyStageReady,
     setOnStt,
-    setOnTranscript,
-    setOnThinking,
     setOnAudio,
-    setOnAck,
     setOnStageChanged,
     setOnIntervene,
     setOnRetryAnswer,
+    abortStream,
+    socket,
   } = useInterviewSocket(id);
 
   const [currentStage, setCurrentStage] = useState<InterviewStage>(
@@ -127,18 +126,76 @@ export function Interview() {
     });
   }, []);
 
-  const stopRecording = useCallback(() => {
-    if (!recording) return;
-    sendFinal();
-    stop();
-    setThinking(null);
-    setConversationState("PROCESSING");
-    finalizeStreamingMessage();
-    hasSpeechRef.current = false;
-    setIsUserSpeaking(false);
-    speechStartTsRef.current = null;
-    silenceStartTsRef.current = null;
-  }, [finalizeStreamingMessage, recording, sendFinal, stop]);
+  const stopRecording = useCallback(
+    (durationMs?: number) => {
+      if (!recording) return;
+
+      stop(); // Stop recording via hook
+
+      setIsUserSpeaking(false);
+
+      // 30초 미만 & SELF_INTRO 단계이며, 남은 시간이 충분할 때만 abort 처리
+      const elapsedSinceStageStart = Date.now() - stageStartTimeRef.current;
+      const SELF_INTRO_LIMIT_MS = 90000; // 90초
+      const remainingTime = SELF_INTRO_LIMIT_MS - elapsedSinceStageStart;
+      const MIN_REMAINING_TIME_MS = 30000; // 30초
+
+      if (
+        durationMs &&
+        durationMs < 30000 &&
+        currentStageRef.current === InterviewStage.SELF_INTRO &&
+        remainingTime >= MIN_REMAINING_TIME_MS // 남은 시간이 30초 이상일 때만 제약 적용
+      ) {
+        console.log("Self intro too short (<30s). Aborting stream.");
+        abortStream();
+
+        const persona = interviewMeta?.persona || "COMFORTABLE";
+        const ttsEngine = (interviewMeta as any)?.ttsEngine || "edge";
+        const audioPath = `/audio/retry_self_intro_too_short_${persona}_${ttsEngine}.mp3`;
+
+        if (audioRef.current) {
+          audioRef.current.src = audioPath;
+          audioRef.current.onended = () => {
+            if (!manualPaused && connected) {
+              // startRecording 재호출 (비동기 처리)
+              startRecording().catch(console.error);
+            }
+          };
+          audioRef.current.play().catch((err) => {
+            console.error("Retry audio play failed:", err);
+            if (!manualPaused && connected) {
+              startRecording().catch(console.error);
+            }
+          });
+        }
+        return; // sendFinal 호출하지 않음
+      }
+
+      sendFinal(); // 정상 종료 시 Final chunk 전송
+
+      setThinking(null);
+      setConversationState("PROCESSING");
+      finalizeStreamingMessage();
+      hasSpeechRef.current = false;
+      speechStartTsRef.current = null;
+      silenceStartTsRef.current = null;
+    },
+    [
+      recording,
+      stop,
+      sendFinal,
+      abortStream,
+      manualPaused,
+      connected,
+      finalizeStreamingMessage,
+      interviewMeta,
+      // startRecording은 여기서 호출되지만 의존성에 없으면 stale closure 가능성 있음.
+      // 하지만 startRecording은 ref나 외부 상태를 많이 사용하여 stable할 수 있음.
+      // 여기서는 safe하게 startRecording을 의존성에 추가하지 않고(정의 순서 문제 회피),
+      // 필요하다면 useRef로 startRecording을 감싸서 호출하거나...
+      // 일단 startRecording은 컴포넌트 내 함수이므로 직접 호출 가능.
+    ],
+  );
 
   const startRecording = useCallback(async () => {
     if (recording || manualPaused) return;
@@ -257,7 +314,7 @@ export function Interview() {
         return;
       const SPEECH_START_THRESHOLD = 0.05;
       const SPEECH_END_THRESHOLD = 0.035;
-      const SILENCE_DURATION_MS = 800;
+      const SILENCE_DURATION_MS = 1500;
       const MIN_SPEECH_DURATION_MS = 250;
       const now = ts;
 
@@ -290,20 +347,29 @@ export function Interview() {
         speechDuration >= MIN_SPEECH_DURATION_MS &&
         silenceDuration >= SILENCE_DURATION_MS
       ) {
-        stopRecording();
+        stopRecording(speechDuration);
         setConversationState("PROCESSING");
         hasSpeechRef.current = false;
         speechStartTsRef.current = null;
         silenceStartTsRef.current = null;
       }
     },
-    [conversationState, manualPaused, recording, stopRecording],
+    [
+      conversationState,
+      manualPaused,
+      recording,
+      stopRecording,
+      abortStream,
+      connected,
+    ],
   );
 
   onLevelRef.current = handleAudioLevel;
 
   // Keep track of currentStage in a ref for callbacks
   const currentStageRef = useRef(currentStage);
+  const stageStartTimeRef = useRef(Date.now()); // 스테이지 시작 시간 기록
+
   useEffect(() => {
     currentStageRef.current = currentStage;
   }, [currentStage]);
@@ -372,11 +438,16 @@ export function Interview() {
 
         // INTERVIEWER_INTRO 단계에서 모든 오디오 재생이 끝나면 백엔드에 알림 (-> SELF_INTRO_PROMPT 전환)
         // TTS 큐가 비어있을 때만 알림
+        // TTS 큐가 비어있을 때만 알림
         if (
-          currentStageRef.current === InterviewStage.INTERVIEWER_INTRO &&
+          (currentStageRef.current === InterviewStage.INTERVIEWER_INTRO ||
+            currentStageRef.current === InterviewStage.SELF_INTRO_PROMPT) &&
           ttsQueueRef.current.length === 0
         ) {
-          notifyStageReady(InterviewStage.INTERVIEWER_INTRO);
+          // 오디오 종료 후 즉시 넘어가면 체감상 빠를 수 있으므로 1초 여유를 둠
+          setTimeout(() => {
+            notifyStageReady(currentStageRef.current);
+          }, 1000);
         }
       };
       audio.onerror = () => {
@@ -535,6 +606,42 @@ export function Interview() {
             });
           }
         }, 1500);
+      } else if (e.currentStage === InterviewStage.SELF_INTRO) {
+        // SELF_INTRO 시작
+        stageStartTimeRef.current = Date.now();
+        setTimeLeft(90);
+        if (!manualPaused && connected) {
+          startRecording();
+        }
+      } else if (
+        e.previousStage === InterviewStage.SELF_INTRO &&
+        e.currentStage === InterviewStage.IN_PROGRESS
+      ) {
+        setTimeLeft(null);
+        // SELF_INTRO -> IN_PROGRESS 전환 시 Transition Audio 재생
+        setIsInterviewerSpeaking(true);
+        ttsPlayingRef.current = true; // 질문 TTS 대기
+
+        const personaKey = interviewMeta?.persona || "RANDOM";
+        const transitionPath = `/audio/transition_intro_${personaKey}_edge.mp3`;
+
+        if (audioRef.current) {
+          audioRef.current.src = transitionPath;
+          audioRef.current.onended = () => {
+            ttsPlayingRef.current = false;
+            setIsInterviewerSpeaking(false);
+            playNextTts(); // 대기 중이던 질문 TTS 재생
+          };
+          audioRef.current.onerror = () => {
+            console.error("Transition audio failed");
+            ttsPlayingRef.current = false;
+            setIsInterviewerSpeaking(false);
+            playNextTts();
+          };
+          audioRef.current.play().catch(console.error);
+        }
+      } else if (e.currentStage === InterviewStage.IN_PROGRESS) {
+        setTimeLeft(null);
       } else if (e.currentStage === InterviewStage.SELF_INTRO_PROMPT) {
         // 1분 자기소개 요청 음성 재생
         setTimeout(() => {
@@ -552,17 +659,35 @@ export function Interview() {
               notifyStageReady(InterviewStage.SELF_INTRO_PROMPT);
             });
           }
-        }, 1000);
-      } else if (e.currentStage === InterviewStage.SELF_INTRO) {
-        setTimeLeft(90);
-      } else if (e.currentStage === InterviewStage.IN_PROGRESS) {
-        setTimeLeft(null);
+        }, 1500);
       }
     });
 
     setOnIntervene((e: InterveneEvent) => {
       console.log(`Intervention received: ${e.message}`);
       setIntervention(e.message);
+
+      // 개입 메시지 오디오 재생
+      setIsInterviewerSpeaking(true);
+      const personaKey = interviewMeta?.persona || "RANDOM";
+      const audioPath = `/audio/intervene_intro_${personaKey}_edge.mp3`;
+
+      if (audioRef.current) {
+        audioRef.current.src = audioPath;
+        audioRef.current.onended = () => {
+          setIsInterviewerSpeaking(false);
+          setIntervention(null);
+        };
+        audioRef.current.onerror = () => {
+          console.error("Intervene audio failed");
+          setIsInterviewerSpeaking(false);
+          setIntervention(null);
+        };
+        audioRef.current.play().catch(console.error);
+      } else {
+        // 오디오 없으면 5초 후 메시지 제거
+        setTimeout(() => setIntervention(null), 5000);
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -572,8 +697,6 @@ export function Interview() {
           text: e.message,
         },
       ]);
-
-      setTimeout(() => setIntervention(null), 5000);
     });
 
     setOnStt((data) => {
@@ -742,6 +865,56 @@ export function Interview() {
             <p className={styles.interventionMessage}>{intervention}</p>
           </div>
         </div>
+      )}
+
+      {/* CANDIDATE_GREETING 단계 안내 Overlay */}
+      {currentStage === InterviewStage.CANDIDATE_GREETING && (
+        <div className={styles.interventionOverlay}>
+          <div className={styles.interventionContent}>
+            <div className={styles.interventionHeader}>
+              <span className={styles.interventionIcon}>👋</span>
+              <span className={styles.interventionTitle}>면접 시작</span>
+            </div>
+            <p className={styles.interventionMessage}>
+              면접관에게 가볍게 인사해주세요!
+              <br />
+              <span style={{ fontSize: "0.9em", color: "#666" }}>
+                (예: "안녕하세요, 잘 부탁드립니다.")
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Debug: Skip Stage Button */}
+      {process.env.NODE_ENV === "development" && (
+        <button
+          onClick={() => {
+            if (socket && connected) {
+              // debug:skip_stage 이벤트를 보냄 (Gateway에서 구현 필요)
+              socket.emit("debug:skip_stage", {
+                interviewSessionId: interviewId,
+                currentStage,
+              });
+            }
+          }}
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            zIndex: 9999,
+            padding: "10px 20px",
+            backgroundColor: "#ff4444",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+          }}
+        >
+          👉 Skip Stage
+        </button>
       )}
 
       {subtitle && (

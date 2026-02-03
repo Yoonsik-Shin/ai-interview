@@ -187,11 +187,20 @@ export function useInterviewSocket(interviewId: string | null) {
     [interviewId],
   );
 
+  const abortStream = useCallback(() => {
+    if (socketRef.current?.connected && interviewId != null) {
+      socketRef.current.emit("interview:abort_stream", {
+        interviewSessionId: interviewId,
+      });
+    }
+  }, [interviewId]);
+
   return {
     connected,
     error,
     sendAudioChunk,
     notifyStageReady,
+    abortStream,
     setOnStt,
     setOnTranscript,
     setOnThinking,
@@ -200,5 +209,6 @@ export function useInterviewSocket(interviewId: string | null) {
     setOnStageChanged,
     setOnIntervene,
     setOnRetryAnswer,
+    socket: socketRef.current,
   };
 }
