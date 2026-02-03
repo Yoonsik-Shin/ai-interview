@@ -36,7 +36,11 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
         }
         case SELF_INTRO_PROMPT -> session.transitionToSelfIntroPrompt();
         case SELF_INTRO -> session.transitionToSelfIntro();
-        case IN_PROGRESS -> session.transitionToInProgress();
+        case IN_PROGRESS -> {
+            session.transitionToInProgress();
+            // IN_PROGRESS 진입 시 첫 번째 면접 질문 생성 트리거
+            triggerFirstQuestion(session);
+        }
         case COMPLETED -> session.transitionToCompleted();
         case WAITING -> throw new IllegalArgumentException("Cannot transition back to WAITING stage");
         default -> throw new IllegalArgumentException("Unknown stage: " + command.newStage());
@@ -67,6 +71,23 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
                 .persona(session.getPersona().name()).history(history).mode(session.getType().name())
                 .stage(session.getStage()).interviewerCount(session.getInterviewerCount()).domain(session.getDomain())
                 .build();
+
+        callLlmPort.generateResponse(llmCommand);
+    }
+
+    private void triggerFirstQuestion(InterviewSession session) {
+        String interviewId = session.getSessionUuid();
+        String userId = session.getCandidate().getId().toString();
+        List<ConversationHistory> history = manageConversationHistoryPort.loadHistory(interviewId);
+
+        CallLlmCommand llmCommand = CallLlmCommand.builder().interviewId(interviewId)
+                .interviewSessionId(session.getId().toString()).userId(userId).userText("자기소개를 마쳤습니다. 첫 번째 질문을 해주세요.") // Trigger
+                                                                                                                       // for
+                                                                                                                       // first
+                                                                                                                       // question
+                .persona(session.getPersona().name()).history(history).mode(session.getType().name())
+                .stage(session.getStage()) // IN_PROGRESS
+                .interviewerCount(session.getInterviewerCount()).domain(session.getDomain()).build();
 
         callLlmPort.generateResponse(llmCommand);
     }
