@@ -7,9 +7,10 @@ import { ThinkingPubSubConsumer } from "./thinking-pubsub.consumer";
 import { AudioPubSubConsumer } from "./audio-pubsub.consumer";
 import { SttModule } from "../stt/stt.module";
 import { CoreInterviewGrpcService } from "./services/core-interview-grpc.service";
+import { RedisModule } from "../../infrastructure/redis/redis.module";
 
 @Module({
-    imports: [SttModule],
+    imports: [SttModule, RedisModule],
     providers: [
         InterviewGateway,
         CoreInterviewGrpcService, // Core gRPC Stage 관리 서비스

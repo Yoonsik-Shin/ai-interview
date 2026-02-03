@@ -78,6 +78,12 @@ export class SttGrpcService implements OnModuleInit {
                         });
                         return;
                     }
+
+                    // Fast Track: Redis Pub/Sub을 거치지 않고 바로 전송 (지연 감소)
+                    client.emit("interview:stt_result", {
+                        text: response.text,
+                        isFinal: true, // 문장 단위 처리이므로 true로 가정 (스트리밍 방식에 따라 다름)
+                    });
                 },
                 error: (err) => {
                     this.logger.log(client, "stt_grpc_stream_failed", {
@@ -112,6 +118,13 @@ export class SttGrpcService implements OnModuleInit {
                 path: "fast",
             });
         }
+    }
+
+    abortStream(interviewSessionId: string) {
+        this.logger.log(null, "stt_grpc_stream_aborted", {
+            interviewSessionId,
+        });
+        this.cleanupSttStream(interviewSessionId, "aborted");
     }
 
     private cleanupSttStream(interviewSessionId: string, reason: string): void {

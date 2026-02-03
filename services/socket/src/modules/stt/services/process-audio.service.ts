@@ -118,4 +118,7 @@ export class ProcessAudioService {
             message: "Failed to process audio chunk",
         });
     }
+    abortProcessing(interviewSessionId: string) {
+        this.sttGrpcService.abortStream(interviewSessionId);
+    }
 }

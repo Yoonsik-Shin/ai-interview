@@ -4,12 +4,14 @@ import { SocketLoggingService } from "../../../core/logging/socket-logging.servi
 import type { SocketConnectedEvent, SocketDisconnectedEvent } from "src/modules/modules.interface";
 import { ConnectionEventType } from "../../modules.enum";
 import { CoreInterviewGrpcService, InterviewStage } from "../services/core-interview-grpc.service";
+import { RedisClient } from "../../../infrastructure/redis/redis.clients";
 
 @Injectable()
 export class InterviewConnectionListener {
     constructor(
         private readonly logger: SocketLoggingService,
         private readonly stageService: CoreInterviewGrpcService,
+        private readonly redisClient: RedisClient,
     ) {}
 
     @OnEvent("socket.connected")
@@ -40,11 +42,20 @@ export class InterviewConnectionListener {
             return;
         }
 
-        const interviewSessionId = query.interviewSessionId;
+        const interviewSessionId = query.interviewSessionId as string;
         const roomName = `interview-session-${interviewSessionId}`;
+        const sessionKey = `interview:session:${interviewSessionId}`;
 
         // Room에 join (Redis Adapter를 통해 다른 Pod에서도 메시지 수신 가능)
         await client.join(roomName);
+
+        // Redis Session Init / Refresh
+        await this.redisClient.hset(sessionKey, {
+            connectedAt: Date.now(),
+            userId: client.data.userId || "unknown",
+            lastActivity: Date.now(),
+        });
+        await this.redisClient.expire(sessionKey, 3600); // 1시간 TTL
 
         this.logger.log(client, "interview_session_joined", {
             roomName,
@@ -59,12 +70,18 @@ export class InterviewConnectionListener {
                     const { stage: currentStage } =
                         await this.stageService.getStage(interviewSessionId);
 
+                    // Redis에 Stage 정보도 업데이트 (Cache Warm-up)
+                    await this.redisClient.hset(sessionKey, "stage", currentStage);
+
                     if (currentStage === InterviewStage.WAITING) {
                         // 최초 진입: WAITING -> GREETING 전환 (면접관 인사)
                         await this.stageService.transitionStage(
                             interviewSessionId,
                             InterviewStage.GREETING,
                         );
+
+                        await this.redisClient.hset(sessionKey, "stage", InterviewStage.GREETING);
+
                         // 클라이언트에 상태 변경 알림
                         client.emit("interview:stage_changed", {
                             interviewSessionId,

@@ -9,7 +9,8 @@ import { Server, Socket } from "socket.io";
 import { ProcessAudioService } from "../stt/services/process-audio.service";
 import { AudioChunkDto } from "../stt/dto/audio-chunk.dto";
 import { CoreInterviewGrpcService, InterviewStage } from "./services/core-interview-grpc.service";
-import { SocketLoggingService } from "../../core/logging/socket-logging.service";
+import { RedisClient } from "../../infrastructure/redis/redis.clients";
+import { SocketLoggingService } from "@/core/logging/socket-logging.service";
 
 @WebSocketGateway({ cors: { origin: "*" } })
 export class InterviewGateway {
@@ -20,6 +21,7 @@ export class InterviewGateway {
         private readonly processAudioService: ProcessAudioService,
         private readonly stageService: CoreInterviewGrpcService,
         private readonly logger: SocketLoggingService,
+        private readonly redisClient: RedisClient,
     ) {}
 
     /**
@@ -34,7 +36,7 @@ export class InterviewGateway {
         this.logger.log(client, "stage_ready_received", payload);
 
         if (payload.currentStage === InterviewStage.GREETING) {
-            // GREETING -> CANDIDATE_GREETING 전환 (면접관 인사 완료)
+            // GREETING -> CANDIDATE_GREETING 전환 (면접관 인사 완료 -> 지원자 인사 유도)
             const nextStage = await this.stageService.transitionStage(
                 payload.interviewSessionId,
                 InterviewStage.CANDIDATE_GREETING,
@@ -45,7 +47,7 @@ export class InterviewGateway {
                 currentStage: nextStage,
             });
         } else if (payload.currentStage === InterviewStage.INTERVIEWER_INTRO) {
-            // INTERVIEWER_INTRO -> SELF_INTRO_PROMPT 전환
+            // INTERVIEWER_INTRO -> SELF_INTRO_PROMPT 전환 (면접관 자기소개 완료 -> 1분 자기소개 유도)
             const nextStage = await this.stageService.transitionStage(
                 payload.interviewSessionId,
                 InterviewStage.SELF_INTRO_PROMPT,
@@ -61,10 +63,58 @@ export class InterviewGateway {
                 payload.interviewSessionId,
                 InterviewStage.SELF_INTRO,
             );
+
+            // Redis에 시작 시간 기록 (Optimization) + Session TTL 갱신
+            const sessionKey = `interview:session:${payload.interviewSessionId}`;
+            await this.redisClient.hset(sessionKey, "selfIntroStart", Date.now());
+            await this.redisClient.expire(sessionKey, 3600);
+
             client.emit("interview:stage_changed", {
                 interviewSessionId: payload.interviewSessionId,
                 previousStage: payload.currentStage,
                 currentStage: nextStage,
+            });
+        }
+    }
+
+    @SubscribeMessage("debug:skip_stage")
+    async handleDebugSkipStage(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() payload: { interviewSessionId: string; currentStage: InterviewStage },
+    ): Promise<void> {
+        this.logger.log(client, "debug_skip_stage", payload);
+        let nextStage: InterviewStage | null = null;
+
+        switch (payload.currentStage) {
+            case InterviewStage.GREETING:
+                nextStage = InterviewStage.CANDIDATE_GREETING;
+                break;
+            case InterviewStage.CANDIDATE_GREETING:
+                nextStage = InterviewStage.INTERVIEWER_INTRO;
+                break;
+            case InterviewStage.INTERVIEWER_INTRO:
+                nextStage = InterviewStage.SELF_INTRO_PROMPT;
+                break;
+            case InterviewStage.SELF_INTRO_PROMPT:
+                nextStage = InterviewStage.SELF_INTRO;
+                break;
+            case InterviewStage.SELF_INTRO:
+                nextStage = InterviewStage.IN_PROGRESS;
+                break;
+            default:
+                this.logger.warn(client, "skip_stage_not_supported", payload);
+                return;
+        }
+
+        if (nextStage) {
+            const newStage = await this.stageService.transitionStage(
+                payload.interviewSessionId,
+                nextStage,
+            );
+            client.emit("interview:stage_changed", {
+                interviewSessionId: payload.interviewSessionId,
+                previousStage: payload.currentStage,
+                currentStage: newStage,
             });
         }
     }
@@ -133,6 +183,17 @@ export class InterviewGateway {
         }
     }
 
+    @SubscribeMessage("interview:abort_stream")
+    handleAbortStream(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() payload: { interviewSessionId: string },
+    ): void {
+        this.logger.log(client, "client_requested_abort", {
+            interviewSessionId: payload.interviewSessionId,
+        });
+        this.processAudioService.abortProcessing(payload.interviewSessionId);
+    }
+
     /**
      * CANDIDATE_GREETING Stage: 면접자 인사 처리
      * - 짧게 인사만 받고 다음 단계로 전환
@@ -172,11 +233,12 @@ export class InterviewGateway {
 
         // 90초 경과 확인 (isFinal 시점에만)
         if (payload.isFinal) {
-            const { selfIntroElapsedSeconds } = await this.stageService.getStage(
+            // Redis Optimization: DB 대신 Redis에서 경과 시간 계산
+            const selfIntroElapsedSeconds = await this.getSelfIntroElapsed(
                 payload.interviewSessionId,
             );
 
-            // 90초 초과 여부 확인
+            // 90초 초과 여부 확인 (강제 종료)
             if (selfIntroElapsedSeconds >= 90) {
                 this.logger.log(client, "self_intro_time_exceeded", {
                     interviewSessionId: payload.interviewSessionId,
@@ -194,10 +256,69 @@ export class InterviewGateway {
                     payload.interviewSessionId,
                     InterviewStage.IN_PROGRESS,
                 );
+            } else if (selfIntroElapsedSeconds >= 30) {
+                // 30초 이상 발화 후 종료 시 정상 진행
+                this.logger.log(client, "self_intro_completed_normally", {
+                    interviewSessionId: payload.interviewSessionId,
+                    elapsedSeconds: selfIntroElapsedSeconds,
+                });
 
-                // TODO: LLM에 개입 메시지 전송하여 "자기소개 충분히 들었으니 다음 질문 시작" 안내
+                // SELF_INTRO → IN_PROGRESS 전환
+                await this.stageService.transitionStage(
+                    payload.interviewSessionId,
+                    InterviewStage.IN_PROGRESS,
+                );
             }
         }
+    }
+
+    /**
+     * 자기소개 경과 시간 계산 (Redis Cached)
+     */
+    /**
+     * 자기소개 경과 시간 계산 (Redis Cached)
+     * - Unified Session Key 사용 (interview:session:{id})
+     */
+    private async getSelfIntroElapsed(interviewSessionId: string): Promise<number> {
+        const sessionKey = `interview:session:${interviewSessionId}`;
+        const cachedStart = await this.redisClient.hget(sessionKey, "selfIntroStart");
+
+        let startTime: number;
+        if (cachedStart) {
+            startTime = Number(cachedStart);
+            // Cache Hit 시 TTL 연장 (Activity가 있으므로 유지)
+            this.redisClient.expire(sessionKey, 3600).catch((err) => {
+                this.logger.error(null, "redis_expire_error", { error: String(err) });
+            });
+            // Debug Log (Too noisy? maybe debug level)
+            // this.logger.debug(null, "redis_time_cache_hit", { interviewSessionId, startTime });
+        } else {
+            // Cache Miss: Fallback to Core (gRPC) or current time
+            const { selfIntroElapsedSeconds } =
+                await this.stageService.getStage(interviewSessionId);
+
+            this.logger.warn(null, "redis_time_cache_miss_fallback", {
+                interviewSessionId,
+                coreElapsed: selfIntroElapsedSeconds,
+            });
+
+            if (selfIntroElapsedSeconds > 0) {
+                startTime = Date.now() - selfIntroElapsedSeconds * 1000;
+            } else {
+                startTime = Date.now();
+            }
+            // 캐시 저장 (1시간)
+            await this.redisClient.hset(sessionKey, "selfIntroStart", startTime);
+            await this.redisClient.expire(sessionKey, 3600);
+        }
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+
+        // 5초 단위로 로그 출력
+        if (elapsed % 5 === 0) {
+            this.logger.debug(null, "self_intro_timer_check", { interviewSessionId, elapsed });
+        }
+
+        return elapsed;
     }
 
     /**
