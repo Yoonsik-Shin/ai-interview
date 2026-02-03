@@ -5112,3 +5112,4 @@ kubectl create secret generic inference-secrets \
 - [Socket] Prevented server crash by gracefully handling unauthenticated connections
 - [Frontend] Updated socket connection to use dynamic auth token for seamless reconnection
 - [Socket] Fixed JWT payload parsing issues by mapping 'sub' claim to 'userId'
+- 2026-02-02: 1분 자기소개 30초 제한 기능 구현 (Socket Abort + Frontend Retry Logic)
