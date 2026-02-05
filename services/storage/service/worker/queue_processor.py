@@ -1,12 +1,30 @@
+import struct
 import json
 import base64
-from typing import List
 import redis
-
+from typing import List
 from utils.log_format import log_json
-from service.worker.metadata_utils import extract_metadata
 from engine.object_storage import ObjectStorageEngine
+from service.worker.metadata_utils import extract_metadata
 
+def add_wav_header(pcm_data: bytes, sample_rate: int = 16000, channels: int = 1) -> bytes:
+    header = struct.pack(
+        '<4sI4s4sIHHIIHH4sI',
+        b'RIFF',
+        36 + len(pcm_data),
+        b'WAVE',
+        b'fmt ',
+        16,  # PCM format size
+        1,   # AudioFormat (1=PCM)
+        channels,
+        sample_rate,
+        sample_rate * channels * 2,  # ByteRate
+        channels * 2,                # BlockAlign
+        16,                          # BitsPerSample
+        b'data',
+        len(pcm_data)
+    )
+    return header + pcm_data
 
 def process_audio_queue(
     redis_client: redis.Redis,
@@ -46,6 +64,8 @@ def process_audio_queue(
                 break
 
             _, message_bytes = result
+            
+            # Treat as uncompressed JSON
             message = json.loads(message_bytes.decode("utf-8"))
 
             # Update metadata
@@ -54,15 +74,14 @@ def process_audio_queue(
 
             # Append chunk
             if "audioData" in message:
-                chunk_data = base64.b64decode(message["audioData"])
+                if isinstance(message["audioData"], str):
+                     chunk_data = base64.b64decode(message["audioData"])
+                else:
+                     # Already binary (if using a different serializer in future, currently usage is JSON so it's string)
+                     # But logically wait, JSON loads returns string for base64.
+                     chunk_data = base64.b64decode(message["audioData"])
+                
                 audio_chunks.append(chunk_data)
-                # Logging every chunk is too verbose
-                # log_json(
-                #     "chunk_received",
-                #     queue_key=queue_key,
-                #     chunk_index=len(audio_chunks),
-                #     chunk_size=len(chunk_data),
-                # )
 
             # Check for final flag
             if message.get("isFinal", False):
@@ -83,11 +102,22 @@ def process_audio_queue(
     # Assemble and upload chunks
     if audio_chunks:
         total_audio = b"".join(audio_chunks)
+        
+        # Add WAV Header if format is PCM
+        if metadata.get("format") == "pcm16" or metadata.get("format") is None:
+            # Default to 16000Hz, 1 channel if not specified
+            sr = int(metadata.get("sample_rate", 16000))
+            ch = int(metadata.get("channels", 1))
+            total_audio = add_wav_header(total_audio, sample_rate=sr, channels=ch)
+            metadata["format"] = "wav"
+            log_json("wav_header_added", sample_rate=sr, channels=ch)
+
         log_json(
             "audio_assembled",
             queue_key=queue_key,
             total_size=len(total_audio),
             chunk_count=len(audio_chunks),
+            format=metadata.get("format")
         )
 
         # Upload to Object Storage
