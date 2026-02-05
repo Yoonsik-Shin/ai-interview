@@ -29,7 +29,7 @@ export class ProcessAudioService {
             await this.sttStorageService.pushToRedis(
                 client,
                 payload,
-                audioData.toString("base64"),
+                audioData, // Pass Buffer directly
                 metadata,
                 timestamp,
             );
@@ -76,7 +76,7 @@ export class ProcessAudioService {
     }
 
     private decodeAudio(chunk: string | Buffer): Buffer {
-        return typeof chunk === "string" ? Buffer.from(chunk, "base64") : chunk;
+        return Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, "base64");
     }
 
     private createMetadata(payload: AudioChunkDto, timestamp: string, traceId: string) {

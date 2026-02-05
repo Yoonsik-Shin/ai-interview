@@ -1,4 +1,13 @@
-import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min, Max } from "class-validator";
+import {
+    IsEnum,
+    IsInt,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    Min,
+    Max,
+    IsArray,
+} from "class-validator";
 
 // .proto의 Enum 값과 문자열이 일치해야 합니다.
 export enum InterviewType {
@@ -6,7 +15,13 @@ export enum InterviewType {
     PRACTICE = "PRACTICE",
 }
 
-export enum InterviewPersona {
+export enum InterviewRole {
+    TECH = "TECH",
+    HR = "HR",
+    LEADER = "LEADER",
+}
+
+export enum InterviewPersonality {
     PRESSURE = "PRESSURE",
     COMFORTABLE = "COMFORTABLE",
     RANDOM = "RANDOM",
@@ -25,13 +40,12 @@ export class CreateInterviewDto {
     @IsEnum(InterviewType)
     type: InterviewType;
 
-    @IsEnum(InterviewPersona)
-    persona: InterviewPersona;
+    @IsArray()
+    @IsEnum(InterviewRole, { each: true })
+    interviewerRoles: InterviewRole[];
 
-    @IsInt()
-    @Min(1)
-    @Max(4)
-    interviewerCount: number;
+    @IsEnum(InterviewPersonality)
+    personality: InterviewPersonality;
 
     @IsInt()
     @Min(10)

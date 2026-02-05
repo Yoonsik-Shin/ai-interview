@@ -35,13 +35,28 @@ export class TranscriptPubSubConsumer implements OnModuleInit, OnModuleDestroy {
             const payload = JSON.parse(message);
             const interviewId = payload.interviewId;
 
-            // WebSocket으로 토큰 전송
-            this.interviewGateway.server
-                .to(`interview:${interviewId}`)
-                .emit("interview:transcript", {
-                    token: payload.token,
-                    timestamp: payload.timestamp,
-                });
+            if (payload.type === "STAGE_CHANGE") {
+                // Stage Change Event
+                this.interviewGateway.server
+                    .to(`interview:${interviewId}`)
+                    .emit("interview:stage_changed", {
+                        currentStage: payload.currentStage,
+                        previousStage: payload.previousStage,
+                        timestamp: payload.timestamp,
+                    });
+            } else {
+                // Regular Transcript Event
+                this.interviewGateway.server
+                    .to(`interview:${interviewId}`)
+                    .emit("interview:transcript", {
+                        token: payload.token,
+                        thinking: payload.thinking,
+                        reduceTotalTime: payload.reduceTotalTime,
+                        nextDifficulty: payload.nextDifficulty,
+                        currentPersonaId: payload.currentPersonaId,
+                        timestamp: payload.timestamp,
+                    });
+            }
         } catch (error) {
             console.error("❌ Transcript handling error:", error);
         }
