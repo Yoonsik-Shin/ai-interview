@@ -18,41 +18,17 @@ import uvicorn
 from utils.log_format import log_json
 from service.storage_service import StorageService
 
+from contextlib import asynccontextmanager
+
 # Load environment variables
 load_dotenv()
 
-app = FastAPI()
-storage_service = None
-
-
-@app.get("/health")
-async def health():
-    """Health check endpoint"""
-    return {
-        "status": "ok",
-        "service": "storage",
-        "timestamp": datetime.now().isoformat(),
-    }
-
-
-@app.get("/health/ready")
-async def readiness():
-    """Readiness check endpoint"""
-    is_ready = storage_service is not None and storage_service.running
-    return {
-        "status": "ready" if is_ready else "not_ready",
-        "service": "storage",
-        "timestamp": datetime.now().isoformat(),
-    }
-
-
-@app.on_event("startup")
-async def startup():
-    """Initialize and start storage service on startup"""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events"""
     global storage_service
-
     log_json("storage_service_startup")
-
+    
     try:
         storage_service = StorageService()
         storage_service.initialize()
@@ -66,16 +42,16 @@ async def startup():
         log_json("storage_service_startup_failed", error=str(e))
         raise
 
+    yield  # Application runs here
 
-@app.on_event("shutdown")
-async def shutdown():
-    """Gracefully shutdown storage service"""
-    global storage_service
-
+    # Shutdown logic
     log_json("storage_service_shutdown")
-
     if storage_service:
         storage_service.stop()
+
+app = FastAPI(lifespan=lifespan)
+storage_service = None
+
 
 
 if __name__ == "__main__":
