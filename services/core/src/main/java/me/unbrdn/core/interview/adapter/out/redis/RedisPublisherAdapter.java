@@ -1,10 +1,8 @@
 package me.unbrdn.core.interview.adapter.out.redis;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -12,11 +10,9 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class RedisPublisherAdapter implements PublishTranscriptPort {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final ObjectMapper objectMapper;
 
     @Override
     public void publish(PublishTranscriptCommand command) {
@@ -30,14 +26,22 @@ public class RedisPublisherAdapter implements PublishTranscriptPort {
                         command.getToken() != null ? command.getToken() : "",
                         "thinking",
                         command.getThinking() != null ? command.getThinking() : "",
+                        "reduceTotalTime",
+                        command.isReduceTotalTime(),
+                        "nextDifficulty",
+                        command.getNextDifficulty(),
+                        "currentPersonaId",
+                        command.getCurrentPersonaId() != null ? command.getCurrentPersonaId() : "",
                         "timestamp",
-                        Instant.now().toString());
+                        Instant.now().toString(),
+                        "type",
+                        command.getType() != null ? command.getType() : "TRANSCRIPT",
+                        "currentStage",
+                        command.getCurrentStage() != null ? command.getCurrentStage() : "",
+                        "previousStage",
+                        command.getPreviousStage() != null ? command.getPreviousStage() : "");
 
-        try {
-            String jsonMessage = objectMapper.writeValueAsString(message);
-            redisTemplate.convertAndSend(channel, jsonMessage);
-        } catch (Exception e) {
-            log.error("Failed to serialize/publish transcript message", e);
-        }
+        // GenericJacksonJsonRedisSerializer will handle the serialization
+        redisTemplate.convertAndSend(channel, message);
     }
 }

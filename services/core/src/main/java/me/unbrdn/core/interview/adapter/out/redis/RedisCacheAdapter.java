@@ -3,14 +3,14 @@ package me.unbrdn.core.interview.adapter.out.redis;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import me.unbrdn.core.interview.application.port.out.AppendRedisCachePort;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class RedisCacheAdapter implements AppendRedisCachePort {
 
-    private final RedisTemplate<String, String> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     public void appendToken(String interviewId, String token) {

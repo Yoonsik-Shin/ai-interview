@@ -143,7 +143,6 @@ spotless {
         endWithNewline() // 파일 끝에 개행 추가
     }
 }
-2
 
 // 컴파일 전에 proto 코드 생성이 완료되도록 보장
 tasks.named('compileJava').configure {

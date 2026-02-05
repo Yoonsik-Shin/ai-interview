@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RedisTtsQueueAdapter implements PushTtsQueuePort {
 
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String TTS_QUEUE = "tts:sentence:queue";
 
@@ -32,11 +31,7 @@ public class RedisTtsQueueAdapter implements PushTtsQueuePort {
                         "mode",
                         command.getMode());
 
-        try {
-            String jsonMessage = objectMapper.writeValueAsString(message);
-            redisTemplate.opsForList().rightPush(TTS_QUEUE, jsonMessage);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize TTS message", e);
-        }
+        // GenericJacksonJsonRedisSerializer will handle the serialization
+        redisTemplate.opsForList().rightPush(TTS_QUEUE, message);
     }
 }

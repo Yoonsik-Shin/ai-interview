@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPort;
 import me.unbrdn.core.interview.domain.model.ConversationHistory;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RedisConversationHistoryAdapter implements ManageConversationHistoryPort {
 
-    private final RedisTemplate<String, String> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private static final int MAX_HISTORY = 20;
 
