@@ -1,5 +1,94 @@
 # Changelog
 
+## [2026-02-04] Redis 데이터베이스 설정 표준화 (DB 0 통합)
+
+### 수정
+
+- **ConfigMap (`k8s/apps/*/common/configmap.yaml`)**:
+  - `core`, `llm`, `stt`, `tts` 서비스의 `REDIS_DB` 설정을 모두 `"0"`으로 통일
+  - 기존 설정(`1`, `2`) 제거를 통해 Split-Brain 현상(서비스 간 통신 단절) 해결
+
+### 배경
+
+- 서비스별로 서로 다른 Redis DB 인덱스를 사용하여 Pub/Sub 및 Stream 데이터 교환이 불가능했던 치명적 버그 수정
+- Redis Cluster 환경 호환성을 위해 DB 0 사용을 강제하는 표준 준수
+
+---
+
+### 수정
+
+- **Core 서비스**:
+  - `RedisConfig.java`: Spring Data Redis 4.0에서 지원 중단된 `GenericJackson2JsonRedisSerializer`를 최신 `GenericJacksonJsonRedisSerializer`로 교체
+  - `GenericJacksonJsonRedisSerializer` 적용 시 빌더 패턴(`builder().build()`)을 사용하여 객체 생성
+
+### 배경
+
+- Spring Boot 4.0 (Spring Data Redis 4.0) 업그레이드에 따른 프레임워크 경고 및 향후 제거 대비
+- Jackson 3 기반의 현대적인 JSON 시리얼라이저로 전환하여 안정성 확보
+
+---
+
+## [2026-02-03] 13단계 고도화 면접 프로세스 및 다중 면접관 자기소개 구현
+
+### 추가
+
+- **13단계 면접 흐름 가속화**:
+  - `InterviewStage`: `LAST_QUESTION_PROMPT`, `LAST_ANSWER` 단계 추가
+  - **Step 4: 다중 면접관 자기소개 (LLM)**: 참여 면접관 수에 따라 순차적으로 본인 소개를 진행하는 로직 구현 (`TransitionInterviewStageInteractor`)
+  - **Step 10: 마지막 질문 안내 (사전 녹음)**: 면접 종료 전 정적 오디오 가이드 재생 (`Interview.tsx`)
+  - **Step 12: 마무리 멘트 (LLM)**: 지원자의 마지막 발언에 공감하고 인사하는 LLM 지침 추가 (`prompts.py`)
+  - **Step 13: 종료 UI**: 면접 완료 오버레이 및 메인 화면 리다이렉트 기능 (`Interview.tsx`)
+
+### 수정
+
+- **Core 서비스**:
+  - `LlmGrpcAdapter.java`: 다중 면접관의 순차적 발화를 보장하기 위해 동기식 gRPC 호출(`generateResponseSync`) 도입 및 인터페이스 확장
+  - `ProcessLlmTokenInteractor.java`: LLM의 면접 종료 신호(`interview_end_signal`) 수신 시 `LAST_QUESTION_PROMPT`로 단계 전환하도록 개선
+  - `InterviewSession.java`: 새로운 단계 전이 메서드(`transitionToLastQuestionPrompt`, `transitionToLastAnswer`) 및 유연한 종료 조건 추가
+  - `InterviewGrpcController.java`: gRPC 프로토콜 업데이트에 따른 스테이지 매핑 최적화
+- **Proto (gRPC)**:
+  - `interview.proto` & `llm.proto`: 13단계 프로세스에 맞춰 `InterviewStageProto` 항목 추가 및 순서 정렬
+- **LLM 서비스**:
+  - `prompts.py`: `LAST_ANSWER` 단계에 대한 페르소나별 공감 및 마무리 지침(System Instruction) 강화
+- **Frontend**:
+  - `Interview.tsx`:
+    - `INTERVIEWER_INTRO` 단계에서 LLM TTS 스트림 대기 및 자동 전환 로직 구현
+    - `COMPLETED` 단계 오버레이 UI 구현 및 마이크 활성화 유지
+    - `useNavigate`를 통한 면접 종료 후 네비게이션 처리
+
+### 배경
+
+- 단조로운 면접 흐름을 실제 대면 면접과 유사한 13단계 프로세스로 고도화하여 사용자 경험(UX) 혁신
+- 여러 면접관이 동시에 말하지 않고 순서대로 자기소개할 수 있도록 기술적 제약 사항 해결 (동기식 오케스트레이션)
+- 면접의 끝을 명확히 인지할 수 있도록 가이드 음성 및 종료 UI 보강
+
+---
+
+## [2026-02-03] 하이브리드 세션 상태 관리 구현: Redis + RDB 성능 최적화
+
+### 추가
+
+- **Core 서비스**:
+  - `InterviewSessionState.java`: Redis에 저장할 '뜨거운(Hot)' 데이터 객체 추가 (난이도, 마지막 답변자, 턴수 등)
+  - `ManageSessionStatePort.java`: 세션 상태 관리를 위한 아웃바운드 포트 정의
+  - `InterviewSessionCacheAdapter.java`: RedisTemplate 기반의 세션 상태 캐시 어댑터 구현
+
+### 수정
+
+- **Core 서비스**:
+  - `ProcessLlmTokenInteractor.java`: 턴마다 발생하는 세션 상태 업데이트를 RDB가 아닌 Redis로 우선 처리하도록 리팩토링
+  - `TransitionInterviewStageInteractor.java`:
+    - 면접 종료(`COMPLETED`) 시 Redis의 최신 상태를 RDB에 Flush하는 로직 추가
+    - LLM 호출(`CallLlmCommand`) 시 Redis에 있는 실시간 상태값을 우선적으로 반영하도록 수정
+  - `V008__add_current_difficulty_to_interview_session.sql`: 기존 데이터가 있는 환경에서도 안전하게 컬럼을 추가할 수 있도록 마이그레이션 스크립트 고도화
+
+### 배경
+
+- 면접 진행 중 LLM 응답마다 발생하는 빈번한 RDB 업데이트 부하를 줄이고 성능을 개선하기 위해 하이브리드 전략 도입
+- 데이터 무결성이 중요한 세션 메타데이터는 RDB에 유지하되, 유동적인 상태값은 Redis에서 관리 후 최종 동기화
+
+---
+
 ## [2026-02-02] 면접 흐름 개선: 단계별 음성 안내 및 자연스러운 전환
 
 ### 수정
