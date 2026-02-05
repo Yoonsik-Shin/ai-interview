@@ -8,16 +8,20 @@ install:
 # Proto 파일 컴파일
 proto:
 	@echo "🔨 Compiling proto files..."
+	mkdir -p generated
 	uv run python -m grpc_tools.protoc \
 		-I../proto \
-		--python_out=. \
-		--grpc_python_out=. \
+		--python_out=generated \
+		--grpc_python_out=generated \
 		../proto/stt.proto
+	uv run python -c "import sys; content = open('generated/stt_pb2_grpc.py').read(); open('generated/stt_pb2_grpc.py', 'w').write(content.replace('import stt_pb2 as stt__pb2', 'from . import stt_pb2 as stt__pb2'))"
+	touch generated/__init__.py
 	@echo "✅ Proto compilation done!"
 
 # 생성된 proto 파일 삭제
 clean:
 	@echo "🧹 Cleaning generated proto files..."
+	rm -rf generated
 	rm -f stt_pb2.py stt_pb2_grpc.py
 	rm -rf __pycache__
 	@echo "✅ Clean done!"

@@ -1,6 +1,6 @@
 import grpc
 from concurrent import futures
-import stt_pb2_grpc
+from generated import stt_pb2_grpc
 from service.worker.audio_request_worker import process_audio_request
 from config import GRPC_PORT
 
