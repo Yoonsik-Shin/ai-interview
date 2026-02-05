@@ -3,11 +3,14 @@
 # Proto 파일 컴파일
 proto:
 	@echo "🔨 Compiling proto files..."
+	mkdir -p generated
 	python -m grpc_tools.protoc \
 		-I../proto \
-		--python_out=. \
-		--grpc_python_out=. \
+		--python_out=generated \
+		--grpc_python_out=generated \
 		../proto/llm.proto
+	python -c "import sys; content = open('generated/llm_pb2_grpc.py').read(); open('generated/llm_pb2_grpc.py', 'w').write(content.replace('import llm_pb2 as llm__pb2', 'from . import llm_pb2 as llm__pb2'))"
+	touch generated/__init__.py
 	@echo "✅ Proto compilation done!"
 
 # 생성된 proto 파일 삭제
