@@ -14,6 +14,12 @@ public class ProcessLlmTokenCommand {
     private final String thinking;
     private final boolean isSentenceEnd;
     private final boolean isFinal;
-    private final String persona;
+    private final String persona; // Deprecated or kept for compatibility mapping
     private final String mode; // "real" | "practice"
+
+    // New Fields from LLM
+    private final String currentPersonaId;
+    private final int nextDifficultyLevel;
+    private final boolean reduceTotalTime;
+    private final boolean interviewEndSignal;
 }

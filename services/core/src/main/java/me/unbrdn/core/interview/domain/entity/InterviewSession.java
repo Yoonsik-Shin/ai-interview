@@ -1,44 +1,21 @@
 package me.unbrdn.core.interview.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import me.unbrdn.core.common.domain.BaseTimeEntity;
-import me.unbrdn.core.interview.domain.enums.InterviewPersona;
+import me.unbrdn.core.interview.domain.enums.InterviewPersonality;
+import me.unbrdn.core.interview.domain.enums.InterviewRole;
 import me.unbrdn.core.interview.domain.enums.InterviewSessionStatus;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import me.unbrdn.core.interview.domain.enums.InterviewType;
 import me.unbrdn.core.resume.domain.entity.Resumes;
 import me.unbrdn.core.user.domain.entity.Candidate;
+import jakarta.persistence.*;
 
-/**
- * 면접 세션 엔티티
- *
- * <p>
- * Snapshot: interview_session 테이블 - session_id (PK, UUID String으로 변경 권장) -
- * candidate_id (FK to candidate): 면접자 - resume_id (FK to resumes, nullable): 참고
- * 이력서 - persona: 면접관 성격 (PRESSURE, COMFORTABLE, RANDOM) - type: 면접 유형
- * (PRACTICE, REAL) - status: 세션 상태 (READY, IN_PROGRESS, COMPLETED, CANCELLED) -
- * started_at: 면접 시작 시각 - ended_at: 면접 종료 시각 - created_at: 세션 생성 시각 -
- * updated_at: 상태 변경 시각
- *
- * <p>
- * 관련 엔티티 (MongoDB): - InterviewMessage: 면접 중 주고받은 메시지 - InterviewQAPair: 질문-답변
- * 쌍 - InterviewQAPairEvaluation: 답변 평가 데이터
- *
- * <p>
- * 비즈니스 규칙: - 세션은 생성 후 24시간 이내에 시작해야 함 (만료 정책) - 면접 완료 후 즉시 평가 프로세스 시작 -
- * MongoDB에 실시간 메시지 저장, RDB에는 메타데이터만 저장
- */
 @Entity
 @Table(name = "interview_session")
 @Getter
@@ -59,9 +36,15 @@ public class InterviewSession extends BaseTimeEntity {
     @JoinColumn(name = "resume_id")
     private Resumes resume;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "interview_session_roles", joinColumns = @JoinColumn(name = "interview_session_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role")
+    private List<InterviewRole> roles = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private InterviewPersona persona;
+    private InterviewPersonality personality;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -96,13 +79,20 @@ public class InterviewSession extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT")
     private String selfIntroduction;
 
-    private InterviewSession(String sessionUuid, Candidate candidate, Resumes resume, InterviewPersona persona,
-            InterviewType type, String domain, int interviewerCount, int targetDurationMinutes,
-            String selfIntroduction) {
+    @Column(name = "current_difficulty", nullable = false)
+    private int currentDifficulty;
+
+    @Column(name = "last_interviewer_id")
+    private String lastInterviewerId;
+
+    private InterviewSession(String sessionUuid, Candidate candidate, Resumes resume, List<InterviewRole> roles,
+            InterviewPersonality personality, InterviewType type, String domain, int interviewerCount,
+            int targetDurationMinutes, String selfIntroduction) {
         this.sessionUuid = sessionUuid;
         this.candidate = candidate;
         this.resume = resume;
-        this.persona = persona;
+        this.roles = roles;
+        this.personality = personality;
         this.type = type;
         this.domain = domain;
         this.interviewerCount = interviewerCount;
@@ -110,13 +100,16 @@ public class InterviewSession extends BaseTimeEntity {
         this.selfIntroduction = selfIntroduction;
         this.status = InterviewSessionStatus.READY;
         this.stage = InterviewStage.WAITING;
+        // Initialize State
+        this.currentDifficulty = 3; // Default Medium
+        this.lastInterviewerId = "MAIN"; // Default Start (Need update later e.g. TECH)
     }
 
     /** 새로운 면접 세션 생성 */
     public static InterviewSession create(String sessionUuid, Candidate candidate, Resumes resume,
-            InterviewPersona persona, InterviewType type, String domain, int interviewerCount,
-            int targetDurationMinutes, String selfIntroduction) {
-        return new InterviewSession(sessionUuid, candidate, resume, persona, type, domain, interviewerCount,
+            List<InterviewRole> roles, InterviewPersonality personality, InterviewType type, String domain,
+            int interviewerCount, int targetDurationMinutes, String selfIntroduction) {
+        return new InterviewSession(sessionUuid, candidate, resume, roles, personality, type, domain, interviewerCount,
                 targetDurationMinutes, selfIntroduction);
     }
 
@@ -197,9 +190,10 @@ public class InterviewSession extends BaseTimeEntity {
 
     /** SELF_INTRO_PROMPT → SELF_INTRO (면접자 1분 자기소개) */
     public void transitionToSelfIntro() {
-        if (this.stage != InterviewStage.SELF_INTRO_PROMPT) {
+        if (this.stage != InterviewStage.SELF_INTRO_PROMPT && this.stage != InterviewStage.SELF_INTRO) {
             throw new IllegalStateException(
-                    "Can only transition to SELF_INTRO from SELF_INTRO_PROMPT, current stage: " + this.stage);
+                    "Can only transition to SELF_INTRO from SELF_INTRO_PROMPT or SELF_INTRO, current stage: "
+                            + this.stage);
         }
         this.stage = InterviewStage.SELF_INTRO;
         this.selfIntroStartTime = LocalDateTime.now();
@@ -218,11 +212,30 @@ public class InterviewSession extends BaseTimeEntity {
         }
     }
 
-    /** IN_PROGRESS → COMPLETED */
-    public void transitionToCompleted() {
+    /** IN_PROGRESS → LAST_QUESTION_PROMPT (마지막 질문 안내) */
+    public void transitionToLastQuestionPrompt() {
         if (this.stage != InterviewStage.IN_PROGRESS) {
             throw new IllegalStateException(
-                    "Can only transition to COMPLETED from IN_PROGRESS, current stage: " + this.stage);
+                    "Can only transition to LAST_QUESTION_PROMPT from IN_PROGRESS, current stage: " + this.stage);
+        }
+        this.stage = InterviewStage.LAST_QUESTION_PROMPT;
+    }
+
+    /** LAST_QUESTION_PROMPT → LAST_ANSWER (지원자 마지막 답변) */
+    public void transitionToLastAnswer() {
+        if (this.stage != InterviewStage.LAST_QUESTION_PROMPT) {
+            throw new IllegalStateException(
+                    "Can only transition to LAST_ANSWER from LAST_QUESTION_PROMPT, current stage: " + this.stage);
+        }
+        this.stage = InterviewStage.LAST_ANSWER;
+    }
+
+    /** LAST_ANSWER → COMPLETED */
+    public void transitionToCompleted() {
+        // Allow transition from LAST_ANSWER or IN_PROGRESS (legacy/fallback)
+        if (this.stage != InterviewStage.LAST_ANSWER && this.stage != InterviewStage.IN_PROGRESS) {
+            throw new IllegalStateException(
+                    "Can only transition to COMPLETED from LAST_ANSWER or IN_PROGRESS, current stage: " + this.stage);
         }
         this.stage = InterviewStage.COMPLETED;
         this.status = InterviewSessionStatus.COMPLETED;
@@ -240,5 +253,26 @@ public class InterviewSession extends BaseTimeEntity {
     /** 자기소개 90초 경과 여부 */
     public boolean isSelfIntroTimeExceeded() {
         return getSelfIntroElapsedSeconds() >= 90;
+    }
+
+    // ==================== State Management Methods ====================
+
+    public void updateDifficulty(int newDifficulty) {
+        if (newDifficulty < 1)
+            newDifficulty = 1;
+        if (newDifficulty > 5)
+            newDifficulty = 5;
+        this.currentDifficulty = newDifficulty;
+    }
+
+    public void updateLastInterviewer(String lastInterviewerId) {
+        this.lastInterviewerId = lastInterviewerId;
+    }
+
+    public void reduceTotalTime() {
+        // Example: Reduce remaining time by 20% of original total?
+        // Or simply mark it. The Requirement said "Reduce total time by 20%".
+        // Implementation: We might store 'effective_duration_minutes'.
+        this.targetDurationMinutes = (int) (this.targetDurationMinutes * 0.8);
     }
 }

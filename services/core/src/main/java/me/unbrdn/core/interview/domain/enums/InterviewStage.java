@@ -28,6 +28,15 @@ public enum InterviewStage {
     /** 본 면접 진행 단계 - 일반적인 질문-답변 형식의 면접 진행 */
     IN_PROGRESS,
 
+    /** 마지막 질문 안내 단계 - 사전 녹음 파일 재생 */
+    LAST_QUESTION_PROMPT,
+
+    /** 지원자 마지막 답변 단계 - 지원자의 마지막 발화 수집 */
+    LAST_ANSWER,
+
+    /** 면접관 마무리 인사 단계 - 면접관 작별 인사 및 지원자 끝인사 */
+    CLOSING_GREETING,
+
     /** 면접 완료 */
     COMPLETED
 }
