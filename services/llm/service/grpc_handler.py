@@ -6,19 +6,28 @@ from concurrent import futures
 from grpc_health.v1 import health
 from grpc_health.v1 import health_pb2
 from grpc_health.v1 import health_pb2_grpc
-import llm_pb2
-import llm_pb2_grpc
+from generated import llm_pb2
+from generated import llm_pb2_grpc
 from engine.openai_engine import OpenAIEngine
 from config import GRPC_PORT
 from utils.log_format import log_json
 
-
 class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
     def __init__(self):
-        self.engine = OpenAIEngine()
+        # LangGraph & LLM Setup
+        # API Key is expected to be in env (OPENAI_API_KEY) or loaded via config
+        from config import OPENAI_API_KEY
+        from engine.graph import create_interview_graph
+        from engine.nodes import InterviewNodes
+        from langchain_openai import ChatOpenAI
+        
+        self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY, streaming=True)
+        self.graph = create_interview_graph(openai_api_key=OPENAI_API_KEY)
+        # Helper to get prompt messages
+        self.nodes = InterviewNodes(self.llm)
 
     def GenerateResponse(self, request, context):
-        """OpenAI API 응답을 그대로 스트리밍"""
+        """LangGraph Orchestration & Streaming"""
         try:
             log_json(
                 "llm_request_start",
@@ -26,91 +35,122 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                 textLength=len(request.user_text),
             )
 
-            # 히스토리 변환
-            history = [{"role": h.role, "content": h.content} for h in request.history]
-            log_json("llm_history_converted", count=len(history))
+            # 1. Construct State
+            # Map Proto history to LangChain messages
+            from langchain_core.messages import HumanMessage, AIMessage
+            history = []
+            for h in request.history:
+                if h.role.lower() == "user":
+                    history.append(HumanMessage(content=h.content))
+                else:
+                    history.append(AIMessage(content=h.content))
 
-            # 신규 필드 추출 (proto에 추가됨)
-            stage = request.stage
-            persona = request.persona or "COMFORTABLE"
-            interviewer_count = request.interviewer_count if request.HasField("interviewer_count") else 1
-            domain = request.domain or "IT"
-
-            # 스트리밍 (Thinking 상태 시뮬레이션 - Stage별로 차별화 가능)
-            thinking_messages = ["질문을 분석 중입니다..."]
-            if stage == 2: # GREETING
-                thinking_messages = ["지원을 환영하고 있습니다..."]
-            elif stage == 3: # INTERVIEWER_INTRO
-                thinking_messages = ["면접관 자기소개를 준비 중입니다..."]
-            elif stage == 4: # SELF_INTRO
-                thinking_messages = ["자기소개를 경청하고 있습니다..."]
-            elif stage == 5: # IN_PROGRESS
-                thinking_messages = ["답변을 분석 중입니다..."]
-
-
-            log_json("llm_thinking_start", stage=stage)
-            for msg in thinking_messages:
-                yield llm_pb2.TokenChunk(
-                    token="",
-                    is_sentence_end=False,
-                    is_final=False,
-                    thinking=msg
-                )
-                import time
-                time.sleep(0.3)
+            # Map Proto PersonaProfile to Dict or Object
+            # We use the repeated field available_personas
+            # Deprecated: available = []
             
-            log_json("llm_openai_stream_start")
+            # Map Proto Roles (Enum) to Strings
+            # request.available_roles is a list of Integers (Enum values)
+            roles = []
+            for r in request.available_roles:
+                role_name = llm_pb2.InterviewRoleProto.Name(r)
+                if role_name != "INTERVIEW_ROLE_UNSPECIFIED":
+                    roles.append(role_name)
 
-            # 스트리밍 (OpenAI 응답 흘려줌)
+            # Map Personality (Enum) to String
+            personality = "COMFORTABLE" # Default
+            if request.personality:
+                p_name = llm_pb2.InterviewPersonalityProto.Name(request.personality)
+                if p_name != "INTERVIEW_PERSONALITY_UNSPECIFIED":
+                    personality = p_name
+
+            state = {
+                "history": history,
+                "user_input": request.user_text,
+                "available_roles": roles, # New
+                "personality": personality, # New
+                "current_difficulty": request.current_difficulty_level or 3,
+                "remaining_time": request.remaining_time_seconds,
+                "total_duration": request.total_duration_seconds,
+                "last_interviewer_id": request.last_interviewer_id,
+                "stage": llm_pb2.InterviewStageProto.Name(request.stage),
+                # Initial internal state
+                "is_ending": False,
+                "reduce_total_time": False,
+                "analysis_result": {}
+            }
+
+            # 2. Run Graph (Decision Making)
+            # invoke() is sync, blocks until decision is made
+            log_json("llm_graph_invoke_start")
+            final_state = self.graph.invoke(state)
+            log_json("llm_graph_invoke_end", 
+                     next_speaker=final_state.get("next_speaker_id"),
+                     next_diff=final_state.get("next_difficulty"))
+            
+            # 3. Prepare Generation
+            messages = self.nodes.get_prompt_messages(final_state)
+            
+            # 4. Stream Response
+            persona_id = final_state.get("next_speaker_id", "MAIN")
+            next_diff = final_state.get("next_difficulty", 3)
+            reduce_time = final_state.get("reduce_total_time", False)
+            is_ending = final_state.get("is_ending", False)
+
+            # Send Thinking/Meta info (Optional, client might expect 'thinking' field)
+            # We can skip specific "thinking" text logic for now or restore it if needed.
+            # Let's send one meta chunk to ensure client gets the update even if stream fails later?
+            # Or just piggyback on first token.
+            
+            log_json("llm_stream_start")
+            first_chunk = True
             accumulated = ""
-            token_count = 0
-
-            for token in self.engine.generate_stream(
-                request.user_text, 
-                history, 
-                stage=stage, 
-                persona=persona, 
-                interviewer_count=interviewer_count, 
-                domain=domain
-            ):
-                if token_count == 0:
-                     log_json("llm_first_token_received")
-                
-                token_count += 1
+            
+            for chunk in self.llm.stream(messages):
+                token = chunk.content
+                if not token:
+                    continue
+                    
                 accumulated += token
-                is_sentence_end = self.engine.is_sentence_end(accumulated)
-
+                
+                # Check sentence end for TTS optimized buffering (Client/Core handles this, 
+                # but we need to mark is_sentence_end for Core's buffering logic)
+                is_sentence_end = (token in [".", "?", "!", "\n"] or 
+                                  accumulated.strip().endswith((".", "?", "!"))) 
+                # Simple check, Core has robust logic too? 
+                # Ref: Core's logic relies on LLM flagging it? 
+                # Previous `grpc_handler` used `engine.is_sentence_end`. 
+                # We can implement a simple one here.
+                
                 yield llm_pb2.TokenChunk(
                     token=token,
                     is_sentence_end=is_sentence_end,
                     is_final=False,
-                    thinking="",
+                    current_persona_id=persona_id,
+                    next_difficulty_level=next_diff,
+                    reduce_total_time=reduce_time if first_chunk else False,
+                    interview_end_signal=is_ending if first_chunk else False
                 )
-
+                
                 if is_sentence_end:
                     accumulated = ""
+                first_chunk = False
 
-            # 최종 완료
+            # Final Chunk
             yield llm_pb2.TokenChunk(
-                token="", is_final=True, is_sentence_end=False, thinking=""
+                token="",
+                is_final=True,
+                is_sentence_end=False,
+                current_persona_id=persona_id
             )
-
-            log_json(
-                "llm_request_completed",
-                interviewId=request.interview_id,
-                totalTokens=token_count,
-            )
+            
+            log_json("llm_request_completed")
 
         except Exception as e:
             log_json("llm_error", error=str(e), error_type=type(e).__name__)
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"{type(e).__name__}: {str(e)}")
             raise e
-
-    def TextToSpeech(self, request, context):
-        """TTS는 별도 서비스로 분리 예정"""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("TTS moved to separate service")
 
 
 def serve_grpc():

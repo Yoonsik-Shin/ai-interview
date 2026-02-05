@@ -16,6 +16,7 @@ proto:
 # 생성된 proto 파일 삭제
 clean:
 	@echo "🧹 Cleaning generated proto files..."
+	rm -rf generated
 	rm -f llm_pb2.py llm_pb2_grpc.py
 	rm -rf __pycache__
 	@echo "✅ Clean done!"

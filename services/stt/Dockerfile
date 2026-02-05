@@ -31,8 +31,11 @@ COPY --from=proto . /app/proto
 COPY . .
 
 # Regenerate proto files using the installed (compatible) grpcio-tools
-# This fixes the incompatibility between generated code (from newer protoc) and runtime (older protobuf)
-RUN python -m grpc_tools.protoc -I/app/proto --python_out=. --grpc_python_out=. /app/proto/stt.proto
+# This fixes the incompatibility between genderated code (from newer protoc) and runtime (older protobuf)
+RUN mkdir -p generated \
+    && python -m grpc_tools.protoc -I/app/proto --python_out=generated --grpc_python_out=generated /app/proto/stt.proto \
+    && python -c "import sys; content = open('generated/stt_pb2_grpc.py').read(); open('generated/stt_pb2_grpc.py', 'w').write(content.replace('import stt_pb2 as stt__pb2', 'from . import stt_pb2 as stt__pb2'))" \
+    && touch generated/__init__.py
 
 RUN chown -R appuser:appuser /app
 

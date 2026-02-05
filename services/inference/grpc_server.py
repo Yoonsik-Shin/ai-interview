@@ -9,13 +9,12 @@ import os
 import sys
 
 # proto 파일에서 생성된 모듈 import
-# grpcio-tools로 생성: python -m grpc_tools.protoc -I../proto --python_out=. --grpc_python_out=. ../proto/inference.proto
 try:
-    import inference_pb2
-    import inference_pb2_grpc
+    from generated import inference_pb2
+    from generated import inference_pb2_grpc
 except ImportError:
     print("ERROR: proto 파일이 컴파일되지 않았습니다.")
-    print("실행: python -m grpc_tools.protoc -I../proto --python_out=. --grpc_python_out=. ../proto/inference.proto")
+    print("실행: make proto")
     sys.exit(1)
 
 from tts_service import generate_tts_openai, generate_tts_edge

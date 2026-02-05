@@ -1,6 +1,6 @@
 import grpc
-import llm_pb2
-import llm_pb2_grpc
+from generated import llm_pb2
+from generated import llm_pb2_grpc
 
 def run():
     # LLM gRPC 서버 주소 (기본 50051 포트)

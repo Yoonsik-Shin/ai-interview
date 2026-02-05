@@ -25,11 +25,14 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Proto 파일 복사 및 컴파일 (builder 스테이지에서)
 COPY --from=proto . ./proto
-RUN python -m grpc_tools.protoc \
+RUN mkdir -p generated \
+    && python -m grpc_tools.protoc \
     -I./proto \
-    --python_out=. \
-    --grpc_python_out=. \
-    proto/inference.proto
+    --python_out=generated \
+    --grpc_python_out=generated \
+    proto/inference.proto \
+    && python -c "import sys; content = open('generated/inference_pb2_grpc.py').read(); open('generated/inference_pb2_grpc.py', 'w').write(content.replace('import inference_pb2 as inference__pb2', 'from . import inference_pb2 as inference__pb2'))" \
+    && touch generated/__init__.py
 
 # ------------------------------------
 # 2단계: 실행 (Runner Stage) - 최종 이미지
@@ -49,7 +52,7 @@ WORKDIR /app
 
 # 빌드 스테이지에서 설치된 패키지 및 컴파일된 proto 파일 복사
 COPY --from=builder /root/.local /home/appuser/.local
-COPY --from=builder /app/inference_pb2.py /app/inference_pb2_grpc.py ./
+COPY --from=builder /app/generated ./generated
 
 # 소스 코드 복사
 COPY --chown=appuser:appuser main.py ./
