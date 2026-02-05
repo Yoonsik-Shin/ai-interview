@@ -13,6 +13,9 @@ service InterviewServiceGrpc {
   // Stage 관리
   rpc GetInterviewStage (GetInterviewStageRequest) returns (GetInterviewStageResponse);
   rpc TransitionStage (TransitionStageRequest) returns (TransitionStageResponse);
+  
+  // 자기소개 재시도 제어
+  rpc IncrementSelfIntroRetry (IncrementSelfIntroRetryRequest) returns (IncrementSelfIntroRetryResponse);
 }
 
 // === Enum 정의 ===
@@ -22,8 +25,15 @@ enum InterviewTypeProto {
   PRACTICE = 2;
 }
 
-enum InterviewPersonaProto {
-  INTERVIEW_PERSONA_UNSPECIFIED = 0;
+enum InterviewRoleProto {
+  INTERVIEW_ROLE_UNSPECIFIED = 0;
+  TECH = 1;      // 기술 면접관
+  HR = 2;        // 인사/컬처 면접관
+  LEADER = 3;    // 리드 면접관
+}
+
+enum InterviewPersonalityProto {
+  INTERVIEW_PERSONALITY_UNSPECIFIED = 0;
   PRESSURE = 1;
   COMFORTABLE = 2;
   RANDOM = 3;
@@ -45,8 +55,11 @@ enum InterviewStageProto {
   INTERVIEWER_INTRO = 4;       // 면접관 자기소개 (LLM)
   SELF_INTRO_PROMPT = 5;       // 1분 자기소개 요청 (녹음 음성)
   SELF_INTRO = 6;              // 면접자 1분 자기소개
-  IN_PROGRESS_STAGE = 7;       // 본 면접 진행 (IN_PROGRESS와 구분하기 위해 _STAGE 접미사)
-  COMPLETED_STAGE = 8;         // 면접 완료
+  IN_PROGRESS_STAGE = 7;       // 본 면접 진행
+  LAST_QUESTION_PROMPT = 8;    // 마지막 질문 안내 (사전 녹음)
+  LAST_ANSWER = 9;             // 지원자 마지막 답변
+  CLOSING_GREETING = 11;       // 면접관 마무리 인사
+  COMPLETED_STAGE = 10;        // 면접 완료
 }
 
 // === 메시지 정의 (DTO) ===
@@ -55,10 +68,11 @@ message CreateInterviewRequest {
   optional string resume_id = 2; // UUID (optional - 이력서 없이도 면접 가능)
   string domain = 3;
   InterviewTypeProto type = 4;
-  InterviewPersonaProto persona = 5;
-  int32 interviewer_count = 6;
+  repeated InterviewRoleProto interviewer_roles = 9; // 복수 선택 가능 (New)
+  InterviewPersonalityProto personality = 10;        // 면접 분위기 (New)
   int32 target_duration_minutes = 7;
   string self_introduction = 8;
+  int32 interviewer_count = 6; 
 }
 
 message CreateInterviewResponse {
@@ -77,6 +91,9 @@ message GetInterviewStageResponse {
   optional string persona = 3;
   optional int32 interviewer_count = 4;
   optional string domain = 5;
+  int32 self_intro_retry_count = 6;
+  repeated InterviewRoleProto interviewer_roles = 7;
+  InterviewPersonalityProto personality = 8;
 }
 
 // Stage 전환
@@ -87,4 +104,13 @@ message TransitionStageRequest {
 
 message TransitionStageResponse {
   InterviewStageProto current_stage = 1;
+}
+
+// 자기소개 재시도 증분
+message IncrementSelfIntroRetryRequest {
+  string interview_session_id = 1;
+}
+
+message IncrementSelfIntroRetryResponse {
+  int32 new_retry_count = 1;
 }

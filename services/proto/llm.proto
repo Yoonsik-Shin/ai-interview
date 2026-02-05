@@ -11,24 +11,60 @@ service LlmService {
 }
 
 enum InterviewStageProto {
-  WAITING = 0;
-  GREETING_PROMPT = 1;
+  INTERVIEW_STAGE_UNSPECIFIED = 0;
+  WAITING = 1;
   GREETING = 2;
-  INTERVIEWER_INTRO = 3;
-  SELF_INTRO = 4;
-  IN_PROGRESS_STAGE = 5;
-  COMPLETED_STAGE = 6;
+  CANDIDATE_GREETING = 3;
+  INTERVIEWER_INTRO = 4;
+  SELF_INTRO_PROMPT = 5;
+  SELF_INTRO = 6;
+  IN_PROGRESS_STAGE = 7;
+  LAST_QUESTION_PROMPT = 8;
+  LAST_ANSWER = 9;
+  COMPLETED_STAGE = 10;
+}
+
+
+message PersonaProfile {
+  string id = 1;
+  string name = 2; // e.g. "Tech Interviewer"
+  string role = 3; // e.g. "MAIN", "SUPPORT"
+  string tone = 4; // e.g. "Sharp", "Encouraging"
+}
+
+
+enum InterviewRoleProto {
+  INTERVIEW_ROLE_UNSPECIFIED = 0;
+  TECH = 1;
+  HR = 2;
+  LEADER = 3;
+}
+
+enum InterviewPersonalityProto {
+  INTERVIEW_PERSONALITY_UNSPECIFIED = 0;
+  PRESSURE = 1;
+  COMFORTABLE = 2;
+  RANDOM = 3;
 }
 
 message GenerateRequest {
   string interview_id = 1;
   string user_id = 2;
   string user_text = 3;
-  string persona = 4;
+  // string persona = 4; // Deprecated
   repeated ConversationHistory history = 5;
   InterviewStageProto stage = 6;
   optional int32 interviewer_count = 7;
   optional string domain = 8;
+  
+  repeated PersonaProfile available_personas = 9; // [Deprecated] Keep for backward compat if needed
+  int64 remaining_time_seconds = 10;
+  int64 total_duration_seconds = 11;
+  int32 current_difficulty_level = 12;
+  string last_interviewer_id = 13;
+  
+  repeated InterviewRoleProto available_roles = 14; // [NEW]
+  InterviewPersonalityProto personality = 15;       // [NEW]
 }
 
 message ConversationHistory {
@@ -41,6 +77,11 @@ message TokenChunk {
   bool is_final = 2;
   bool is_sentence_end = 3;
   string thinking = 4;  // LangGraph 노드 실행 정보
+  
+  string current_persona_id = 5;      // [NEW] 발화자 ID
+  int32 next_difficulty_level = 6;    // [NEW] 조정된 다음 난이도 (Core가 저장)
+  bool reduce_total_time = 7;         // [NEW] 전체 시간 20% 단축 신호
+  bool interview_end_signal = 8;      // [NEW] 면접 종료 신호
 }
 
 message TTSRequest {
