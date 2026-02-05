@@ -163,7 +163,23 @@ echo "📋 노드 목록 및 라벨 확인:"
 kubectl get nodes --show-labels | grep -E "node-pool|NAME"
 
 echo ""
-echo "✅ Kind 클러스터 준비 완료!"
+echo "🌐 Ingress Controller 설치 중..."
+# Kind 전용 Ingress Controller 매니페스트 사용
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+
+echo "⏳ Ingress Controller 준비 대기 중..."
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=180s || true
+
+# NodePort 설정 확인 및 패치 (확실성을 위해)
+echo "🔧 Ingress Controller NodePort 설정 (30080/30443)..."
+kubectl patch svc ingress-nginx-controller -n ingress-nginx \
+  -p '{"spec":{"type":"NodePort","ports":[{"port":80,"nodePort":30080,"protocol":"TCP","targetPort":"http"},{"port":443,"nodePort":30443,"protocol":"TCP","targetPort":"https"}]}}' || true
+
+echo ""
+echo "✅ Kind 클러스터 및 Ingress 준비 완료!"
 echo ""
 echo "📌 다음 단계:"
 echo "   1. Strimzi Operator 설치: ./scripts/setup-strimzi-local.sh"

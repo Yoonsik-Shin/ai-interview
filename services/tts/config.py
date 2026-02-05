@@ -52,12 +52,22 @@ EDGE_RATE = os.getenv('EDGE_TTS_RATE', '+0%')
 EDGE_VOLUME = os.getenv('EDGE_TTS_VOLUME', '+0%')
 
 OPENAI_VOICE_MAP = {
+    'MAIN': os.getenv('TTS_OPENAI_VOICE_MAIN', 'alloy'),
+    'TECH': os.getenv('TTS_OPENAI_VOICE_TECH', 'onyx'),
+    'HR': os.getenv('TTS_OPENAI_VOICE_HR', 'nova'),
+    'EXEC': os.getenv('TTS_OPENAI_VOICE_EXEC', 'echo'),
+    # Legacy Fallback
     'PRESSURE': os.getenv('TTS_OPENAI_VOICE_PRESSURE', 'onyx'),
     'COMFORTABLE': os.getenv('TTS_OPENAI_VOICE_COMFORTABLE', 'nova'),
     'RANDOM': os.getenv('TTS_OPENAI_VOICE_RANDOM', 'alloy'),
 }
 
 EDGE_VOICE_MAP = {
+    'MAIN': os.getenv('TTS_EDGE_VOICE_MAIN', 'ko-KR-SunHiNeural'),
+    'TECH': os.getenv('TTS_EDGE_VOICE_TECH', 'ko-KR-InJoonNeural'),
+    'HR': os.getenv('TTS_EDGE_VOICE_HR', 'ko-KR-SunHiNeural'),
+    'EXEC': os.getenv('TTS_EDGE_VOICE_EXEC', 'ko-KR-InJoonNeural'),
+    # Legacy Fallback
     'PRESSURE': os.getenv('TTS_EDGE_VOICE_PRESSURE', EDGE_VOICE_DEFAULT),
     'COMFORTABLE': os.getenv('TTS_EDGE_VOICE_COMFORTABLE', EDGE_VOICE_DEFAULT),
     'RANDOM': os.getenv('TTS_EDGE_VOICE_RANDOM', EDGE_VOICE_DEFAULT),

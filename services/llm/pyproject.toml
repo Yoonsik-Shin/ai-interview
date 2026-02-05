@@ -13,6 +13,9 @@ dependencies = [
     "protobuf>=5.28.0",
     "python-dotenv==1.0.0",
     "edge-tts>=6.1.12",
+    "langchain>=1.2.8",
+    "langgraph>=1.0.7",
+    "langchain-openai>=1.1.7",
 ]
 
 [tool.uv]

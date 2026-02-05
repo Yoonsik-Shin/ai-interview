@@ -27,6 +27,18 @@ ASSETS = {
         "wait": "잠시만 기다려주세요.",
         "thanks": "답변 감사합니다.",
         "next_q": "다음 질문 드리겠습니다."
+    },
+    "last_question_prompt": {
+        "text_default": "오늘 면접 고생하셨습니다. 마지막으로 하고 싶은 말씀이나 질문이 있으신가요?",
+        "text_COMFORTABLE": "긴 시간 동안 고생 많으셨어요. 혹시 마지막으로 하고 싶은 말씀이나 궁금한 점 있으신가요?",
+        "text_PRESSURE": "면접 검증은 이것으로 마칩니다. 마지막으로 하실 말씀이나 질문 있으면 간단히 하십시오.",
+        "text_RANDOM": "오늘 면접 고생하셨습니다. 마지막으로 하고 싶은 말씀이나 질문이 있으신가요?" 
+    },
+    "closing": {
+        "text_default": "좋은 말씀 감사합니다. 오늘 면접 수고 많으셨습니다. 조심히 들어가세요.",
+        "text_COMFORTABLE": "네, 잘 알겠습니다. 오늘 정말 고생 많으셨어요! 조심히 가시고 좋은 결과 있기를 바라겠습니다.",
+        "text_PRESSURE": "알겠습니다. 오늘 면접 수고하셨습니다. 나가보셔도 좋습니다.",
+        "text_RANDOM": "좋은 말씀 감사합니다. 오늘 면접 수고 많으셨습니다. 조심히 들어가세요."
     }
 }
 
@@ -63,6 +75,18 @@ async def generate_assets(engine_name="openai"):
             filename = f"{persona}_{key}_{engine_name}.mp3"
             path = os.path.join(output_dir, filename)
             await generate_file(filler_text, persona, path, engine_name)
+
+        # 3. Generate Last Question Prompt
+        text_last = ASSETS["last_question_prompt"].get(f"text_{persona}", ASSETS["last_question_prompt"]["text_default"])
+        filename_last = f"last_question_prompt_{persona}_{engine_name}.mp3"
+        path_last = os.path.join(greeting_dir, filename_last)
+        await generate_file(text_last, persona, path_last, engine_name)
+
+        # 4. Generate Closing
+        text_closing = ASSETS["closing"].get(f"text_{persona}", ASSETS["closing"]["text_default"])
+        filename_closing = f"closing_{persona}_{engine_name}.mp3"
+        path_closing = os.path.join(greeting_dir, filename_closing)
+        await generate_file(text_closing, persona, path_closing, engine_name)
 
 async def generate_file(text, persona, path, engine_name):
     try:

@@ -1063,49 +1063,34 @@ else
     log_success "인증서가 이미 존재합니다"
 fi
 
-# Step 9.5: Ingress Controller 설치 (필수 - Kind 전용)
+# Step 9.5: Ingress Controller 확인 및 대기
 log_section "Ingress Controller"
 if ! kubectl get pods -n ingress-nginx -l app.kubernetes.io/component=controller &> /dev/null; then
+    log_warning "Ingress Controller가 설치되어 있지 않습니다. 설치를 시도합니다..."
     start_spinner "Ingress Controller 설치 중..."
-    # Kind 전용 Ingress Controller 매니페스트 사용 (NodePort 자동 설정)
-    # Kind 전용 Ingress Controller 매니페스트 사용 (NodePort 자동 설정)
     if kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml >/dev/null 2>&1; then
         stop_spinner "success" "Ingress Controller 매니페스트 적용 완료"
     else
-        stop_spinner "error" "Ingress Controller 매니페스트 적용 실패"
-        log_error "설치 중 에러가 발생했습니다."
-        exit 1
-    fi
-
-    # Controller가 준비될 때까지 대기
-    log_task "Ingress Controller 준비 대기 중..."
-    if ! kubectl wait --namespace ingress-nginx \
-      --for=condition=ready pod \
-      --selector=app.kubernetes.io/component=controller \
-      --timeout=120s >/dev/null 2>&1; then
-        log_error "Ingress Controller가 준비되지 않았습니다."
-        exit 1
-    fi
-
-    # Kind의 경우 NodePort 30080/30443으로 자동 패치 (확실하게 하기 위해)
-    # log_task "NodePort 확인 및 패치 (30080/30443)..."
-    kubectl patch svc ingress-nginx-controller -n ingress-nginx \
-      -p '{"spec":{"type":"NodePort","ports":[{"port":80,"nodePort":30080,"protocol":"TCP","targetPort":"http"},{"port":443,"nodePort":30443,"protocol":"TCP","targetPort":"https"}]}}' \
-      >/dev/null 2>&1 || true
-      
-    log_success "Ingress Controller 설정 완료 (localhost:80 & localhost:443 접근 가능)"
-else
-    log_success "Ingress Controller가 이미 설치되어 있습니다."
-    # 기존 설치된 경우에도 NodePort 확인
-    CURRENT_TYPE=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.type}' 2>/dev/null || echo "")
-    if [ "$CURRENT_TYPE" != "NodePort" ]; then
-        log_task "서비스 타입을 NodePort로 변경 중..."
-        kubectl patch svc ingress-nginx-controller -n ingress-nginx \
-          -p '{"spec":{"type":"NodePort","ports":[{"port":80,"nodePort":30080,"protocol":"TCP","targetPort":"http"},{"port":443,"nodePort":30443,"protocol":"TCP","targetPort":"https"}]}}' \
-          >/dev/null 2>&1 || true
-        log_success "NodePort 설정 완료"
+        stop_spinner "error" "Ingress Controller 설치 실패"
     fi
 fi
+
+# Controller가 준비될 때까지 대기 (이미 설치된 경우에도 확인)
+start_spinner "Ingress Controller 상태 확인 중..."
+if kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=60s >/dev/null 2>&1; then
+    stop_spinner "success" "Ingress Controller 준비됨"
+else
+    stop_spinner "warning" "Ingress Controller 대기 타임아웃 (백그라운드에서 초기화 중일 수 있음)"
+fi
+
+# NodePort 패치 (멱등성 유지)
+kubectl patch svc ingress-nginx-controller -n ingress-nginx \
+  -p '{"spec":{"type":"NodePort","ports":[{"port":80,"nodePort":30080,"protocol":"TCP","targetPort":"http"},{"port":443,"nodePort":30443,"protocol":"TCP","targetPort":"https"}]}}' \
+  >/dev/null 2>&1 || true
+log_success "Ingress Controller 설정 확인 완료"
 
 # Step 10: Ingress 배포
 start_spinner "Ingress 배포 중..."

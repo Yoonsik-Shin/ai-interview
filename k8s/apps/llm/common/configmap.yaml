@@ -11,7 +11,7 @@ data:
 
   REDIS_HOST: "redis.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
-  REDIS_DB: "1"
+  REDIS_DB: "0"
   # Redis Sentinel (3 Pod)
   REDIS_SENTINEL_HOSTS: "redis-node-0.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-1.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-2.redis-headless.unbrdn.svc.cluster.local:26379"
   REDIS_SENTINEL_HOST: "redis-node-0.redis-headless.unbrdn.svc.cluster.local"
