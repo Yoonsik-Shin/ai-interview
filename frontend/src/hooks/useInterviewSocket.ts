@@ -11,6 +11,9 @@ export enum InterviewStage {
   SELF_INTRO_PROMPT = "SELF_INTRO_PROMPT",
   SELF_INTRO = "SELF_INTRO",
   IN_PROGRESS = "IN_PROGRESS",
+  LAST_QUESTION_PROMPT = "LAST_QUESTION_PROMPT",
+  LAST_ANSWER = "LAST_ANSWER",
+  CLOSING_GREETING = "CLOSING_GREETING",
   COMPLETED = "COMPLETED",
 }
 
@@ -20,7 +23,14 @@ export type SttResult = {
   isFinal: boolean;
   engine?: string;
 };
-export type TranscriptToken = { token: string; timestamp?: string };
+export type TranscriptToken = {
+  token: string;
+  timestamp?: string;
+  thinking?: string;
+  reduceTotalTime?: boolean;
+  nextDifficulty?: number;
+  currentPersonaId?: string;
+};
 export type ThinkingEvent = {
   nodeName: string;
   status: string;
@@ -163,7 +173,7 @@ export function useInterviewSocket(interviewId: string | null) {
 
   const sendAudioChunk = useCallback(
     (payload: {
-      chunk: string;
+      chunk: string | ArrayBuffer;
       interviewSessionId: string;
       isFinal?: boolean;
       format?: string;

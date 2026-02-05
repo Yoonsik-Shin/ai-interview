@@ -1,9 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 
 const TARGET_SAMPLE_RATE = 16000;
-const CHUNK_MS = 500;
-const SRC_RATE = 48000;
-const SAMPLES_PER_CHUNK = Math.floor((TARGET_SAMPLE_RATE * CHUNK_MS) / 1000); // 8000
+const CHUNK_MS = 1010; // 1000ms보다 약간 여유를 두어 4096 블록 정합성 유도
 
 function resample16k(src: Float32Array, srcRate: number): Float32Array {
   const ratio = srcRate / TARGET_SAMPLE_RATE;
@@ -29,17 +27,17 @@ function floatToPcm16(f32: Float32Array): ArrayBuffer {
   return buf;
 }
 
-function toBase64(arr: ArrayBuffer): string {
-  const u8 = new Uint8Array(arr);
-  let b = "";
-  for (let i = 0; i < u8.length; i++) b += String.fromCharCode(u8[i]!);
-  return btoa(b);
-}
+// function toBase64(arr: ArrayBuffer): string {
+//   const u8 = new Uint8Array(arr);
+//   let b = "";
+//   for (let i = 0; i < u8.length; i++) b += String.fromCharCode(u8[i]!);
+//   return btoa(b);
+// }
 
 export function useAudioRecorder(
   interviewSessionId: string,
   onChunk: (payload: {
-    chunk: string;
+    chunk: string | ArrayBuffer;
     interviewSessionId: string;
     isFinal?: boolean;
     format?: string;
@@ -63,10 +61,14 @@ export function useAudioRecorder(
   onChunkRef.current = onChunk;
 
   const flush = useCallback(() => {
-    const srcSamplesNeeded = Math.floor((SRC_RATE * CHUNK_MS) / 1000);
+    if (!ctxRef.current) return;
+    const currentSrcRate = ctxRef.current.sampleRate;
+    const srcSamplesNeeded = Math.floor((currentSrcRate * CHUNK_MS) / 1000);
+
     const bufs = bufferRef.current;
     let n = 0;
     for (const b of bufs) n += b.length;
+
     if (n < srcSamplesNeeded) return;
 
     const concat = new Float32Array(srcSamplesNeeded);
@@ -85,13 +87,17 @@ export function useAudioRecorder(
     bufferRef.current = nextBufs;
     totalRef.current = nextBufs.reduce((s, x) => s + x.length, 0);
 
-    const resampled = resample16k(concat, SRC_RATE);
-    const pcm = floatToPcm16(resampled);
-    const b64 = toBase64(pcm);
+    const resample = resample16k(concat, currentSrcRate);
+    const pcm = floatToPcm16(resample);
+    // const b64 = toBase64(pcm); // Removed Base64 encoding
     chunkIdRef.current += 1;
-    const chunkId = `c-${Date.now()}-${chunkIdRef.current}`;
+
+    const now = Date.now();
+    const chunkId = `c-${now}-${chunkIdRef.current}`;
+    // console.log(`[AudioRecorder] Sending chunk ${chunkId}, size=${pcm.byteLength}, rate=${currentSrcRate}`);
+
     onChunkRef.current({
-      chunk: b64,
+      chunk: pcm, // Send ArrayBuffer directly
       interviewSessionId,
       isFinal: false,
       format: "pcm16",
@@ -124,10 +130,16 @@ export function useAudioRecorder(
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
-        const ctx = new AudioContext({ sampleRate: SRC_RATE });
+
+        // 시스템 샘플 레이트 자동 감지 (기본값 사용)
+        const ctx = new AudioContext();
         ctxRef.current = ctx;
         const src = ctx.createMediaStreamSource(stream);
         sourceRef.current = src;
+
+        console.log(
+          `[AudioRecorder] Started. Context SampleRate: ${ctx.sampleRate}`,
+        );
 
         const processor = ctx.createScriptProcessor(4096, 1, 1);
         processorRef.current = processor;
@@ -165,7 +177,7 @@ export function useAudioRecorder(
     chunkIdRef.current += 1;
     const chunkId = `c-${Date.now()}-${chunkIdRef.current}-final`;
     onChunkRef.current({
-      chunk: "",
+      chunk: new ArrayBuffer(0), // Empty buffer for final signal
       interviewSessionId,
       isFinal: true,
       format: "pcm16",

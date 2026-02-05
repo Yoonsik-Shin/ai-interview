@@ -1,7 +1,13 @@
 import { api } from "./client";
 
 export type InterviewType = "REAL" | "PRACTICE";
-export type InterviewPersona = "PRESSURE" | "COMFORTABLE" | "RANDOM";
+export type InterviewPersona =
+  | "PRESSURE"
+  | "COMFORTABLE"
+  | "RANDOM"
+  | "TECH"
+  | "MAIN"
+  | "HR";
 
 export type CreateInterviewReq = {
   resumeId?: number; // optional - 이력서 없이도 면접 가능

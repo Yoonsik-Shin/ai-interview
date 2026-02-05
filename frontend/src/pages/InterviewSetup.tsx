@@ -4,7 +4,8 @@ import {
   createInterview,
   type CreateInterviewReq,
   type InterviewType,
-  type InterviewPersona,
+  type InterviewRole,
+  type InterviewPersonality,
 } from "@/api/interview";
 import { uploadResume } from "@/api/resumes";
 import styles from "./InterviewSetup.module.css";
@@ -12,14 +13,33 @@ import styles from "./InterviewSetup.module.css";
 export function InterviewSetup() {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [form, setForm] = useState<Omit<CreateInterviewReq, "resumeId">>({
+
+  // State
+  const [selectedRoles, setSelectedRoles] = useState<InterviewRole[]>(["TECH"]);
+  const [personality, setPersonality] =
+    useState<InterviewPersonality>("COMFORTABLE");
+
+  const [form, setForm] = useState<
+    Omit<CreateInterviewReq, "resumeId" | "interviewerRoles" | "personality">
+  >({
     domain: "프론트엔드",
     type: "PRACTICE",
-    persona: "COMFORTABLE",
-    interviewerCount: 1,
     targetDurationMinutes: 30,
     selfIntroduction: "",
   });
+
+  const toggleRole = (role: InterviewRole) => {
+    setSelectedRoles((prev) => {
+      const isSelected = prev.includes(role);
+      if (isSelected) {
+        if (prev.length === 1) return prev; // At least one
+        return prev.filter((r) => r !== role);
+      } else {
+        return [...prev, role];
+      }
+    });
+  };
+
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -199,13 +219,18 @@ export function InterviewSetup() {
         );
         resumeId = id;
       }
-      const payload: CreateInterviewReq = resumeId
-        ? { ...form, resumeId }
-        : form;
+      const payload: CreateInterviewReq = {
+        ...form,
+        resumeId,
+        interviewerRoles: selectedRoles,
+        personality: personality,
+      };
+
       const { interviewId } = await createInterview(payload);
+
       const meta = {
-        interviewerCount: form.interviewerCount,
-        persona: form.persona,
+        roles: selectedRoles,
+        personality: personality,
         type: form.type,
         domain: form.domain,
         targetDurationMinutes: form.targetDurationMinutes,
@@ -369,38 +394,75 @@ export function InterviewSetup() {
                   : "🎯 고품질 | STT: OpenAI Whisper, TTS: OpenAI TTS"}
               </p>
             </div>
+
             <div className={styles.field}>
-              <label>페르소나</label>
+              <label>면접 분위기 (성격)</label>
               <select
-                value={form.persona}
+                value={personality}
                 onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    persona: e.target.value as InterviewPersona,
-                  }))
+                  setPersonality(e.target.value as InterviewPersonality)
                 }
                 className={styles.input}
               >
-                <option value="PRESSURE">압박</option>
-                <option value="COMFORTABLE">편안한</option>
+                <option value="COMFORTABLE">편안한 (격려하는 분위기)</option>
+                <option value="PRESSURE">압박 (날카로운 분위기)</option>
                 <option value="RANDOM">랜덤</option>
               </select>
             </div>
+
             <div className={styles.field}>
-              <label>면접관 수 (1~4)</label>
+              <label>면접관 구성 (복수 선택 가능)</label>
+              <div className={styles.personaGrid}>
+                {[
+                  {
+                    id: "TECH",
+                    title: "기술 면접관",
+                    desc: "기술 역량 검증",
+                    icon: "💻",
+                  },
+                  {
+                    id: "HR",
+                    title: "인사 면접관",
+                    desc: "조직 적합성 및 인성 확인",
+                    icon: "🤝",
+                  },
+                  {
+                    id: "LEADER",
+                    title: "리드 면접관",
+                    desc: "리더십 및 종합 및 경험 평가",
+                    icon: "👨‍💼",
+                  },
+                ].map((p) => {
+                  const isSelected = selectedRoles.includes(
+                    p.id as InterviewRole,
+                  );
+                  return (
+                    <div
+                      key={p.id}
+                      className={`${styles.personaCard} ${isSelected ? styles.selected : ""}`}
+                      onClick={() => toggleRole(p.id as InterviewRole)}
+                    >
+                      <div className={styles.cardIcon}>{p.icon}</div>
+                      <div className={styles.cardTitle}>{p.title}</div>
+                      <div className={styles.cardDescription}>{p.desc}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className={styles.field}>
+              <label>면접관 수</label>
               <input
                 type="number"
-                min={1}
-                max={4}
                 value={form.interviewerCount}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    interviewerCount: Number(e.target.value),
-                  }))
-                }
+                disabled
                 className={styles.input}
+                style={{ backgroundColor: "#f3f4f6" }}
               />
+              <p className={styles.fieldHint}>
+                선택한 면접관 수에 따라 자동으로 설정됩니다.
+              </p>
             </div>
             <div className={styles.field}>
               <label>목표 시간 (분, 10~120)</label>
