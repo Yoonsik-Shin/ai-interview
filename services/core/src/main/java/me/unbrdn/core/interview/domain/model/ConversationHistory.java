@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConversationHistory {
-    private String role; // "user" or "assistant"
+    private String role; // "user", "assistant", or "system"
     private String content;
 }

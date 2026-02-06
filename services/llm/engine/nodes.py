@@ -109,16 +109,15 @@ class InterviewNodes:
         Select next speaker.
         """
         if state.get("is_ending"):
-             return {"next_speaker_id": "CLOSING"}
-             
-        # Force specific logic for INTRO stages if available_roles has only 1 (Sequential Intro)
+            return {"next_speaker_id": "CLOSING"}
+
+        # Force specific logic for INTRO stages (순차 자기소개)
         stage = state.get("stage", "")
         roles = state.get("available_roles", [])
-        
+
         if stage == "INTERVIEWER_INTRO":
-            # In sequential intro, Core only sends 1 role at a time usually, but even if multiple,
-            # we should pick the first or handled by Core logic.
-            # If Core sends [TECH], we must pick TECH.
+            # Core가 INTERVIEWER_INTRO에서는 항상 현재 소개할 1명의 역할만 넘기도록 설계되어 있으므로,
+            # 여기서는 전달받은 역할 중 첫 번째만 그대로 사용한다.
             if roles:
                 return {"next_speaker_id": roles[0]}
 
@@ -183,6 +182,10 @@ class InterviewNodes:
         
         messages = [SystemMessage(content=system_text)] + state.get("history", [])
         if state.get("user_input"):
-             messages.append(HumanMessage(content=state["user_input"]))
+             input_role = state.get("input_role", "user")
+             if input_role == "system":
+                 messages.append(SystemMessage(content=state["user_input"]))
+             else:
+                 messages.append(HumanMessage(content=state["user_input"]))
              
         return messages

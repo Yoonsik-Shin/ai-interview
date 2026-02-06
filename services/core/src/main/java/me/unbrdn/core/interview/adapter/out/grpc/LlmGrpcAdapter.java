@@ -17,7 +17,6 @@ import me.unbrdn.core.interview.application.dto.command.CallLlmCommand;
 import me.unbrdn.core.interview.application.dto.command.ProcessLlmTokenCommand;
 import me.unbrdn.core.interview.application.port.in.ProcessLlmTokenUseCase;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
-import me.unbrdn.core.interview.domain.enums.InterviewPersona;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
 
@@ -89,8 +88,9 @@ public class LlmGrpcAdapter implements CallLlmPort {
                 .setTotalDurationSeconds(command.getTotalDurationSeconds())
                 .setRemainingTimeSeconds(command.getRemainingTimeSeconds())
                 .setCurrentDifficultyLevel(command.getCurrentDifficultyLevel())
-                .setLastInterviewerId(command.getLastInterviewerId() == null ? "MAIN" : command.getLastInterviewerId())
-                .build();
+                .setLastInterviewerId(
+                        command.getLastInterviewerId() == null ? "LEADER" : command.getLastInterviewerId())
+                .setInputRole(command.getInputRole() == null ? "user" : command.getInputRole()).build();
     }
 
     private void processChunk(TokenChunk chunk, CallLlmCommand command) {
@@ -100,7 +100,8 @@ public class LlmGrpcAdapter implements CallLlmPort {
                 .isSentenceEnd(chunk.getIsSentenceEnd()).isFinal(chunk.getIsFinal())
                 .currentPersonaId(chunk.getCurrentPersonaId()).nextDifficultyLevel(chunk.getNextDifficultyLevel())
                 .reduceTotalTime(chunk.getReduceTotalTime()).interviewEndSignal(chunk.getInterviewEndSignal())
-                .mode(command.getMode()).build();
+                .mode(command.getMode()).inputRole(command.getInputRole() == null ? "user" : command.getInputRole())
+                .build();
 
         processLlmTokenUseCase.execute(tokenCommand);
     }

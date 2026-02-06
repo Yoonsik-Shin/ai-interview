@@ -63,12 +63,13 @@ message GenerateRequest {
   int32 current_difficulty_level = 12;
   string last_interviewer_id = 13;
   
-  repeated InterviewRoleProto available_roles = 14; // [NEW]
-  InterviewPersonalityProto personality = 15;       // [NEW]
+  repeated InterviewRoleProto available_roles = 14; 
+  InterviewPersonalityProto personality = 15;       
+  string input_role = 16;                           // [NEW] "user" (default) or "system"
 }
 
 message ConversationHistory {
-  string role = 1;
+  string role = 1; // "user", "assistant", or "system" [NEW: support system]
   string content = 2;
 }
 

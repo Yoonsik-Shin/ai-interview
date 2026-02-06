@@ -48,6 +48,8 @@ interface GetInterviewStageResponse {
     interviewerCount?: number;
     domain?: string;
     selfIntroRetryCount: number;
+    interviewerRoles?: number[];
+    personality?: number;
 }
 
 interface IncrementSelfIntroRetryResponse {
@@ -86,6 +88,8 @@ export class CoreInterviewGrpcService implements OnModuleInit {
         interviewerCount?: number;
         domain?: string;
         selfIntroRetryCount: number;
+        interviewerRoles?: number[];
+        personality?: number;
     }> {
         try {
             const request = {
@@ -103,6 +107,8 @@ export class CoreInterviewGrpcService implements OnModuleInit {
                 interviewerCount: response.interviewerCount,
                 domain: response.domain,
                 selfIntroRetryCount: response.selfIntroRetryCount,
+                interviewerRoles: response.interviewerRoles,
+                personality: response.personality,
             };
         } catch (error) {
             this.logger.error(null as any, "core_grpc_get_stage_failed", {

@@ -2,6 +2,7 @@ package me.unbrdn.core.interview.application.interactor;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import me.unbrdn.core.interview.application.dto.command.CallLlmCommand;
 import me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 /** 면접 세션의 Stage 전환 Interactor */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TransitionInterviewStageInteractor implements TransitionInterviewStageUseCase {
 
     private final InterviewPort interviewPort;
@@ -67,37 +69,41 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
 
         // Determine participating roles
         List<me.unbrdn.core.interview.domain.enums.InterviewRole> roles = session.getRoles();
+        if (roles == null || roles.isEmpty()) {
+            log.warn("No interview roles configured for session: {}", interviewId);
+            return;
+        }
+
+        // 중복 역할이 있다면 한 번만 소개되도록 정규화
+        List<me.unbrdn.core.interview.domain.enums.InterviewRole> distinctRoles = roles.stream().distinct().toList();
+        if (distinctRoles.size() != roles.size()) {
+            log.info("Deduplicated interview roles for session {}: original={}, distinct={}", interviewId, roles,
+                    distinctRoles);
+        }
 
         // Update session state with participating roles (names) for sequential control
-        // if needed
         me.unbrdn.core.interview.domain.model.InterviewSessionState state = sessionStatePort
                 .getState(session.getId().toString())
                 .orElse(me.unbrdn.core.interview.domain.model.InterviewSessionState.createDefault());
 
-        // Assuming we rely on Roles now
-        // state.setParticipatingPersonas(personas.stream().map(Enum::name).toList());
-        // We might want to store Roles in State too if we use them for turn-taking.
-        // For now, let's skip state update for roles if not critical, or map roles to
-        // string list.
-        state.setParticipatingPersonas(roles.stream().map(Enum::name).toList());
-        state.setNextPersonaIndex(1); // Next one to trigger is at index 1
+        state.setParticipatingPersonas(distinctRoles.stream().map(Enum::name).toList());
+        // 첫 번째 소개는 여기서 처리하므로, 다음 소개부터 listener에서 1,2,... 순서로 사용
+        state.setNextPersonaIndex(1);
         sessionStatePort.saveState(session.getId().toString(), state);
 
-        // Trigger ONLY the FIRST role
-        if (!roles.isEmpty()) {
-            // me.unbrdn.core.interview.domain.enums.InterviewRole firstRole = roles.get(0);
-            CallLlmCommand llmCommand = CallLlmCommand.builder().interviewId(interviewId)
-                    .interviewSessionId(session.getId().toString()).userId(userId)
-                    .userText("면접관님, 지원자에게 간단히 본인 소개를 해주세요.").availableRoles(roles) // Pass all roles so LLM knows who
-                                                                                    // is there
-                    .personality(session.getPersonality()).history(history).mode(session.getType().name())
-                    .stage(session.getStage()).interviewerCount(session.getInterviewerCount())
-                    .domain(session.getDomain()).totalDurationSeconds(totalDurationSeconds)
-                    .remainingTimeSeconds(remainingTimeSeconds).currentDifficultyLevel(getCurrentDifficulty(session))
-                    .lastInterviewerId(getLastInterviewerId(session)).build();
+        // Trigger ONLY the FIRST role explicitly
+        me.unbrdn.core.interview.domain.enums.InterviewRole firstRole = distinctRoles.get(0);
 
-            callLlmPort.generateResponse(llmCommand);
-        }
+        CallLlmCommand llmCommand = CallLlmCommand.builder().interviewId(interviewId)
+                .interviewSessionId(session.getId().toString()).userId(userId).userText("면접관님, 지원자에게 간단히 본인 소개를 해주세요.")
+                .inputRole("system").availableRoles(List.of(firstRole)).personality(session.getPersonality())
+                .history(history).mode(session.getType().name()).stage(session.getStage())
+                .interviewerCount(session.getInterviewerCount()).domain(session.getDomain())
+                .totalDurationSeconds(totalDurationSeconds).remainingTimeSeconds(remainingTimeSeconds)
+                .currentDifficultyLevel(getCurrentDifficulty(session)).lastInterviewerId(getLastInterviewerId(session))
+                .build();
+
+        callLlmPort.generateResponse(llmCommand);
     }
 
     private void triggerFirstQuestion(InterviewSession session) {
@@ -113,11 +119,22 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
         }
         long remainingTimeSeconds = Math.max(0, totalDurationSeconds - elapsed);
 
+        // QnA 첫 질문은 반드시 리드 면접관(또는 첫 번째 역할)이 진행하도록 roles를 제한
+        List<me.unbrdn.core.interview.domain.enums.InterviewRole> roles = session.getRoles();
+        List<me.unbrdn.core.interview.domain.enums.InterviewRole> availableRoles;
+        if (roles != null && roles.contains(me.unbrdn.core.interview.domain.enums.InterviewRole.LEADER)) {
+            availableRoles = java.util.List.of(me.unbrdn.core.interview.domain.enums.InterviewRole.LEADER);
+        } else {
+            // LEADER가 없으면 기존 roles 전체를 사용
+            availableRoles = roles;
+        }
+
         CallLlmCommand llmCommand = CallLlmCommand.builder().interviewId(interviewId)
                 .interviewSessionId(session.getId().toString()).userId(userId)
-                .userText("지원자가 자기소개를 마쳤습니다. 이제 이력서를 바탕으로 첫 번째 면접 질문을 시작해주세요.").availableRoles(session.getRoles())
-                .personality(session.getPersonality()).history(history).mode(session.getType().name())
-                .stage(session.getStage()).interviewerCount(session.getInterviewerCount()).domain(session.getDomain())
+                .userText("지원자가 자기소개를 마쳤습니다. 이제 이력서를 바탕으로 첫 번째 면접 질문을 시작해주세요.").inputRole("system")
+                .availableRoles(availableRoles).personality(session.getPersonality()).history(history)
+                .mode(session.getType().name()).stage(session.getStage())
+                .interviewerCount(session.getInterviewerCount()).domain(session.getDomain())
                 .totalDurationSeconds(totalDurationSeconds).remainingTimeSeconds(remainingTimeSeconds)
                 .currentDifficultyLevel(getCurrentDifficulty(session)).lastInterviewerId(getLastInterviewerId(session))
                 .build();

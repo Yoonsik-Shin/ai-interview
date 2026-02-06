@@ -8,4 +8,6 @@ public interface ManageConversationHistoryPort {
     List<ConversationHistory> loadHistory(String interviewId);
 
     void appendExchange(String interviewId, String userText, String aiAnswer);
+
+    void appendExchange(String interviewId, String role, String userText, String aiAnswer);
 }

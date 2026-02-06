@@ -6,7 +6,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.Map;
@@ -34,20 +33,17 @@ public class InterviewReports extends BaseTimeEntity {
     @Column(name = "pass_fail_status", nullable = false, length = 10)
     private PassFailStatus passFailStatus;
 
-    @Lob
-    @Column(name = "summary_text")
+    @Column(name = "summary_text", columnDefinition = "TEXT")
     private String summaryText;
 
-    @Lob
-    @Column(name = "resume_feedback")
+    @Column(name = "resume_feedback", columnDefinition = "TEXT")
     private String resumeFeedback;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "detail_metrics", columnDefinition = "JSON")
     private Map<String, Object> detailMetrics;
 
-    private InterviewReports(
-            InterviewSession interviewSession, Integer totalScore, PassFailStatus passFailStatus) {
+    private InterviewReports(InterviewSession interviewSession, Integer totalScore, PassFailStatus passFailStatus) {
         this.interview = interviewSession;
         this.totalScore = totalScore;
         this.passFailStatus = passFailStatus;
@@ -57,8 +53,8 @@ public class InterviewReports extends BaseTimeEntity {
         return new InterviewReports(interviewSession, totalScore, PassFailStatus.HOLD);
     }
 
-    public static InterviewReports create(
-            InterviewSession interviewSession, Integer totalScore, PassFailStatus passFailStatus) {
+    public static InterviewReports create(InterviewSession interviewSession, Integer totalScore,
+            PassFailStatus passFailStatus) {
         return new InterviewReports(interviewSession, totalScore, passFailStatus);
     }
 }

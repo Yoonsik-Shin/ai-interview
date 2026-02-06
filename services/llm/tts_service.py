@@ -31,11 +31,16 @@ def log_json(event: str, **fields):
     print(json.dumps(log, ensure_ascii=False), flush=True)
 
 
-# 페르소나별 목소리 매핑
+# 페르소나 및 역할별 목소리 매핑
 VOICE_MAP = {
+    # 성격 기반 (Mood)
     "PRESSURE": "onyx",      # 낮은 톤, 단호함
     "COMFORTABLE": "nova",   # 밝은 톤, 친근함
     "RANDOM": "alloy",       # 중립적
+    # 역할 기반 (Role)
+    "LEADER": "onyx",        # 리드 면접관
+    "TECH": "fable",         # 기술 면접관
+    "HR": "shimmer",         # 인사 면접관
 }
 
 

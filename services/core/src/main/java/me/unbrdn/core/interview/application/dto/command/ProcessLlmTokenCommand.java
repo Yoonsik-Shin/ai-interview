@@ -16,6 +16,7 @@ public class ProcessLlmTokenCommand {
     private final boolean isFinal;
     private final String persona; // Deprecated or kept for compatibility mapping
     private final String mode; // "real" | "practice"
+    private final String inputRole; // "user" or "system"
 
     // New Fields from LLM
     private final String currentPersonaId;

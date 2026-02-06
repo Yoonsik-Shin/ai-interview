@@ -4,7 +4,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -16,9 +15,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
-@Table(
-        name = "interview_qna",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"interview_id", "turn_number"})})
+@Table(name = "interview_qna", uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "interview_id", "turn_number" }) })
 @Getter
 @NoArgsConstructor
 public class InterviewQnA extends BaseTimeEntity {
@@ -30,16 +28,13 @@ public class InterviewQnA extends BaseTimeEntity {
     @Column(name = "turn_number", nullable = false)
     private Integer turnNumber;
 
-    @Lob
-    @Column(name = "question_text", nullable = false)
+    @Column(name = "question_text", nullable = false, columnDefinition = "TEXT")
     private String questionText;
 
-    @Lob
-    @Column(name = "answer_text")
+    @Column(name = "answer_text", columnDefinition = "TEXT")
     private String answerText;
 
-    @Lob
-    @Column(name = "stt_text")
+    @Column(name = "stt_text", columnDefinition = "TEXT")
     private String sttText;
 
     @JdbcTypeCode(SqlTypes.JSON)
@@ -49,8 +44,7 @@ public class InterviewQnA extends BaseTimeEntity {
     @Column(name = "media_url")
     private String mediaUrl;
 
-    public InterviewQnA(
-            InterviewSession interviewSession, Integer turnNumber, String questionText) {
+    public InterviewQnA(InterviewSession interviewSession, Integer turnNumber, String questionText) {
         this.interview = interviewSession;
         this.turnNumber = turnNumber;
         this.questionText = questionText;

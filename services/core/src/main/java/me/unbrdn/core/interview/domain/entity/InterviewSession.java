@@ -43,7 +43,7 @@ public class InterviewSession extends BaseTimeEntity {
     private List<InterviewRole> roles = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "personality", nullable = false, length = 20)
     private InterviewPersonality personality;
 
     @Enumerated(EnumType.STRING)
@@ -102,7 +102,7 @@ public class InterviewSession extends BaseTimeEntity {
         this.stage = InterviewStage.WAITING;
         // Initialize State
         this.currentDifficulty = 3; // Default Medium
-        this.lastInterviewerId = "MAIN"; // Default Start (Need update later e.g. TECH)
+        this.lastInterviewerId = "LEADER"; // Default Start (Need update later e.g. TECH)
     }
 
     /** 새로운 면접 세션 생성 */

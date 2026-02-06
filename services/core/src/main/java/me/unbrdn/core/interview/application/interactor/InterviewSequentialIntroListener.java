@@ -39,6 +39,8 @@ public class InterviewSequentialIntroListener {
                         List<String> personas = state.getParticipatingPersonas();
                         Integer nextIdx = state.getNextPersonaIndex();
 
+                        log.info("Sequential intro state: personas={}, nextIdx={}", personas, nextIdx);
+
                         if (personas != null && nextIdx != null && nextIdx < personas.size()) {
                             String nextRoleName = personas.get(nextIdx); // Actually role names now
                             me.unbrdn.core.interview.domain.enums.InterviewRole nextRole = me.unbrdn.core.interview.domain.enums.InterviewRole
@@ -51,8 +53,10 @@ public class InterviewSequentialIntroListener {
 
                             CallLlmCommand llmCommand = CallLlmCommand.builder().interviewId(event.getInterviewId())
                                     .interviewSessionId(session.getId().toString()).userId(event.getUserId())
-                                    .userText("면접관님, 지원자에게 간단히 본인 소개를 해주세요.").availableRoles(List.of(nextRole))
-                                    .personality(session.getPersonality()) // Same personality for all
+                                    .userText("면접관님, 지원자에게 간단히 본인 소개를 해주세요.").inputRole("system")
+                                    .availableRoles(List.of(nextRole)).personality(session.getPersonality()) // Same
+                                                                                                             // personality
+                                                                                                             // for all
                                     .history(conversationHistoryPort.loadHistory(event.getInterviewId()))
                                     .mode(event.getMode()).stage(session.getStage())
                                     .interviewerCount(session.getInterviewerCount()).domain(session.getDomain())

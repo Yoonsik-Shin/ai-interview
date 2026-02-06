@@ -14,6 +14,7 @@ public class CallLlmCommand {
     private final String interviewSessionId; // 실제 PK (ULID)
     private final String userId;
     private final String userText;
+    private final String inputRole; // "user" or "system"
     // private final String persona; // Deprecated, use availablePersonas
     private final List<ConversationHistory> history;
     private final String mode; // "real" | "practice"

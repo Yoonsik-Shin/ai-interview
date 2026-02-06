@@ -30,7 +30,8 @@ public class RedisConversationHistoryAdapter implements ManageConversationHistor
         }
 
         try {
-            return objectMapper.readValue(json, new TypeReference<List<ConversationHistory>>() {});
+            return objectMapper.readValue(json, new TypeReference<List<ConversationHistory>>() {
+            });
         } catch (Exception e) {
             log.error("Failed to parse conversation history", e);
             return new ArrayList<>();
@@ -39,8 +40,13 @@ public class RedisConversationHistoryAdapter implements ManageConversationHistor
 
     @Override
     public void appendExchange(String interviewId, String userText, String aiAnswer) {
+        appendExchange(interviewId, "user", userText, aiAnswer);
+    }
+
+    @Override
+    public void appendExchange(String interviewId, String role, String userText, String aiAnswer) {
         List<ConversationHistory> history = loadHistory(interviewId);
-        history.add(new ConversationHistory("user", userText));
+        history.add(new ConversationHistory(role, userText));
         history.add(new ConversationHistory("assistant", aiAnswer));
 
         // 최대 20개 유지

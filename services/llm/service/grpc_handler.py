@@ -37,11 +37,14 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
 
             # 1. Construct State
             # Map Proto history to LangChain messages
-            from langchain_core.messages import HumanMessage, AIMessage
+            from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
             history = []
             for h in request.history:
-                if h.role.lower() == "user":
+                role_lower = h.role.lower()
+                if role_lower == "user":
                     history.append(HumanMessage(content=h.content))
+                elif role_lower == "system":
+                    history.append(SystemMessage(content=h.content))
                 else:
                     history.append(AIMessage(content=h.content))
 
@@ -69,6 +72,7 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                 "user_input": request.user_text,
                 "available_roles": roles, # New
                 "personality": personality, # New
+                "input_role": getattr(request, "input_role", "user"), # New
                 "current_difficulty": request.current_difficulty_level or 3,
                 "remaining_time": request.remaining_time_seconds,
                 "total_duration": request.total_duration_seconds,
@@ -92,7 +96,7 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             messages = self.nodes.get_prompt_messages(final_state)
             
             # 4. Stream Response
-            persona_id = final_state.get("next_speaker_id", "MAIN")
+            persona_id = final_state.get("next_speaker_id", "LEADER")
             next_diff = final_state.get("next_difficulty", 3)
             reduce_time = final_state.get("reduce_total_time", False)
             is_ending = final_state.get("is_ending", False)
