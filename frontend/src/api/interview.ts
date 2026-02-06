@@ -1,25 +1,25 @@
 import { api } from "./client";
 
 export type InterviewType = "REAL" | "PRACTICE";
-export type InterviewPersona =
-  | "PRESSURE"
-  | "COMFORTABLE"
-  | "RANDOM"
-  | "TECH"
-  | "MAIN"
-  | "HR";
+
+export type InterviewRole = "TECH" | "HR" | "LEADER";
+
+export type InterviewPersonality = "PRESSURE" | "COMFORTABLE" | "RANDOM";
+
+// 하위 호환성을 위해 유지 (UI 맵 등에서 사용)
+export type InterviewPersona = InterviewRole | InterviewPersonality;
 
 export type CreateInterviewReq = {
-  resumeId?: number; // optional - 이력서 없이도 면접 가능
+  resumeId?: string; // optional - 이력서 없이도 면접 가능
   domain: string;
   type: InterviewType;
-  persona: InterviewPersona;
-  interviewerCount: number;
+  interviewerRoles: InterviewRole[];
+  personality: InterviewPersonality;
   targetDurationMinutes: number;
   selfIntroduction: string;
 };
 
-export type CreateInterviewRes = { interviewId: number; status: string };
+export type CreateInterviewRes = { interviewId: string; status: string };
 
 export async function createInterview(
   body: CreateInterviewReq,

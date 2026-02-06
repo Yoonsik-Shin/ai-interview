@@ -46,31 +46,65 @@ export async function api<T>(
           });
         }
       } else {
-        throw new Error("Refresh failed");
+        const refreshBody = await refreshRes.json().catch(() => ({}));
+        throw new Error(
+          refreshBody.message ??
+            "인증 세션이 만료되었습니다. 다시 로그인해주세요.",
+        );
       }
     } catch (e) {
       console.error("Token refresh failed", e);
       // Refresh 실패 시 로그아웃 -> 로그인 페이지로 이동
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken"); // 만약 있다면 삭제
-      window.location.href = "/login";
-      throw new Error("인증이 만료되었습니다. 다시 로그인해주세요.");
+
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+
+      throw e instanceof Error
+        ? e
+        : new Error("인증이 만료되었습니다. 다시 로그인해주세요.");
     }
   }
 
   if (!res.ok) {
-    // 401이어도 refresh 실패 후라면 여기서 에러 처리됨
-    // 401이 아니면 일반적인 에러 처리
-    if (res.status === 401) {
-      localStorage.removeItem("accessToken");
-      window.location.href = "/login";
-      throw new Error("인증이 만료되었습니다. 다시 로그인해주세요.");
+    const isAuthRequest =
+      url.includes("/v1/auth/login") || url.includes("/v1/auth/refresh");
+
+    let errorMessage = `HTTP ${res.status}`;
+    try {
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const body = await res.json();
+        errorMessage = body.message || body.error || errorMessage;
+      } else {
+        const text = await res.text();
+        if (text) errorMessage = text.slice(0, 100);
+      }
+    } catch (e) {
+      console.error("Error parsing error response", e);
     }
 
-    const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as { message?: string }).message ?? `HTTP ${res.status}`,
-    );
+    // 401 에러 처리
+    if (res.status === 401) {
+      localStorage.removeItem("accessToken");
+
+      // 로그인/리프레시 요청이 아닌 경우에만 리다이렉트
+      if (!isAuthRequest && window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+
+      throw new Error(
+        errorMessage === `HTTP 401`
+          ? isAuthRequest
+            ? "인증에 실패했습니다."
+            : "인증이 만료되었습니다. 다시 로그인해주세요."
+          : errorMessage,
+      );
+    }
+
+    throw new Error(errorMessage);
   }
   return res.json() as Promise<T>;
 }

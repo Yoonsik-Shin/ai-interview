@@ -3,11 +3,17 @@ import { useNavigate } from "react-router-dom";
 import {
   createInterview,
   type CreateInterviewReq,
-  type InterviewType,
   type InterviewRole,
   type InterviewPersonality,
 } from "@/api/interview";
-import { uploadResume } from "@/api/resumes";
+import {
+  listResumes,
+  getUploadUrl,
+  uploadToPresignedUrl,
+  completeUpload,
+  type ResumeItem,
+} from "@/api/resumes";
+import { Toast } from "@/components/Toast";
 import styles from "./InterviewSetup.module.css";
 
 export function InterviewSetup() {
@@ -15,7 +21,10 @@ export function InterviewSetup() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // State
-  const [selectedRoles, setSelectedRoles] = useState<InterviewRole[]>(["TECH"]);
+  const [selectedRoles, setSelectedRoles] = useState<InterviewRole[]>([
+    "LEADER",
+    "TECH",
+  ]);
   const [personality, setPersonality] =
     useState<InterviewPersonality>("COMFORTABLE");
 
@@ -29,6 +38,7 @@ export function InterviewSetup() {
   });
 
   const toggleRole = (role: InterviewRole) => {
+    if (role === "LEADER") return; // LEADER is mandatory
     setSelectedRoles((prev) => {
       const isSelected = prev.includes(role);
       if (isSelected) {
@@ -40,12 +50,40 @@ export function InterviewSetup() {
     });
   };
 
+  const [existingResumes, setExistingResumes] = useState<ResumeItem[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [isNewUpload, setIsNewUpload] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resumesLoading, setResumesLoading] = useState(true);
 
-  // 미디어 관련 상태
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  // 이력서 목록 가져오기
+  useEffect(() => {
+    async function loadResumes() {
+      try {
+        const list = await listResumes();
+        setExistingResumes(list);
+        if (list.length === 0) {
+          setIsNewUpload(true);
+        } else {
+          setSelectedResumeId(list[0].id);
+        }
+      } catch (err) {
+        console.error("이력서 목록 로드 실패:", err);
+      } finally {
+        setResumesLoading(false);
+      }
+    }
+    loadResumes();
+  }, []);
+
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationIdRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
+
   const [audioLevel, setAudioLevel] = useState(0);
   const [mediaError, setMediaError] = useState("");
   const [devices, setDevices] = useState<{
@@ -57,10 +95,7 @@ export function InterviewSetup() {
 
   // 미디어 권한 요청 및 스트림 가져오기
   useEffect(() => {
-    let audioContext: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let animationId: number;
-
+    isMountedRef.current = true;
     async function setupMedia() {
       try {
         // 미디어 권한 요청
@@ -68,7 +103,16 @@ export function InterviewSetup() {
           video: true,
           audio: true,
         });
-        setStream(mediaStream);
+
+        if (!isMountedRef.current) {
+          mediaStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+        }
+        streamRef.current = mediaStream;
 
         // 비디오 프리뷰 설정
         if (videoRef.current) {
@@ -77,6 +121,8 @@ export function InterviewSetup() {
 
         // 디바이스 목록 가져오기
         const deviceList = await navigator.mediaDevices.enumerateDevices();
+        if (!isMountedRef.current) return;
+
         const cameras = deviceList.filter((d) => d.kind === "videoinput");
         const microphones = deviceList.filter((d) => d.kind === "audioinput");
         setDevices({ cameras, microphones });
@@ -90,22 +136,26 @@ export function InterviewSetup() {
           setSelectedMicrophone(audioTrack.getSettings().deviceId || "");
 
         // 오디오 레벨 분석
-        audioContext = new AudioContext();
-        analyser = audioContext.createAnalyser();
+        const audioContext = new AudioContext();
+        audioContextRef.current = audioContext;
+        const analyser = audioContext.createAnalyser();
+        analyserRef.current = analyser;
+
         const source = audioContext.createMediaStreamSource(mediaStream);
         source.connect(analyser);
         analyser.fftSize = 256;
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
         function updateAudioLevel() {
-          if (!analyser) return;
-          analyser.getByteFrequencyData(dataArray);
+          if (!isMountedRef.current || !analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(dataArray);
           const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
           setAudioLevel(average / 255); // 0-1 범위로 정규화
-          animationId = requestAnimationFrame(updateAudioLevel);
+          animationIdRef.current = requestAnimationFrame(updateAudioLevel);
         }
         updateAudioLevel();
       } catch (err) {
+        if (!isMountedRef.current) return;
         console.error("미디어 권한 에러:", err);
         setMediaError("카메라 또는 마이크 권한이 필요합니다.");
       }
@@ -114,15 +164,22 @@ export function InterviewSetup() {
     setupMedia();
 
     return () => {
+      isMountedRef.current = false;
       // 클린업
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
-      if (audioContext) {
-        audioContext.close();
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
       }
-      if (animationId) {
-        cancelAnimationFrame(animationId);
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = null;
       }
     };
   }, []);
@@ -130,7 +187,18 @@ export function InterviewSetup() {
   // 디바이스 변경
   async function changeDevice(type: "video" | "audio", deviceId: string) {
     try {
-      // 1. 계산된 새로운 비디오/오디오 제약조건 설정
+      // 1. 기존 오디오 관련 리소스 명시적 정리
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+      analyserRef.current = null;
+
+      // 2. 계산된 새로운 비디오/오디오 제약조건 설정
       const newCameraId = type === "video" ? deviceId : selectedCamera;
       const newMicId = type === "audio" ? deviceId : selectedMicrophone;
 
@@ -145,34 +213,38 @@ export function InterviewSetup() {
             : { deviceId: { exact: newMicId } },
       };
 
-      // 2. 둘 다 "none"이면 스트림 정지하고 null 처리
+      // 3. 둘 다 "none"이면 스트림 정지하고 null 처리
       if (
         (newCameraId === "none" || !newCameraId) &&
         (newMicId === "none" || !newMicId)
       ) {
-        if (stream) {
-          stream.getTracks().forEach((t) => t.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
         }
-        setStream(null);
         if (videoRef.current) {
           videoRef.current.srcObject = null;
         }
+        setAudioLevel(0);
         // State update
         if (type === "video") setSelectedCamera("none");
         else setSelectedMicrophone("none");
         return;
       }
 
-      // 3. 새 스트림 요청
+      // 4. 새 스트림 요청
       const newStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-      // 4. 기존 스트림 정지 (새 스트림 성공 후)
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      if (!isMountedRef.current) {
+        newStream.getTracks().forEach((t) => t.stop());
+        return;
       }
 
-      // 5. 상태 업데이트
-      setStream(newStream);
+      // 5. 기존 스트림 정지 (새 스트림 성공 후)
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      streamRef.current = newStream;
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
       }
@@ -180,17 +252,21 @@ export function InterviewSetup() {
       // 6. 오디오 분석기 재연결 (오디오가 있는 경우만)
       if (newMicId !== "none" && newMicId) {
         const audioContext = new AudioContext();
+        audioContextRef.current = audioContext;
         const analyser = audioContext.createAnalyser();
+        analyserRef.current = analyser;
+
         const source = audioContext.createMediaStreamSource(newStream);
         source.connect(analyser);
         analyser.fftSize = 256;
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
         function updateAudioLevel() {
-          analyser.getByteFrequencyData(dataArray);
+          if (!isMountedRef.current || !analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(dataArray);
           const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
           setAudioLevel(average / 255);
-          requestAnimationFrame(updateAudioLevel);
+          animationIdRef.current = requestAnimationFrame(updateAudioLevel);
         }
         updateAudioLevel();
       } else {
@@ -201,8 +277,8 @@ export function InterviewSetup() {
       if (type === "video") setSelectedCamera(deviceId);
       else setSelectedMicrophone(deviceId);
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.error("디바이스 변경 에러:", err);
-      // 에러 시 상태 롤백 혹은 에러 표시 (여기선 간단히 콘솔 로그)
     }
   }
 
@@ -211,12 +287,17 @@ export function InterviewSetup() {
     setError("");
     setLoading(true);
     try {
-      let resumeId: number | undefined;
-      if (resumeFile) {
-        const { resumeId: id } = await uploadResume(
-          resumeFile,
+      let resumeId: string | undefined =
+        selectedResumeId && !isNewUpload ? selectedResumeId : undefined;
+
+      if (isNewUpload && resumeFile) {
+        // Presigned URL flow
+        const { uploadUrl, resumeId: id } = await getUploadUrl(
+          resumeFile.name,
           resumeFile.name,
         );
+        await uploadToPresignedUrl(uploadUrl, resumeFile);
+        await completeUpload(id);
         resumeId = id;
       }
       const payload: CreateInterviewReq = {
@@ -229,22 +310,20 @@ export function InterviewSetup() {
       const { interviewId } = await createInterview(payload);
 
       const meta = {
-        roles: selectedRoles,
-        personality: personality,
-        type: form.type,
-        domain: form.domain,
-        targetDurationMinutes: form.targetDurationMinutes,
+        ...payload,
         selectedCamera,
         selectedMicrophone,
       };
+
       sessionStorage.setItem(
         `interview-meta-${interviewId}`,
         JSON.stringify(meta),
       );
 
       // 스트림 정지
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
 
       navigate(`/interview/${interviewId}`, { replace: true, state: meta });
@@ -269,8 +348,6 @@ export function InterviewSetup() {
         {/* 미디어 테스트 섹션 */}
         <div className={styles.mediaSection}>
           <h2>미디어 테스트</h2>
-
-          {mediaError && <p className={styles.mediaError}>{mediaError}</p>}
 
           {/* 카메라 프리뷰 */}
           <div className={styles.videoContainer}>
@@ -333,71 +410,131 @@ export function InterviewSetup() {
         <div className={styles.formSection}>
           <div className={styles.profileSection}>
             <div className={styles.profileHeader}>
-              <div className={styles.profileAvatar}>ME</div>
-              <div>
-                <h2>프로필</h2>
-                <p>이력서를 업로드하면 질문 품질이 향상됩니다.</p>
+              <div className={styles.profileAvatar}>
+                <span className={styles.avatarIcon}>👤</span>
+              </div>
+              <div className={styles.profileText}>
+                <h2>이력서 설정</h2>
+                <p>기존 이력서를 선택하거나 새 파일을 업로드하세요.</p>
               </div>
             </div>
-            <label className={styles.fileLabel} htmlFor="resume-upload">
-              이력서 업로드
-            </label>
-            <div className={styles.fileInputWrapper}>
-              <input
-                id="resume-upload"
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
-                className={styles.fileInput}
-              />
-              <span className={styles.fileInputText}>
-                {resumeFile ? "다른 파일 선택" : "파일 선택"}
-              </span>
-            </div>
-            <p className={styles.fileHint}>PDF, DOC, DOCX 파일만 지원합니다.</p>
-            <p className={styles.fileName}>
-              {resumeFile ? resumeFile.name : "선택된 파일 없음"}
-            </p>
+
+            {resumesLoading ? (
+              <div className={styles.resumesLoading}>이력서 불러오는 중...</div>
+            ) : isNewUpload ? (
+              <div className={styles.uploadArea}>
+                <div className={styles.uploadHeader}>
+                  <h3>새 이력서 업로드</h3>
+                  {existingResumes.length > 0 && (
+                    <button
+                      type="button"
+                      className={styles.textBtn}
+                      onClick={() => setIsNewUpload(false)}
+                    >
+                      기존 목록에서 선택
+                    </button>
+                  )}
+                </div>
+                <div className={styles.uploadBox}>
+                  <span className={styles.uploadIcon}>📄</span>
+                  <div className={styles.fileInputWrapper}>
+                    <label
+                      htmlFor="resume-upload"
+                      className={styles.customFileBtn}
+                    >
+                      파일 선택
+                    </label>
+                    <span className={styles.fileName}>
+                      {resumeFile
+                        ? resumeFile.name
+                        : "파일을 선택하거나 드래그하세요"}
+                    </span>
+                  </div>
+                  <p className={styles.fileHint}>PDF, DOC, DOCX (최대 10MB)</p>
+                </div>
+                <input
+                  id="resume-upload"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
+                  className={styles.fileInput}
+                />
+              </div>
+            ) : (
+              <div className={styles.resumeListArea}>
+                <div className={styles.uploadHeader}>
+                  <h3>내 이력서 목록</h3>
+                  <button
+                    type="button"
+                    className={styles.addBtn}
+                    onClick={() => setIsNewUpload(true)}
+                  >
+                    + 새 이력서 추가
+                  </button>
+                </div>
+                <div className={styles.resumeGrid}>
+                  {existingResumes.map((resume) => (
+                    <div
+                      key={resume.id}
+                      className={`${styles.resumeCard} ${selectedResumeId === resume.id ? styles.resumeSelected : ""}`}
+                      onClick={() => setSelectedResumeId(resume.id)}
+                    >
+                      <div className={styles.resumeCardIcon}>📄</div>
+                      <div className={styles.resumeCardBody}>
+                        <div className={styles.resumeCardTitle}>
+                          {resume.title}
+                        </div>
+                        <div className={styles.resumeCardDate}>
+                          {new Date(resume.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      {selectedResumeId === resume.id && (
+                        <div className={styles.checkIcon}>✓</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <h2 className={styles.formTitle}>면접 설정</h2>
+          <h2 className={styles.formTitle}>면접 상세 설정</h2>
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.field}>
-              <label>도메인</label>
+              <label htmlFor="domain">도메인</label>
               <input
+                id="domain"
                 type="text"
                 value={form.domain}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, domain: e.target.value }))
-                }
+                onChange={(e) => setForm({ ...form, domain: e.target.value })}
                 className={styles.input}
+                placeholder="예: 프론트엔드, 자바 백엔드"
+                required
               />
             </div>
+
             <div className={styles.field}>
-              <label>면접 타입</label>
+              <label htmlFor="interview-type">면접 타입</label>
               <select
+                id="interview-type"
                 value={form.type}
                 onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    type: e.target.value as InterviewType,
-                  }))
+                  setForm({ ...form, type: e.target.value as any })
                 }
                 className={styles.input}
               >
+                <option value="REAL">실전 면접 (정밀 분석, 유료)</option>
                 <option value="PRACTICE">모의 면접 (빠른 처리, 무료)</option>
-                <option value="REAL">실전 면접 (고품질, OpenAI)</option>
               </select>
-              <p className={styles.fieldHint}>
-                {form.type === "PRACTICE"
-                  ? "⚡ 빠른 처리 | STT: Fast Whisper, TTS: Edge TTS"
-                  : "🎯 고품질 | STT: OpenAI Whisper, TTS: OpenAI TTS"}
-              </p>
             </div>
+            <p className={styles.fieldHint}>
+              ⚡ 빠른 처리 | STT: Fast Whisper, TTS: Edge TTS
+            </p>
 
             <div className={styles.field}>
-              <label>면접 분위기 (성격)</label>
+              <label htmlFor="personality">면접 분위기 (성격)</label>
               <select
+                id="personality"
                 value={personality}
                 onChange={(e) =>
                   setPersonality(e.target.value as InterviewPersonality)
@@ -405,7 +542,7 @@ export function InterviewSetup() {
                 className={styles.input}
               >
                 <option value="COMFORTABLE">편안한 (격려하는 분위기)</option>
-                <option value="PRESSURE">압박 (날카로운 분위기)</option>
+                <option value="PRESSURE">엄격한 (압박 면접 분위기)</option>
                 <option value="RANDOM">랜덤</option>
               </select>
             </div>
@@ -414,6 +551,12 @@ export function InterviewSetup() {
               <label>면접관 구성 (복수 선택 가능)</label>
               <div className={styles.personaGrid}>
                 {[
+                  {
+                    id: "LEADER",
+                    title: "리드 면접관",
+                    desc: "리더십 및 종합 및 경험 평가",
+                    icon: "👨‍💼",
+                  },
                   {
                     id: "TECH",
                     title: "기술 면접관",
@@ -426,12 +569,6 @@ export function InterviewSetup() {
                     desc: "조직 적합성 및 인성 확인",
                     icon: "🤝",
                   },
-                  {
-                    id: "LEADER",
-                    title: "리드 면접관",
-                    desc: "리더십 및 종합 및 경험 평가",
-                    icon: "👨‍💼",
-                  },
                 ].map((p) => {
                   const isSelected = selectedRoles.includes(
                     p.id as InterviewRole,
@@ -439,11 +576,16 @@ export function InterviewSetup() {
                   return (
                     <div
                       key={p.id}
-                      className={`${styles.personaCard} ${isSelected ? styles.selected : ""}`}
+                      className={`${styles.personaCard} ${isSelected ? styles.selected : ""} ${p.id === "LEADER" ? styles.mandatory : ""}`}
                       onClick={() => toggleRole(p.id as InterviewRole)}
                     >
                       <div className={styles.cardIcon}>{p.icon}</div>
-                      <div className={styles.cardTitle}>{p.title}</div>
+                      <div className={styles.cardTitle}>
+                        {p.title}
+                        {p.id === "LEADER" && (
+                          <span className={styles.mandatoryBadge}>필수</span>
+                        )}
+                      </div>
                       <div className={styles.cardDescription}>{p.desc}</div>
                     </div>
                   );
@@ -451,19 +593,6 @@ export function InterviewSetup() {
               </div>
             </div>
 
-            <div className={styles.field}>
-              <label>면접관 수</label>
-              <input
-                type="number"
-                value={form.interviewerCount}
-                disabled
-                className={styles.input}
-                style={{ backgroundColor: "#f3f4f6" }}
-              />
-              <p className={styles.fieldHint}>
-                선택한 면접관 수에 따라 자동으로 설정됩니다.
-              </p>
-            </div>
             <div className={styles.field}>
               <label>목표 시간 (분, 10~120)</label>
               <input
@@ -492,13 +621,23 @@ export function InterviewSetup() {
                 className={styles.input}
               />
             </div>
-            {error && <p className={styles.error}>{error}</p>}
             <button type="submit" disabled={loading} className={styles.btn}>
               {loading ? "생성 중…" : "면접 시작"}
             </button>
           </form>
         </div>
       </div>
+
+      {(error || mediaError) && (
+        <Toast
+          message={error || mediaError}
+          onClose={() => {
+            setError("");
+            setMediaError("");
+          }}
+          autoDismissMs={5000}
+        />
+      )}
     </div>
   );
 }
