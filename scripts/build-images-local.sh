@@ -13,8 +13,8 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
 # 서비스 목록
-ALL_SERVICES=("bff" "core" "llm" "socket" "stt" "tts" "storage")
-ALL_SERVICE_PATHS=("services/bff" "services/core" "services/llm" "services/socket" "services/stt" "services/tts" "services/storage")
+ALL_SERVICES=("bff" "core" "llm" "socket" "stt" "tts" "storage" "document")
+ALL_SERVICE_PATHS=("services/bff" "services/core" "services/llm" "services/socket" "services/stt" "services/tts" "services/storage" "services/document")
 
 # 기본 설정
 TAG="latest"

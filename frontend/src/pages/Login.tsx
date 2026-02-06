@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from '@/auth/authApi'
+import { Toast } from '@/components/Toast'
 import styles from './Auth.module.css'
 
 export function Login() {
@@ -48,7 +49,6 @@ export function Login() {
             autoComplete="current-password"
             className={styles.input}
           />
-          {error && <p className={styles.error}>{error}</p>}
           <button type="submit" disabled={loading} className={styles.btn}>
             {loading ? '로그인 중…' : '로그인'}
           </button>
@@ -57,6 +57,9 @@ export function Login() {
           계정이 없으시면 <Link to="/register">회원가입</Link>
         </p>
       </div>
+      {error && (
+        <Toast message={error} onClose={() => setError('')} autoDismissMs={5000} />
+      )}
     </div>
   )
 }

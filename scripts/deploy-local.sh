@@ -75,6 +75,8 @@ start_spinner() {
     ) &
     
     SPINNER_PID=$!
+    # disown을 사용하여 백그라운드 프로세스 종료 시 셸이 메시지를 출력하지 않도록 함
+    disown $SPINNER_PID 2>/dev/null || true
 }
 
 stop_spinner() {
@@ -107,10 +109,103 @@ stop_spinner() {
 }
 
 cleanup_spinner_on_exit() {
-    [ -n "$SPINNER_PID" ] && kill $SPINNER_PID 2>/dev/null || true
+    if [ -n "$SPINNER_PID" ]; then
+        kill $SPINNER_PID 2>/dev/null || true
+        wait $SPINNER_PID 2>/dev/null || true
+    fi
     tput cnorm 2>/dev/null || true
 }
 trap cleanup_spinner_on_exit EXIT
+
+# 병렬 배포 상태 관리 전용
+DEPLOY_STATUS_DIR="/tmp/deploy-status-$$"
+USE_PARALLEL_DEPLOY=true
+[ -t 1 ] && USE_SINGLE_LINE=true || USE_SINGLE_LINE=false
+
+show_deployment_status() {
+    local total=${#SERVICES[@]}
+    local completed=0
+    local failed=0
+    local max_elapsed=0
+
+    for SVC in "${SERVICES[@]}"; do
+        local status_file="${DEPLOY_STATUS_DIR}/${SVC}.status"
+        local time_file="${DEPLOY_STATUS_DIR}/${SVC}.time"
+        if [ -f "$status_file" ]; then
+            local result=$(cat "$status_file")
+            if [ "$result" == "success" ]; then ((completed++)); elif [ "$result" == "failed" ]; then ((failed++)); fi
+        fi
+        if [ -f "$time_file" ]; then
+            local e=$(cat "$time_file" 2>/dev/null)
+            [ -n "$e" ] && [ "$e" -gt "${max_elapsed:-0}" ] 2>/dev/null && max_elapsed=$e
+        fi
+    done
+
+    if [ "$USE_SINGLE_LINE" != "true" ]; then return; fi
+
+    if [ $completed -eq $total ]; then
+        printf '\n'
+        echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${BOLD}🚀 배포 진행 상황${NC}"
+        echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        for SVC in "${SERVICES[@]}"; do
+            local status_file="${DEPLOY_STATUS_DIR}/${SVC}.status"
+            local time_file="${DEPLOY_STATUS_DIR}/${SVC}.time"
+            local status="⏳ 배포 중..."
+            local color="${YELLOW}"
+            local elapsed=""
+            if [ -f "$status_file" ]; then
+                local result=$(cat "$status_file")
+                if [ "$result" == "success" ]; then status="완료      "; color="${GREEN}"; [ -f "$time_file" ] && elapsed="($(cat $time_file)초)"; elif [ "$result" == "failed" ]; then status="실패      "; color="${RED}"; [ -f "$time_file" ] && elapsed="($(cat $time_file)초)"; fi
+            elif [ -f "$time_file" ]; then elapsed="($(cat $time_file)초)"; fi
+            local svc_disp=$(printf "%-12s" "$SVC")
+            echo -e "  ${color}${svc_disp}${NC} ${status} ${elapsed}"
+        done
+        echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "  ${GREEN}${BOLD}✨ 모든 서비스 배포가 완료되었습니다!${NC}"
+        echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        return
+    fi
+
+    local parts=""
+    for SVC in "${SERVICES[@]}"; do
+        local status_file="${DEPLOY_STATUS_DIR}/${SVC}.status"
+        local s="⏳"
+        if [ -f "$status_file" ]; then
+            local r=$(cat "$status_file")
+            [ "$r" == "success" ] && s="✅"
+            [ "$r" == "failed" ] && s="❌"
+        fi
+        parts="${parts} ${s} ${SVC}"
+    done
+    printf "\r${CLEAR_LINE}${CYAN}🔄${NC} 배포 진행... %d/%d 완료 |%s | %ds\r" "$completed" "$total" "$parts" "$max_elapsed"
+}
+
+monitor_deployment_status() {
+    local pids=("$@")
+    local total=${#SERVICES[@]}
+    while true; do
+        local all_done=true
+        for pid in "${pids[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then all_done=false; break; fi
+        done
+
+        for SVC in "${SERVICES[@]}"; do
+            local start_file="${DEPLOY_STATUS_DIR}/${SVC}.start"
+            local time_file="${DEPLOY_STATUS_DIR}/${SVC}.time"
+            local status_file="${DEPLOY_STATUS_DIR}/${SVC}.status"
+            if [ -f "$start_file" ] && [ ! -f "$status_file" ]; then
+                local start_time=$(cat "$start_file")
+                local current_time=$(date +%s)
+                echo $((current_time - start_time)) > "$time_file"
+            fi
+        done
+
+        show_deployment_status
+        if $all_done; then break; fi
+        sleep 1
+    done
+}
 
 # 배포 단계 카운터 (상태 메시지용)
 TOTAL_STEPS=12
@@ -407,7 +502,7 @@ if [ "$READY_COUNT" -lt "$NODE_COUNT" ]; then
 fi
 
 # Docker 이미지 존재 확인 (Kind는 로컬 이미지 사용)
-REQUIRED_IMAGES=("bff:latest" "core:latest" "llm:latest" "socket:latest" "stt:latest" "tts:latest" "storage:latest")
+REQUIRED_IMAGES=("bff:latest" "core:latest" "llm:latest" "socket:latest" "stt:latest" "tts:latest" "storage:latest" "document:latest")
 MISSING_IMAGES=()
 
 for IMAGE in "${REQUIRED_IMAGES[@]}"; do
@@ -666,6 +761,15 @@ done
 
 if [ $REDIS_ELAPSED -ge $REDIS_TIMEOUT ]; then
     printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} ${YELLOW}⚠️  Redis Pod 준비 타임아웃${NC}\n"
+fi
+
+# Step 3.5: Redis Insight 배포
+start_spinner "Redis Insight UI 배포 중..."
+if [ -f "k8s/infra/redis/redis-insight.yaml" ]; then
+    kubectl apply -f k8s/infra/redis/redis-insight.yaml >/dev/null 2>&1
+    stop_spinner "success" "Redis Insight 매니페스트 적용 완료"
+else
+    stop_spinner "warning" "Redis Insight 매니페스트가 없습니다"
 fi
 
 # Step 4: Kafka 클러스터 배포
@@ -970,8 +1074,8 @@ fi
 log_section "애플리케이션 배포"
 
 # 서비스별 배포
-SERVICES=("llm" "stt" "tts" "storage" "core" "bff" "socket")
-SERVICE_LABELS=("app=llm" "app=stt" "app=tts" "app=storage" "app=core" "app=bff" "app=socket")
+SERVICES=("llm" "stt" "tts" "storage" "document" "core" "bff" "socket")
+SERVICE_LABELS=("app=llm" "app=stt" "app=tts" "app=storage" "app=document" "app=core" "app=bff" "app=socket")
 
 # 선택적 배포 로직 추가
 SELECTED_SERVICES=()
@@ -1012,47 +1116,70 @@ if [ ${#SELECTED_SERVICES[@]} -gt 0 ]; then
     SERVICE_LABELS=("${NEW_LABELS[@]}")
 fi
 
+# 로컬 배포: common + local만 참조 (prod 미참조). 둘 다 없으면 에러
+log_task "배포 매니페스트 검증 중..."
+for SVC in "${SERVICES[@]}"; do
+    if [ ! -d "k8s/apps/${SVC}/common" ]; then
+        log_error "${SVC}: k8s/apps/${SVC}/common 없음"
+        exit 1
+    fi
+    if [ ! -d "k8s/apps/${SVC}/local" ]; then
+        log_error "${SVC}: k8s/apps/${SVC}/local 없음"
+        exit 1
+    fi
+done
+log_success "매니페스트 검증 완료"
+
+log_task "서비스 배포 (병렬)..."
+mkdir -p "${DEPLOY_STATUS_DIR}"
+DEPLOY_PIDS=()
 
 for i in "${!SERVICES[@]}"; do
     SERVICE=${SERVICES[$i]}
     LABEL=${SERVICE_LABELS[$i]}
     
-    start_spinner "${SERVICE} 배포 중..."
-    # common 먼저, 그 다음 prod/local 적용. *.yaml만 적용 (README, *.example 제외)
-    for f in k8s/apps/${SERVICE}/common/*.yaml k8s/apps/${SERVICE}/common/*.yml; do
-        [ -e "$f" ] && [[ "$f" != *example* ]] && kubectl apply -f "$f" >/dev/null 2>&1
-    done
-    if [ -d "k8s/apps/${SERVICE}/local" ]; then
-        TGT="local"
-    else
-        TGT="prod"
-    fi
-    for f in k8s/apps/${SERVICE}/${TGT}/*.yaml k8s/apps/${SERVICE}/${TGT}/*.yml; do
-        [ -e "$f" ] && [[ "$f" != *example* ]] && kubectl apply -f "$f" >/dev/null 2>&1
-    done
-    stop_spinner "success" "${SERVICE} 매니페스트 적용 완료"
-    
-    # 이미지 재빌드 시 Pod을 강제로 재시작 (latest 태그의 경우 필수)
-    # Deployment가 존재하는 경우에만 재시작
-    if kubectl get deployment ${SERVICE} -n ${NAMESPACE} &>/dev/null; then
-        start_spinner "${SERVICE} Pod 재시작 중..."
-        kubectl rollout restart deployment ${SERVICE} -n ${NAMESPACE} >/dev/null 2>&1
-        stop_spinner "success" "${SERVICE} Pod 재시작 완료"
-    else
-        # Deployment가 없는 경우 (StatefulSet 등) 스피너 없이 메시지만 출력
-        log_warning "${SERVICE} Deployment가 없습니다 (건너뜀)"
-    fi
-    
-    if ! show_pod_status "${NAMESPACE}" "${LABEL}" 120 "${SERVICE}"; then
-        # 제대로 안 뜬 Pod 삭제 후 재시도 (컨트롤러가 재생성)
-        log_info "비정상 Pod의 ReplicaSet 삭제 후 재시도..."
-        delete_unhealthy_replicasets "${NAMESPACE}" "${LABEL}"
-        sleep 3
-        if ! show_pod_status "${NAMESPACE}" "${LABEL}" 90 "${SERVICE}"; then
-            log_warning "로그 확인: kubectl logs -l ${LABEL} -n ${NAMESPACE}"
+    (
+        echo "$(date +%s)" > "${DEPLOY_STATUS_DIR}/${SERVICE}.start"
+        
+        # Deployment 매니페스트 적용 영역
+        SUCCESS=true
+        {
+            # common → local만 적용 (prod 미참조)
+            for f in k8s/apps/${SERVICE}/common/*.yaml k8s/apps/${SERVICE}/common/*.yml; do
+                [ -e "$f" ] && [[ "$f" != *example* ]] && kubectl apply -f "$f" >/dev/null 2>&1
+            done
+            for f in k8s/apps/${SERVICE}/local/*.yaml k8s/apps/${SERVICE}/local/*.yml; do
+                [ -e "$f" ] && [[ "$f" != *example* ]] && kubectl apply -f "$f" >/dev/null 2>&1
+            done
+            
+            # Pod 재시작 (이미지 갱신 반영)
+            if kubectl get deployment ${SERVICE} -n ${NAMESPACE} &>/dev/null; then
+                kubectl rollout restart deployment ${SERVICE} -n ${NAMESPACE} >/dev/null 2>&1
+                
+                # 가용성 대기 (병렬 내부에서 수행)
+                if ! show_pod_status "${NAMESPACE}" "${LABEL}" 120 "${SERVICE}" >/dev/null 2>&1; then
+                    delete_unhealthy_replicasets "${NAMESPACE}" "${LABEL}" >/dev/null 2>&1
+                    sleep 3
+                    if ! show_pod_status "${NAMESPACE}" "${LABEL}" 90 "${SERVICE}" >/dev/null 2>&1; then
+                        SUCCESS=false
+                    fi
+                fi
+            fi
+        } || SUCCESS=false
+        
+        if [ "$SUCCESS" = true ]; then
+            echo "success" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
+        else
+            echo "failed" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
         fi
-    fi
+    ) &
+    DEPLOY_PIDS+=($!)
 done
+
+# 모든 배포 완료 대기 및 상태 표시
+monitor_deployment_status "${DEPLOY_PIDS[@]}"
+rm -rf "${DEPLOY_STATUS_DIR}"
+echo ""
 
 # Step 9: 자체 서명 인증서 생성
 if ! kubectl get secret tls-secret -n ${NAMESPACE} &>/dev/null; then
@@ -1096,10 +1223,10 @@ log_success "Ingress Controller 설정 확인 완료"
 start_spinner "Ingress 배포 중..."
 # Ingress는 local 또는 prod 경로 확인
 if [ -d "k8s/common/ingress/local" ]; then
-    kubectl apply -f k8s/common/ingress/local/ >/dev/null 2>&1
+    kubectl apply -f k8s/common/ingress/local/
 elif [ -d "k8s/common/ingress/prod" ]; then
     # local이 없으면 prod 사용
-    kubectl apply -f k8s/common/ingress/prod/ >/dev/null 2>&1
+    kubectl apply -f k8s/common/ingress/prod/
 fi
 stop_spinner "success" "Ingress 배포 완료"
 
@@ -1262,9 +1389,11 @@ echo -e "  ${GREEN}•${NC} BFF (HTTP):       ${CYAN}http://localhost${NC}"
 echo -e "  ${GREEN}•${NC} BFF (HTTPS):      ${CYAN}https://localhost${NC}"
 echo -e "  ${GREEN}•${NC} Socket (HTTPS):   ${CYAN}https://localhost/socket.io${NC}"
 echo ""
-echo -e "  ${GREEN}•${NC} Kafka UI (HTTPS): ${CYAN}https://localhost/admin${NC}"
-echo -e "  ${GREEN}•${NC} Grafana (HTTPS):  ${CYAN}https://localhost/grafana${NC} ${DIM}(admin/admin)${NC}"
-echo -e "  ${GREEN}•${NC} Prometheus:       ${CYAN}https://localhost/prometheus${NC}"
+echo -e "  ${GREEN}•${NC} Kafka UI (HTTP):  ${CYAN}http://kafka.localhost${NC}"
+echo -e "  ${GREEN}•${NC} Redis UI (HTTP):  ${CYAN}http://redis.localhost${NC}"
+echo -e "  ${GREEN}•${NC} Grafana (HTTP):   ${CYAN}http://grafana.localhost${NC} ${DIM}(admin/admin)${NC}"
+echo -e "  ${GREEN}•${NC} Prometheus:       ${CYAN}http://prometheus.localhost${NC}"
+echo -e "  ${GREEN}•${NC} MinIO (Console):  ${CYAN}http://minio.localhost${NC}"
 echo ""
 echo -e "${YELLOW}⚠️  참고:${NC}"
 echo -e "  - Kind는 포트 30080(HTTP), 30443(HTTPS)을 호스트의 80, 443으로 매핑합니다"

@@ -71,6 +71,10 @@ export function useInterviewSocket(interviewId: string | null) {
   const onAck = useRef<(e: AudioAck) => void>(() => {});
   const onStageChanged = useRef<(e: StageChangedEvent) => void>(() => {});
   const onIntervene = useRef<(e: InterveneEvent) => void>(() => {});
+  const onRetryAnswer = useRef<(e: { message: string }) => void>(() => {});
+  const onResumeProcessed = useRef<
+    (e: { resumeId: string; status: string; userId: string }) => void
+  >(() => {});
 
   const setOnStt = useCallback((fn: (e: SttResult) => void) => {
     onStt.current = fn;
@@ -97,10 +101,16 @@ export function useInterviewSocket(interviewId: string | null) {
     onIntervene.current = fn;
   }, []);
 
-  const onRetryAnswer = useRef<(e: { message: string }) => void>(() => {});
   const setOnRetryAnswer = useCallback(
     (fn: (e: { message: string }) => void) => {
       onRetryAnswer.current = fn;
+    },
+    [],
+  );
+
+  const setOnResumeProcessed = useCallback(
+    (fn: (e: { resumeId: string; status: string; userId: string }) => void) => {
+      onResumeProcessed.current = fn;
     },
     [],
   );
@@ -147,6 +157,11 @@ export function useInterviewSocket(interviewId: string | null) {
     );
     socket.on("interview:retry_answer", (p: { message: string }) =>
       onRetryAnswer.current(p),
+    );
+    socket.on(
+      "resume:processed",
+      (p: { resumeId: string; status: string; userId: string }) =>
+        onResumeProcessed.current(p),
     );
     socket.on("interview:error", (p: { code?: string; message?: string }) =>
       setError(p?.message ?? "인터뷰 오류"),
@@ -219,6 +234,7 @@ export function useInterviewSocket(interviewId: string | null) {
     setOnStageChanged,
     setOnIntervene,
     setOnRetryAnswer,
+    setOnResumeProcessed,
     socket: socketRef.current,
   };
 }

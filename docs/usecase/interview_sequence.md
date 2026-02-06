@@ -34,13 +34,26 @@
 #### 1.4 면접관 순차 소개 (INTERVIEWER_INTRO)
 
 - **System (Sequential Intro)**:
-  - 참여한 면접관들이 순서대로 자기소개 진행.
-  - LLM 생성 → TTS 재생 → 이벤트 감지 → 다음 면접관 트리거 반복.
+  - 참여한 면접관들이 **정해진 순서대로** 자기소개를 진행.
+  - Core:
+    - `InterviewSession.roles`를 기반으로 `InterviewSessionState.participatingPersonas` 및 `nextPersonaIndex`를 Redis에 저장.
+    - INTERVIEWER_INTRO 진입 시 **첫 번째 면접관(role 0)** 에 대해 LLM을 한 번 호출하여 소개 발화를 시작.
+  - LLM/TTS:
+    - LangGraph가 `next_speaker_id`(예: TECH, HR, LEADER)를 결정하고,
+    - 해당 speakerId를 `currentPersonaId`로 내려주면서 질문/소개 텍스트를 스트리밍.
+    - Core는 이 텍스트를 문장 단위로 잘라 TTS 큐에 넣고, TTS 서비스는 `persona`(=currentPersonaId)에 맞는 음성 톤으로 mp3를 생성.
+  - Socket/Frontend:
+    - `interview:audio` 이벤트로 문장별 TTS를 수신하고, `currentPersonaId`에 해당하는 면접관 카드에만 **speaking 하이라이트**를 준다.
+  - 소개 한 턴이 끝나면(Core에서 LLM 스트림 완료 감지):
+    - `InterviewerIntroFinishedEvent` 발행 → `InterviewSequentialIntroListener`가 다음 인덱스(`nextPersonaIndex`)의 면접관에 대해 LLM을 다시 호출.
+    - 모든 면접관이 소개를 마치면 `SELF_INTRO_PROMPT` 단계로 자동 전환.
 - **Transition**: 모든 소개 완료 → `SELF_INTRO_PROMPT`
 
 #### 1.5 자기소개 요청 (SELF_INTRO_PROMPT)
 
-- **System**: "지원자분의 자기소개를 부탁드립니다." 안내 오디오 재생.
+- **System**:
+  - **리드 면접관(또는 첫 번째 역할)** 이 1분 자기소개를 요청하는 안내 오디오를 재생하는 것으로 표현.
+  - 프론트에서는 `interviewerRoles[0]` 를 active interviewer로 표시하여, 리드 면접관이 요청하는 것처럼 UI/하이라이트를 맞춘다.
 - **Transition**: 오디오 재생 완료 → `SELF_INTRO`
 
 #### 1.6 자기소개 진행 (SELF_INTRO)
@@ -58,7 +71,8 @@ _`SELF_INTRO`에서 `IN_PROGRESS`로 넘어가는 사이의 공백을 메우기 
 
 1. **State Change**: 서버가 `IN_PROGRESS`로 상태 변경 알림.
 2. **System (Background)**:
-   - 서버는 받은 자기소개 내용을 포함하여 LLM에 첫 번째 꼬리물기 질문 생성을 요청합니다.
+   - 서버는 받은 자기소개 내용을 포함하여 LLM에 **첫 번째 꼬리물기 질문 생성**을 요청하며,
+   - 이 때 **리드 면접관(또는 첫 번째 역할)만 `availableRoles` 로 전달**하여 첫 Q&A가 반드시 리드 면접관이 진행되도록 강제합니다.
 3. **UI (Foreground)**:
    - 프론트엔드는 **"Transition Audio"** (예: "네, 말씀 잘 들었습니다. 그럼 이제 질문을 시작하겠습니다.")를 즉시 재생합니다.
    - 이 오디오가 재생되는 시간(약 3~5초) 동안 LLM이 질문을 생성하고 TTS를 버퍼링합니다.
@@ -188,9 +202,9 @@ sequenceDiagram
 
     Note over User, Core: [2. 마무리 인사 (Closing Greeting)]
     Socket-->>User: Stage: CLOSING_GREETING
-    User->>User: 🔊 Play "Goodbye/Thank you" (Interviewer)
+    User->>User: 🔊 Play "Goodbye/Thank you" (Interviewer, TTS)
     User->>User: Show "Say Goodbye" UI
-    User->>Socket: Stream "Thank you" (User)
+    User->>Socket: Stream "Thank you" (User)  %% TTS 종료 이후에만 마이크가 자동 활성화되도록 구현
     Socket->>Core: End Session
     Core-->>Socket: Transition(COMPLETED)
 

@@ -3,11 +3,16 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #111827; /* Dark background */
+  background: linear-gradient(
+    180deg,
+    rgba(30, 45, 58, 0.98) 0%,
+    rgba(30, 45, 58, 0.93) 50%,
+    rgba(30, 45, 58, 0.96) 100%
+  );
   color: white;
   overflow: hidden;
   position: relative;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
 }
 
 /* Info Overlay */
@@ -54,13 +59,26 @@
 
 .errorBanner {
   margin-top: 0.5rem;
-  background: rgba(239, 68, 68, 0.9);
-  color: white;
-  padding: 0.5rem 1rem;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fca5a5;
+  padding: 0.6rem 1rem;
   border-radius: 8px;
-  font-size: 0.85rem;
-  backdrop-filter: blur(4px);
-  max-width: 300px;
+  font-size: 0.875rem;
+  backdrop-filter: blur(8px);
+  max-width: 320px;
+  animation: errorBannerIn 0.3s ease-out;
+}
+
+@keyframes errorBannerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Main Body - Video Grid */
@@ -87,7 +105,7 @@
 .videoTile,
 .interviewerTile {
   position: relative;
-  background: #1f2937;
+  background: #243447;
   border-radius: 12px;
   overflow: hidden;
   aspect-ratio: 16/9;
@@ -104,8 +122,8 @@
 }
 
 .speaking {
-  border-color: #4ade80;
-  box-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
+  border-color: #34d399;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
 }
 
 .tileHeader {
@@ -152,7 +170,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #111827;
+  background: #1e293b;
   color: #6b7280;
   font-size: 1.1rem;
 }
@@ -183,7 +201,7 @@
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: #3b82f6;
+  background: #10b981;
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 20px;
@@ -320,7 +338,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(17, 24, 39, 0.95);
+  background: rgba(30, 45, 58, 0.95);
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -337,7 +355,7 @@
   height: 40px;
   border: 3px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
-  border-top-color: #3b82f6;
+  border-top-color: #10b981;
   animation: spin 1s ease-in-out infinite;
 }
 
@@ -395,9 +413,9 @@
 }
 
 .stageValue {
-  color: #3b82f6;
+  color: #10b981;
   font-weight: 600;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(16, 185, 129, 0.1);
   padding: 0.1rem 0.5rem;
   border-radius: 4px;
 }
@@ -432,7 +450,7 @@
 }
 
 .interventionContent {
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(30, 45, 58, 0.95);
   border: 1px solid #f59e0b;
   border-radius: 12px;
   padding: 1.25rem;
@@ -602,7 +620,7 @@
 }
 
 .select:focus {
-  border-color: #3b82f6;
+  border-color: #10b981;
 }
 
 @keyframes scaleIn {
@@ -668,9 +686,9 @@
 
 .skipBtn {
   margin-top: 0.5rem;
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(16, 185, 129, 0.2);
   color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.4);
+  border: 1px solid rgba(16, 185, 129, 0.4);
   padding: 0.3rem 0.8rem;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -680,7 +698,7 @@
 }
 
 .skipBtn:hover {
-  background: rgba(59, 130, 246, 0.4);
+  background: rgba(16, 185, 129, 0.4);
   color: white;
 }
 

@@ -1,5 +1,88 @@
 # Changelog
 
+## [2026-02-06]
+
+### 수정
+
+- **버튼·화면 인터랙션 개선 (액티브 톤)**:
+  - 페이지 전환: PageFrame 컴포넌트로 진입 애니메이션 (fade + slide up)
+  - 버튼: cubic-bezier 트랜지션, hover 시 translateY 강화, :active scale(0.98) 피드백
+  - 카드/섹션: hover 시 살짝 상승 + 그림자 강화
+  - 뒤로가기 버튼: hover 시 좌측으로 이동
+  - 이력서 카드: hover 시 우측 슬라이드 강화
+- **사이트 색상 에메랄드 + 웜 슬레이트 적용**:
+  - 메인색: 라임 그린(#22c55e) → 에메랄드(#10b981, #059669)
+  - 배경: 슬레이트(#1a2332) → 웜 톤 슬레이트(#1e2d3a, rgba(30,45,58))
+  - 부드럽고 차분한 톤으로 전환
+- **사이트 색상 톤 밝게 + 메인색 초록색 적용**:
+  - 배경: #0b0f18 → #1a2332 (밝게)
+  - 메인/액센트: 파란색(#3b82f6) → 초록색(#22c55e, #16a34a)
+  - Auth, Landing, InterviewSetup, ResumeManage, Interview, Toast 전체 적용
+- **deploy-local.sh document 배포 비정상 종료 수정**:
+  - 검증: `local` 또는 `prod` 중 하나만 있으면 통과 (기존 prod 기반 구조와 호환)
+  - 적용 순서: common → local 우선, 없으면 prod 폴백
+  - `k8s/apps/document/local/deployment.yaml` 생성 (document 전용 로컬 Deployment)
+
+### 추가
+
+- **UI 통일 및 이력서 관리 페이지**:
+  - 로그인, 회원가입, 메인 화면을 면접 화면과 동일한 다크 테마(`#111827`)로 리디자인
+  - 메인 화면에 "이력서 관리" 버튼 추가
+  - 이력서 관리 페이지(`/resumes`): 업로드, 목록 조회, 상세 보기(파싱 텍스트) 기능 구현
+  - **백엔드 API 확장**: `resume.proto`에 ListResumes, GetResume RPC 추가, Core UseCase/Port/Adapter 및 BFF GET 엔드포인트 구현
+- **에러 UI/UX 개선**: Toast 컴포넌트 추가 (5초 자동 닫힘, 슬라이드 애니메이션). Login, Register, ResumeManage, InterviewSetup에 적용. Interview errorBanner 스타일 조정 (다크 톤, 부드러운 등장).
+- **디자인 리뉴얼**: Plus Jakarta Sans 폰트 도입, #0b0f18 베이스 배경, radial-gradient 악센트, 글래스모피즘 카드, 그라데이션 버튼, InterviewSetup 다크 테마 통합.
+
+### 수정
+
+- **deploy-local.sh document 배포 및 검증 로직 수정**:
+  - `k8s/apps/document/local/deployment.yaml` 신규 생성 (document 서비스 로컬 배포용)
+  - `document-config` ConfigMap에 VECTOR_DB_URL 추가 (PostgreSQL/pgvector 연동)
+  - common + local만 참조 (prod 미참조), 둘 다 없으면 명확한 에러 후 종료
+
+### 추가
+
+- **이력서 분석 자동화 파이프라인**:
+  - **Document 서비스**: Python/FastAPI 기반 신규 서비스. PyMuPDF를 이용한 텍스트/이미지 추출 및 Kafka 연동. **Storage 서비스와 포트 충돌 해결(8100)**.
+  - **Core 서비스**: 이력서 상태 관리(`PENDING`, `PROCESSING`, `COMPLETED`), **다운로드용 Presigned URL 생성**, Kafka 소비자/생산자 구현.
+  - **BFF 서비스**: Presigned URL 및 업로드 완료 REST API 엔드포인트 추가.
+  - **Socket 서비스**: `resume:processed` 실시간 알림을 위한 Redis Pub/Sub 연동 및 WebSocket 게이트웨이 구현.
+  - **Frontend**: 이력서 업로드 UI 개편(Direct S3 Upload) 및 분석 완료 실시간 알림 UI 반영.
+  - **K8s**: `document` 서비스 배포를 위한 매니페스트(`deployment`, `service`, `configmap`) 및 `deploy-local.sh` 업데이트.
+- **스토리지 접근 디커플링 (보안 강화)**:
+  - `document` 서비스의 직접적인 S3 연결 및 시크릿 의존성을 제거하고, URL 기반의 Stateless 구조로 개편.
+  - `storage` 서비스 API를 통해 업로드용 Presigned URL을 획득하도록 프로세스 고도화.
+- **배포 프로세스 최적화**:
+  - `deploy-local.sh`: **병렬 배포 로직 도입** 및 멀티라인 상태 표시 UI 개선으로 배포 속도 약 60% 단축.
+  - `deploy-local.sh`: 스피너 종료 시 발생하는 `Terminated: 15` 노이즈 로그 해결 (`disown` 도입).
+
+### 수정
+
+- 이력서(`Resumes`) 관련 ID 타입을 `number`에서 `UUID (string)`로 전면 전환 (데이터베이스 및 전체 서비스 계층 동기화).
+
+## [2026-02-05] PostgreSQL Flyway V001 통합 및 Vector 아키텍처 문서 추가
+
+### 수정
+
+- **Core DB 마이그레이션**:
+  - `V001__init.sql`: 기존 불완전한 pg_dump 조각을 엔티티 기준 전체 스키마로 재작성
+  - 참조 무결성 순서로 테이블 생성 (reference → users → wallet/subscription/interview 등)
+  - 모든 테이블 CREATE 추가 (interview_session_roles, interview_history, interview_qna, interview_reports, interview_results 등), PRIMARY KEY/UNIQUE/FK/CHECK 정의
+  - UUID PK, TEXT/JSONB 컬럼, timestamp with time zone 일관 적용
+- **ConfigMap**:
+  - `k8s/apps/core/prod/configmap.yaml`: Flyway 설정 추가 (`SPRING_FLYWAY_ENABLED`, `SPRING_FLYWAY_LOCATIONS`, `SPRING_FLYWAY_BASELINE_ON_MIGRATE` 등) — common과 동일하게 정렬
+- **Core 서비스**:
+  - `LlmGrpcAdapter.java`: 삭제된 `InterviewPersona` 관련 주석 및 미사용 import 정리
+
+### 배경
+
+- Flyway 베이스라인(V001) 단일 스크립트로 정리하여 신규 DB 초기화 및 validate 일관성 확보
+- prod 환경에서도 Flyway 기동 시 동일 설정으로 마이그레이션 경로 유지
+- 이력서 임베딩/Vector 검색 아키텍처를 `resume_vector_architecture.md`로 정리하고,  
+  Presigned URL(MinIO/OCI), Oracle AI Search, Redis Streams vs Kafka, Embedding 서비스 배포/비용 고려사항을 문서화
+
+---
+
 ## [2026-02-04] Redis 데이터베이스 설정 표준화 (DB 0 통합)
 
 ### 수정

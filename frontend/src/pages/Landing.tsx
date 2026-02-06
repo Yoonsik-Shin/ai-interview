@@ -61,9 +61,17 @@ export function Landing() {
               </div>
             )}
 
-            <button className={styles.startButton} onClick={handleStart}>
-              면접 시작하기
-            </button>
+            <div className={styles.buttonRow}>
+              <button className={styles.startButton} onClick={handleStart}>
+                면접 시작하기
+              </button>
+              <button
+                className={styles.resumeButton}
+                onClick={() => navigate("/resumes")}
+              >
+                이력서 관리
+              </button>
+            </div>
 
             <button className={styles.logoutButton} onClick={handleLogout}>
               로그아웃

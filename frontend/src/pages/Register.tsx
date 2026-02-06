@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { register, type RegisterReq } from '@/auth/authApi'
+import { Toast } from '@/components/Toast'
 import styles from './Auth.module.css'
 
 export function Register() {
@@ -88,7 +89,6 @@ export function Register() {
             <option value="CANDIDATE">지원자</option>
             <option value="RECRUITER">채용담당자</option>
           </select>
-          {error && <p className={styles.error}>{error}</p>}
           <button type="submit" disabled={loading} className={styles.btn}>
             {loading ? '가입 중…' : '가입'}
           </button>
@@ -97,6 +97,9 @@ export function Register() {
           이미 계정이 있으시면 <Link to="/login">로그인</Link>
         </p>
       </div>
+      {error && (
+        <Toast message={error} onClose={() => setError('')} autoDismissMs={5000} />
+      )}
     </div>
   )
 }
