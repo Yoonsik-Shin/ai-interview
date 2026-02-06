@@ -106,7 +106,10 @@ export function useAudioRecorder(
     });
   }, [interviewSessionId]);
 
+  const isMountedRef = useRef(true);
+
   const stop = useCallback(() => {
+    isMountedRef.current = false;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     sourceRef.current = null;
@@ -120,15 +123,34 @@ export function useAudioRecorder(
 
   const start = useCallback(
     async (deviceId?: string) => {
+      isMountedRef.current = true;
       setMicError(null);
       chunkIdRef.current = 0;
       bufferRef.current = [];
       totalRef.current = 0;
       try {
-        const constraints = {
-          audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+        const baseAudioConstraints: MediaTrackConstraints = {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        };
+
+        const constraints: MediaStreamConstraints = {
+          audio: deviceId
+            ? { deviceId: { exact: deviceId }, ...baseAudioConstraints }
+            : baseAudioConstraints,
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        // 비동기 호출 사이에 언마운트되거나 중지 요청이 있었다면 즉시 닫기
+        if (!isMountedRef.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+        }
         streamRef.current = stream;
 
         // 시스템 샘플 레이트 자동 감지 (기본값 사용)

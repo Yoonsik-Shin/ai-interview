@@ -7,19 +7,26 @@ import {
   type InterveneEvent,
 } from "@/hooks/useInterviewSocket";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
-import type { InterviewRole, InterviewPersonality, InterviewType } from "@/api/interview";
+import type {
+  InterviewPersona,
+  InterviewType,
+  InterviewRole,
+  InterviewPersonality,
+} from "@/api/interview";
 import styles from "./Interview.module.css";
 
 type TtsChunk = { sentenceIndex: number; audioData: string; duration?: number };
 
 type InterviewMeta = {
-  roles: InterviewRole[];
+  interviewerRoles?: InterviewRole[];
   personality: InterviewPersonality;
+  interviewerCount: number;
   type: InterviewType;
   domain: string;
   targetDurationMinutes: number;
   selectedCamera?: string;
   selectedMicrophone?: string;
+  ttsEngine?: string;
 };
 
 type AudioCategory =
@@ -53,93 +60,6 @@ export function Interview() {
   const [interviewMeta, setInterviewMeta] = useState<InterviewMeta | null>(
     null,
   );
-  // ... (unchanged code) ...
-  const [currentPersonaId, setCurrentPersonaId] = useState<string | null>(null);
-
-  // ... (sockets, useEffects) ...
-
-  // Audio Playback Helper using Personality
-  const getPersonaKey = () => interviewMeta?.personality || "COMFORTABLE";
-
-  // ... (inside callbacks)
-  // Example: 
-  // const personaKey = getPersonaKey();
-
-  // ... (render logic)
-
-    const selectedRoles = interviewMeta?.roles || ["TECH"];
-    const interviewerCount = selectedRoles.length;
-  
-    const ROLE_UI_MAP: Record<
-      InterviewRole,
-      { label: string; icon: string; color: string }
-    > = {
-      TECH: { label: "기술 면접관", icon: "💻", color: "#60a5fa" },
-      HR: { label: "인사 면접관", icon: "🤝", color: "#4ade80" },
-      LEADER: { label: "리드 면접관", icon: "👨‍💼", color: "#f59e0b" },
-    };
-
-    return (
-       // ... existing JSX ...
-       <div className={styles.infoOverlay}>
-        <div className={styles.sessionInfo}>
-          {/* ... */}
-          {/* Hide Personality Badge */}
-          {/* ... */}
-        </div>
-       </div>
-
-       {/* ... */}
-       
-          {selectedRoles.map((roleId, idx) => {
-            const roleUI = ROLE_UI_MAP[roleId] || ROLE_UI_MAP.TECH;
-
-            // Highlight Logic
-            const isThisInterviewerSpeaking =
-              isInterviewerSpeaking &&
-              (currentPersonaId === roleId || interviewerCount === 1);
-
-            return (
-              <div
-                key={`interviewer-${idx}-${roleId}`}
-                className={`${styles.interviewerTile} ${isThisInterviewerSpeaking ? styles.speaking : ""}`}
-                style={{
-                  borderColor: isThisInterviewerSpeaking
-                    ? roleUI.color
-                    : "transparent",
-                  transition: "border-color 0.2s",
-                }}
-              >
-                <div className={styles.tileHeader}>
-                  <span className={styles.tileLabel}>면접관 {idx + 1}</span>
-                  <span
-                    className={styles.roleBadge}
-                    style={{
-                      backgroundColor: roleUI.color + "22",
-                      color: roleUI.color,
-                    }}
-                  >
-                    {roleUI.label}
-                  </span>
-                </div>
-                <div className={styles.interviewerAvatar}>
-                    {/* ... avatar logic ... */}
-                      <div
-                        className={styles.avatarCircle}
-                        style={{ backgroundColor: roleUI.color }}
-                      >
-                        {roleUI.icon}
-                      </div>
-                      <div className={styles.interviewerName}>
-                        {roleUI.label}
-                      </div>
-                   {/* ... */}
-                </div>
-              </div>
-            );
-          })}
-    );
-}
   const [videoError, setVideoError] = useState("");
   const [conversationState, setConversationState] =
     useState<ConversationState>("IDLE");
@@ -151,6 +71,8 @@ export function Interview() {
   const appendStreamRef = useRef<(token: string) => void>(() => {});
   const ttsQueueRef = useRef<TtsChunk[]>([]);
   const ttsPlayingRef = useRef(false);
+  // 자기소개 → 본 면접 전환 시 Transition Audio가 끝나기 전까지 질문 TTS를 재생하지 않도록 하는 게이트
+  const suppressTtsUntilTransitionRef = useRef(false);
   const hasSpeechRef = useRef(false);
   const speechStartTsRef = useRef<number | null>(null);
   const silenceStartTsRef = useRef<number | null>(null);
@@ -181,9 +103,13 @@ export function Interview() {
     setOnStageChanged,
     setOnIntervene,
     setOnRetryAnswer,
+    setOnResumeProcessed,
     abortStream,
     socket,
   } = useInterviewSocket(id);
+
+  const streamRef = useRef<MediaStream | null>(null);
+  const isMountedRef = useRef(true);
 
   const [currentStage, setCurrentStage] = useState<InterviewStage>(
     InterviewStage.WAITING,
@@ -248,7 +174,18 @@ export function Interview() {
         setCurrentPersonaId(tokenData.currentPersonaId);
       }
     });
-  }, [setOnTranscript]);
+
+    setOnResumeProcessed((e) => {
+      console.log("Resume processed notification received:", e);
+      if (e.status === "COMPLETED") {
+        setSubtitle("이력서 분석이 완료되었습니다. 면접 질문에 반영됩니다.");
+        // 5초 뒤에 자막 제거
+        if (subtitleTimeoutRef.current)
+          clearTimeout(subtitleTimeoutRef.current);
+        subtitleTimeoutRef.current = setTimeout(() => setSubtitle(null), 5000);
+      }
+    });
+  }, [setOnTranscript, setOnResumeProcessed]);
 
   const stopRecording = useCallback(
     (durationMs?: number) => {
@@ -273,7 +210,12 @@ export function Interview() {
         console.log("Self intro too short (<30s). Aborting stream.");
         abortStream();
 
-        const persona = interviewMeta?.persona || "COMFORTABLE";
+        // 안내 음성과 기존 LLM TTS가 섞이지 않도록 현재 TTS 큐와 상태를 완전히 초기화
+        ttsQueueRef.current = [];
+        ttsPlayingRef.current = false;
+        setIsInterviewerSpeaking(false);
+
+        const persona = interviewMeta?.personality || "COMFORTABLE";
         const ttsEngine = (interviewMeta as any)?.ttsEngine || "edge";
         const audioPath = getAudioPath(
           "feedback",
@@ -284,16 +226,35 @@ export function Interview() {
 
         if (audioRef.current) {
           audioRef.current.src = audioPath;
+          // 안내 멘트 재생 동안에는 면접관이 말하는 것으로 표시
+          setIsInterviewerSpeaking(true);
+          setConversationState("SPEAKING");
+
           audioRef.current.onended = () => {
+            setIsInterviewerSpeaking(false);
+            // 안내 멘트가 끝난 뒤에만 다시 녹음 시작
             if (!manualPaused && connected) {
-              // startRecording 재호출 (비동기 처리)
               startRecording().catch(console.error);
+            } else {
+              setConversationState("IDLE");
+            }
+          };
+          audioRef.current.onerror = (err) => {
+            console.error("Retry audio play failed:", err);
+            setIsInterviewerSpeaking(false);
+            if (!manualPaused && connected) {
+              startRecording().catch(console.error);
+            } else {
+              setConversationState("IDLE");
             }
           };
           audioRef.current.play().catch((err) => {
             console.error("Retry audio play failed:", err);
+            setIsInterviewerSpeaking(false);
             if (!manualPaused && connected) {
               startRecording().catch(console.error);
+            } else {
+              setConversationState("IDLE");
             }
           });
         }
@@ -338,9 +299,11 @@ export function Interview() {
   // Video Stream Logic
   const initVideo = useCallback(async (deviceId?: string) => {
     try {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((t) => t.stop());
+      if (streamRef.current) {
+        (streamRef.current as MediaStream)
+          .getTracks()
+          .forEach((t: MediaStreamTrack) => t.stop());
+        streamRef.current = null;
       }
 
       if (deviceId === "none") {
@@ -356,6 +319,20 @@ export function Interview() {
         video: deviceId ? { deviceId: { exact: deviceId } } : true,
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // check if still mounted
+      if (!isMountedRef.current) {
+        stream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
+        return;
+      }
+
+      // RACE CONDITION PROTECTION: Stop anything that might have been set while we were awaiting
+      if (streamRef.current) {
+        (streamRef.current as MediaStream)
+          .getTracks()
+          .forEach((t: MediaStreamTrack) => t.stop());
+      }
+      streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -377,14 +354,17 @@ export function Interview() {
 
   // Initialize Devices & Stream on Mount
   useEffect(() => {
+    isMountedRef.current = true;
     const init = async () => {
       // Load devices
       try {
         const deviceList = await navigator.mediaDevices.enumerateDevices();
-        setDevices({
-          cameras: deviceList.filter((d) => d.kind === "videoinput"),
-          microphones: deviceList.filter((d) => d.kind === "audioinput"),
-        });
+        if (isMountedRef.current) {
+          setDevices({
+            cameras: deviceList.filter((d) => d.kind === "videoinput"),
+            microphones: deviceList.filter((d) => d.kind === "audioinput"),
+          });
+        }
       } catch (err) {
         console.error("Device enumerate error:", err);
       }
@@ -407,27 +387,34 @@ export function Interview() {
         }
       }
 
-      setSelectedCamera(camId);
-      setSelectedMicrophone(micId);
-
-      // Init video
-      await initVideo(camId || undefined);
+      if (isMountedRef.current) {
+        setSelectedCamera(camId);
+        setSelectedMicrophone(micId);
+        // Init video
+        await initVideo(camId || undefined);
+      }
     };
     init();
 
     socket?.on("interview:timer_sync", (payload: { timeLeft: number }) => {
       console.log("Timer sync received:", payload);
-      setTimeLeft(payload.timeLeft);
+      if (isMountedRef.current) setTimeLeft(payload.timeLeft);
     });
 
     return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        (videoRef.current.srcObject as MediaStream)
+      isMountedRef.current = false;
+      if (streamRef.current) {
+        (streamRef.current as MediaStream)
           .getTracks()
-          .forEach((t) => t.stop());
+          .forEach((t: MediaStreamTrack) => t.stop());
+        streamRef.current = null;
       }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      stop(); // useAudioRecorder의 stop 호출
     };
-  }, [id, location.state, initVideo]);
+  }, [id, location.state, initVideo, stop]);
 
   // Change Device Handlers
   const handleChangeCamera = async (deviceId: string) => {
@@ -439,6 +426,7 @@ export function Interview() {
     setSelectedMicrophone(deviceId);
     if (recording) {
       stopRecording();
+      // 약간의 지연 후 재시작하거나, 사용자가 다시 켜도록 유도 (여기서는 우선 멈춤)
     }
   };
 
@@ -529,8 +517,13 @@ export function Interview() {
   }, [id, location.state]);
 
   const playNextTts = useCallback(() => {
-    // 1. If currently playing, do nothing (wait for onended)
-    if (ttsPlayingRef.current) return;
+    // 1. If currently playing (either TTS chunk or pre-recorded audioRef), do nothing
+    if (
+      ttsPlayingRef.current ||
+      (audioRef.current && !audioRef.current.paused)
+    ) {
+      return;
+    }
 
     // 2. If Queue has items, play immediately
     if (ttsQueueRef.current.length > 0) {
@@ -589,18 +582,15 @@ export function Interview() {
     }
 
     // 3. Queue is EMPTY -> Schedule "Turn End" Debounce
-    // Do not leverage existing timeout if already set (let it tick)
     if (turnEndTimeoutRef.current) return;
 
     turnEndTimeoutRef.current = setTimeout(() => {
       turnEndTimeoutRef.current = null;
-      // Double Check: If Queue filled up during wait, playNextTts would have been called by setOnAudio
       if (ttsQueueRef.current.length > 0) {
         playNextTts();
         return;
       }
 
-      // Real Turn End Logic
       console.log("Turn Ended. Stage:", currentStageRef.current);
 
       const shouldResumeRecording = () => {
@@ -612,14 +602,12 @@ export function Interview() {
         return allowedStages.includes(currentStageRef.current);
       };
 
-      // 1. Resume Recording if needed
       if (!manualPaused && connected && shouldResumeRecording()) {
         startRecording().catch(console.error);
       } else {
-        setConversationState(connected ? "IDLE" : "IDLE");
+        setConversationState("IDLE");
       }
 
-      // 2. Trigger Stage Transition if needed (Interviewer Intro -> Self Intro Prompt)
       if (
         (currentStageRef.current === InterviewStage.INTERVIEWER_INTRO ||
           currentStageRef.current === InterviewStage.SELF_INTRO_PROMPT) &&
@@ -627,7 +615,7 @@ export function Interview() {
       ) {
         notifyStageReady(currentStageRef.current);
       }
-    }, 1500); // 1.5s Debounce for network jitter / sentence gaps
+    }, 1500);
   }, [
     connected,
     manualPaused,
@@ -641,7 +629,11 @@ export function Interview() {
     setOnAudio((e: TtsChunk) => {
       if (!e.audioData) return;
       ttsQueueRef.current.push(e);
-      playNextTts();
+      // 자기소개에서 본 면접으로 넘어가는 첫 질문은
+      // Transition Audio가 끝난 뒤에만 재생되도록 suppress 플래그로 게이트 한다.
+      if (!suppressTtsUntilTransitionRef.current) {
+        playNextTts();
+      }
     });
   }, [setOnAudio, playNextTts]);
 
@@ -729,10 +721,12 @@ export function Interview() {
       setCurrentStage(e.currentStage);
 
       if (e.currentStage === InterviewStage.GREETING) {
-        // 면접관 인사 음성 재생
+        // 면접관 인사 음성 재생 (리드 면접관 or 첫 번째 역할 기준)
         setTimeout(() => {
           const personaKey = interviewMeta?.personality || "COMFORTABLE";
-          setCurrentPersonaId(personaKey); // Highlight active persona
+          const activeRole =
+            interviewMeta?.interviewerRoles?.[0] || ("TECH" as InterviewRole);
+          setCurrentPersonaId(activeRole); // UI 상에서 말하는 면접관을 역할 기준으로 표시
           setIsInterviewerSpeaking(true); // Show speaking border
 
           const audioPath = getAudioPath(
@@ -771,11 +765,15 @@ export function Interview() {
 
         // SELF_INTRO -> IN_PROGRESS 전환 시 Transition Audio 재생 (조건부)
         if (e.previousStage === InterviewStage.SELF_INTRO) {
+          // 첫 질문 오디오가 이미 도착하더라도, Transition Audio가 끝날 때까지는 재생하지 않는다.
+          suppressTtsUntilTransitionRef.current = true;
           setIsInterviewerSpeaking(true);
           ttsPlayingRef.current = true; // 질문 TTS 대기
 
           const personaKey = interviewMeta?.personality || "COMFORTABLE";
-          setCurrentPersonaId(personaKey);
+          const activeRole =
+            interviewMeta?.interviewerRoles?.[0] || ("TECH" as InterviewRole);
+          setCurrentPersonaId(activeRole);
           const transitionPath = getAudioPath(
             "guide",
             "transition_intro",
@@ -788,12 +786,14 @@ export function Interview() {
             audioRef.current.onended = () => {
               ttsPlayingRef.current = false;
               setIsInterviewerSpeaking(false);
+              suppressTtsUntilTransitionRef.current = false;
               playNextTts(); // 대기 중이던 질문 TTS 재생
             };
             audioRef.current.onerror = () => {
               console.error("Transition audio failed");
               ttsPlayingRef.current = false;
               setIsInterviewerSpeaking(false);
+              suppressTtsUntilTransitionRef.current = false;
               playNextTts();
             };
             audioRef.current.play().catch(console.error);
@@ -804,8 +804,10 @@ export function Interview() {
         console.log("Waiting for interviewer self-introductions...");
       } else if (e.currentStage === InterviewStage.SELF_INTRO_PROMPT) {
         // 1분 자기소개 요청 음성 재생 (사전 녹음)
-        const personaKey = interviewMeta?.persona || "RANDOM";
-        setCurrentPersonaId(personaKey);
+        const personaKey = interviewMeta?.personality || "RANDOM";
+        const activeRole =
+          interviewMeta?.interviewerRoles?.[0] || ("TECH" as InterviewRole);
+        setCurrentPersonaId(activeRole);
         setIsInterviewerSpeaking(true);
 
         const engineKey =
@@ -835,8 +837,10 @@ export function Interview() {
         }
       } else if (e.currentStage === InterviewStage.LAST_QUESTION_PROMPT) {
         // 마지막 질문 안내 음성 재생 (사전 녹음)
-        const personaKey = interviewMeta?.persona || "RANDOM";
-        setCurrentPersonaId(personaKey);
+        const personaKey = interviewMeta?.personality || "RANDOM";
+        const activeRole =
+          interviewMeta?.interviewerRoles?.[0] || ("TECH" as InterviewRole);
+        setCurrentPersonaId(activeRole);
         setIsInterviewerSpeaking(true);
 
         const engineKey =
@@ -871,8 +875,10 @@ export function Interview() {
         }
       } else if (e.currentStage === InterviewStage.CLOSING_GREETING) {
         // 면접관 마무리 인사
-        const personaKey = interviewMeta?.persona || "RANDOM";
-        setCurrentPersonaId(personaKey);
+        const personaKey = interviewMeta?.personality || "RANDOM";
+        const activeRole =
+          interviewMeta?.interviewerRoles?.[0] || ("TECH" as InterviewRole);
+        setCurrentPersonaId(activeRole);
         setIsInterviewerSpeaking(true);
 
         const engineKey =
@@ -888,7 +894,10 @@ export function Interview() {
           audioRef.current.src = audioPath;
           audioRef.current.onended = () => {
             setIsInterviewerSpeaking(false);
-            // 오디오 종료 후 자동 녹음 시작 (autoRecordStages에 의해)
+            // 마무리 인사 TTS가 끝난 뒤에만 사용자 끝인사 녹음을 시작
+            if (!manualPaused && connected) {
+              startRecording();
+            }
           };
           audioRef.current.onerror = () => {
             console.error("Closing greeting audio failed");
@@ -908,7 +917,7 @@ export function Interview() {
 
       // 개입 메시지 오디오 재생
       setIsInterviewerSpeaking(true);
-      const personaKey = interviewMeta?.persona || "RANDOM";
+      const personaKey = interviewMeta?.personality || "RANDOM";
       const audioPath = getAudioPath(
         "guide",
         "intervene_intro",
@@ -986,8 +995,6 @@ export function Interview() {
       InterviewStage.SELF_INTRO,
       InterviewStage.IN_PROGRESS,
       InterviewStage.LAST_ANSWER,
-      InterviewStage.CLOSING_GREETING, // 마무리 인사 후 사용자 답변 수집
-      InterviewStage.COMPLETED, // 종료 UI에서도 마지막 인사 수집
     ];
     if (!recording && autoRecordStages.includes(currentStage)) {
       startRecording();
@@ -995,6 +1002,31 @@ export function Interview() {
   }, [connected, manualPaused, recording, startRecording, micOn, currentStage]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Sync audioRef state with ttsPlayingRef to prevent overlaps
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handlePlay = () => {
+      // ttsPlayingRef.current = true; // Pre-recorded audio already sets this in some stages, but let's be safe
+    };
+    const handleEnd = () => {
+      ttsPlayingRef.current = false;
+      setIsInterviewerSpeaking(false);
+      playNextTts();
+    };
+
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("ended", handleEnd);
+    audio.addEventListener("error", handleEnd);
+
+    return () => {
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("ended", handleEnd);
+      audio.removeEventListener("error", handleEnd);
+    };
+  }, [playNextTts]);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -1014,19 +1046,18 @@ export function Interview() {
   if (id == null)
     return <div className={styles.wrap}>유효하지 않은 인터뷰입니다.</div>;
 
-  const selectedPersonas =
-    (interviewMeta?.selectedPersonas as InterviewPersona[]) || [
-      interviewMeta?.persona || "COMFORTABLE",
-    ];
-  const interviewerCount = selectedPersonas.length;
+  const interviewerCount = interviewMeta?.interviewerCount || 1;
+  const selectedRoles = interviewMeta?.interviewerRoles || [
+    "TECH" as InterviewRole,
+  ];
 
   const PERSONA_UI_MAP: Record<
     InterviewPersona,
     { label: string; icon: string; color: string }
   > = {
     TECH: { label: "기술 면접관", icon: "💻", color: "#60a5fa" },
-    HR: { label: "인사 면접관", icon: "🤝", color: "#4ade80" },
-    MAIN: { label: "리드 면접관", icon: "👨‍💼", color: "#f59e0b" },
+    HR: { label: "인사 면접관", icon: "🤝", color: "#34d399" },
+    LEADER: { label: "리드 면접관", icon: "👨‍💼", color: "#f59e0b" },
     PRESSURE: { label: "압박 면접관", icon: "⚡", color: "#f87171" },
     COMFORTABLE: { label: "편안한 면접관", icon: "😊", color: "#10b981" },
     RANDOM: { label: "랜덤 면접관", icon: "🎲", color: "#8b5cf6" },
@@ -1042,12 +1073,25 @@ export function Interview() {
               ? "Listening..."
               : conversationState}
           </span>
-          {/* 성격 정보 노출 제거 */}
+          {interviewMeta?.personality && (
+            <>
+              <span className={styles.divider}>|</span>
+              <span className={styles.personalityBadge}>
+                분위기:{" "}
+                {
+                  PERSONA_UI_MAP[interviewMeta.personality as InterviewPersona]
+                    ?.label
+                }
+              </span>
+            </>
+          )}
           {currentPersonaId && (
             <>
               <span className={styles.divider}>|</span>
               <span className={styles.interviewerBadge}>
-                면접관: {currentPersonaId}
+                면접관:{" "}
+                {PERSONA_UI_MAP[currentPersonaId as InterviewPersona]?.label ||
+                  currentPersonaId}
               </span>
             </>
           )}
@@ -1070,7 +1114,7 @@ export function Interview() {
           )}
           <span
             className={styles.connectionDot}
-            style={{ background: connected ? "#4ade80" : "#fbbf24" }}
+            style={{ background: connected ? "#34d399" : "#fbbf24" }}
           />
         </div>
         {(error || micError) && (
@@ -1176,7 +1220,22 @@ export function Interview() {
         </div>
       )}
 
-      {/* Debug: Skip Stage Button */}
+      {/* 자기소개 타이머 테두리 효과 */}
+      {currentStage === InterviewStage.SELF_INTRO && timeLeft !== null && (
+        <div
+          className={styles.timerOverlay}
+          style={
+            {
+              "--timer-color":
+                timeLeft > 60
+                  ? "#3b82f6" // 0~30초 (기본 90초 시작 기준 역산) -> 실제 계산 로직 적용
+                  : timeLeft > 30
+                    ? "#34d399"
+                    : "#ef4444",
+            } as React.CSSProperties
+          }
+        />
+      )}
 
       {subtitle && (
         <div className={styles.subtitleOverlay}>
@@ -1211,7 +1270,7 @@ export function Interview() {
           </div>
 
           {selectedRoles.map((roleId, idx) => {
-            const roleUI = ROLE_UI_MAP[roleId] || ROLE_UI_MAP.TECH;
+            const roleUI = PERSONA_UI_MAP[roleId] || PERSONA_UI_MAP.TECH;
 
             // Highlight if backend sent this roleId OR if only 1 interviewer exists
             const isThisInterviewerSpeaking =
