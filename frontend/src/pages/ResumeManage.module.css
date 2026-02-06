@@ -1,0 +1,313 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(16, 185, 129, 0.08), transparent),
+    linear-gradient(135deg, rgba(30, 45, 58, 0.97) 0%, rgba(16, 185, 129, 0.03) 50%, rgba(30, 45, 58, 0.95) 100%);
+  color: #e2e8f0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 2rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+}
+
+.backButton {
+  background: rgba(51, 65, 85, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.2s ease, border-color 0.2s ease;
+  text-decoration: none;
+  font-family: inherit;
+  display: inline-block;
+}
+
+.backButton:hover {
+  background: rgba(71, 85, 105, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(-2px);
+}
+
+.backButton:active {
+  transform: translateX(0) scale(0.97);
+}
+
+.headerTitle {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+}
+
+.content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.uploadSection {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(8px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s ease;
+}
+
+.uploadSection:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.25);
+}
+
+.uploadSection h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.fileInputWrapper {
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease, background 0.25s ease;
+  background: rgba(51, 65, 85, 0.2);
+}
+
+.fileInputWrapper:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.06);
+  transform: scale(1.01);
+}
+
+.fileInputWrapper:active {
+  transform: scale(0.99);
+}
+
+.fileInput {
+  display: none;
+}
+
+.fileInputLabel {
+  color: #94a3b8;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.fileInputLabel span {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.fileName {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+}
+
+.uploadButton {
+  margin-top: 1.25rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.uploadButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -4px rgba(16, 185, 129, 0.45);
+}
+
+.uploadButton:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.uploadButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.listSection h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.resumeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.resumeCard {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1.125rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.resumeCard:hover {
+  background: rgba(51, 65, 85, 0.45);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(6px);
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.2);
+}
+
+.resumeCard:active {
+  transform: translateX(4px) scale(0.99);
+}
+
+.resumeCardInfo {
+  flex: 1;
+}
+
+.resumeCardTitle {
+  font-weight: 600;
+  color: #f8fafc;
+  margin-bottom: 0.25rem;
+  font-size: 0.9375rem;
+}
+
+.resumeCardMeta {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+.statusPENDING {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fcd34d;
+}
+
+.statusPROCESSING {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.statusCOMPLETED {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.statusFAILED {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3.5rem 2rem;
+  color: #64748b;
+  font-size: 0.9375rem;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.modal {
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.modalClose {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.modalClose:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.modalBody {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modalContent {
+  color: #cbd5e1;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  font-size: 0.9375rem;
+}
+
+.modalMeta {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  margin-bottom: 1.25rem;
+}

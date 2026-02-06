@@ -94,3 +94,31 @@ class ObjectStorageEngine:
         except Exception as e:
             log_json("file_upload_failed", interview_id=interview_id, error=str(e))
             return None
+
+    def generate_presigned_url(self, object_key: str, method: str = "get_object", expiration: int = 3600) -> Optional[str]:
+        """
+        Generate a presigned URL for an object
+
+        Args:
+            object_key: S3 object key
+            method: S3 client method (e.g., 'get_object' for download, 'put_object' for upload)
+            expiration: URL expiration time in seconds (default 1 hour)
+
+        Returns:
+            Presigned URL string, or None if generation failed
+        """
+        if not self.client:
+            log_json("s3_client_not_initialized")
+            return None
+
+        try:
+            url = self.client.generate_presigned_url(
+                method,
+                Params={"Bucket": self.bucket, "Key": object_key},
+                ExpiresIn=expiration,
+            )
+            log_json("presigned_url_generated", object_key=object_key)
+            return url
+        except Exception as e:
+            log_json("presigned_url_generation_failed", object_key=object_key, error=str(e))
+            return None

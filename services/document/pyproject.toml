@@ -1,0 +1,18 @@
+[project]
+name = "document-service"
+version = "0.1.0"
+description = "AI Interview Document Intelligence Service"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn>=0.30.0",
+    "python-dotenv>=1.0.1",
+    "confluent-kafka>=2.4.0",
+    "pymupdf>=1.24.0",
+    "psycopg2-binary>=2.9.9",
+    "sentence-transformers>=3.0.0",
+    "requests>=2.32.0",
+]
+
+[tool.uv]
+package = false

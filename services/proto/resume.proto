@@ -6,8 +6,39 @@ option java_package = "me.unbrdn.core.grpc";
 option java_outer_classname = "ResumeProto";
 
 service ResumeService {
-  // 이력서 업로드
+  // 이력서 업로드 URL 발급
+  rpc GetUploadUrl (GetUploadUrlRequest) returns (GetUploadUrlResponse);
+
+  // 이력서 업로드 완료 알림
+  rpc CompleteUpload (CompleteUploadRequest) returns (CompleteUploadResponse);
+
+  // 이력서 업로드 (Legacy: 직접 파일 전송)
   rpc UploadResume (UploadResumeRequest) returns (UploadResumeResponse);
+
+  // 사용자 이력서 목록 조회
+  rpc ListResumes (ListResumesRequest) returns (ListResumesResponse);
+
+  // 이력서 상세 조회
+  rpc GetResume (GetResumeRequest) returns (GetResumeResponse);
+}
+
+message GetUploadUrlRequest {
+  string userId = 1;
+  string fileName = 2;
+  string title = 3;
+}
+
+message GetUploadUrlResponse {
+  string uploadUrl = 1;
+  string resumeId = 2;
+}
+
+message CompleteUploadRequest {
+  string resumeId = 1;
+}
+
+message CompleteUploadResponse {
+  bool success = 1;
 }
 
 message UploadResumeRequest {
@@ -20,4 +51,36 @@ message UploadResumeRequest {
 
 message UploadResumeResponse {
   string resumeId = 1; // UUID
+}
+
+message ListResumesRequest {
+  string userId = 1;
+}
+
+message ListResumesResponse {
+  repeated ResumeItem resumes = 1;
+}
+
+message ResumeItem {
+  string id = 1;
+  string title = 2;
+  string status = 3;
+  string createdAt = 4;
+}
+
+message GetResumeRequest {
+  string resumeId = 1;
+  string userId = 2;
+}
+
+message GetResumeResponse {
+  ResumeDetail resume = 1;
+}
+
+message ResumeDetail {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string status = 4;
+  string createdAt = 5;
 }

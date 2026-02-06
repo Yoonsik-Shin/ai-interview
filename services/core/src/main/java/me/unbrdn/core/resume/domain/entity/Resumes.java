@@ -2,9 +2,10 @@ package me.unbrdn.core.resume.domain.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -26,17 +27,48 @@ public class Resumes extends BaseTimeEntity {
     @Column(nullable = false, length = 100)
     private String title;
 
-    @Lob // 긴 텍스트 (TEXT 타입 매핑)
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String content;
 
-    private Resumes(User user, String title, String content) {
+    @Column(name = "file_path", length = 500)
+    private String filePath;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ResumeStatus status;
+
+    @Column(name = "image_urls", columnDefinition = "JSONB")
+    private String imageUrls;
+
+    @Column(name = "vector_status", length = 20)
+    private String vectorStatus;
+
+    private Resumes(User user, String title, String filePath) {
         this.user = user;
         this.title = title;
-        this.content = content;
+        this.filePath = filePath;
+        this.status = ResumeStatus.PENDING;
     }
 
-    public static Resumes create(User user, String title, String content) {
-        return new Resumes(user, title, content);
+    public static Resumes create(User user, String title, String filePath) {
+        return new Resumes(user, title, filePath);
+    }
+
+    public void startProcessing() {
+        this.status = ResumeStatus.PROCESSING;
+    }
+
+    public void completeProcessing(String content, String imageUrls) {
+        this.content = content;
+        this.imageUrls = imageUrls;
+        this.status = ResumeStatus.COMPLETED;
+    }
+
+    public void failProcessing() {
+        this.status = ResumeStatus.FAILED;
+    }
+
+    public void updateVectorStatus(String vectorStatus) {
+        this.vectorStatus = vectorStatus;
     }
 }

@@ -16,7 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 이력서 업로드 UseCase 구현체 (Interactor)
  *
- * <p>비즈니스 로직: 1. 사용자 조회 2. 문서에서 텍스트 추출 (Apache Tika) 3. 이력서 저장
+ * <p>
+ * 비즈니스 로직: 1. 사용자 조회 2. 문서에서 텍스트 추출 (Apache Tika) 3. 이력서 저장
  */
 @Slf4j
 @Service
@@ -31,27 +32,21 @@ public class UploadResumeInteractor implements UploadResumeUseCase {
     @Transactional
     public UUID execute(UploadResumeCommand command) {
         // 1. 사용자 조회
-        User user =
-                loadUserPort
-                        .loadById(command.getUserId())
-                        .orElseThrow(
-                                () ->
-                                        new UserNotFoundException(
-                                                "사용자를 찾을 수 없습니다. ID: " + command.getUserId()));
+        User user = loadUserPort.loadUserById(command.getUserId())
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다. ID: " + command.getUserId()));
 
         // 2. 문서에서 텍스트 추출
-        String extractedText =
-                documentParser.extractText(command.getFileData(), command.getContentType());
-        log.info(
-                "이력서 텍스트 추출 완료: userId={}, textLength={}",
-                command.getUserId(),
-                extractedText.length());
+        String extractedText = documentParser.extractText(command.getFileData(), command.getContentType());
+        log.info("이력서 텍스트 추출 완료: userId={}, textLength={}", command.getUserId(), extractedText.length());
 
-        // 3. 이력서 생성 및 저장
-        Resumes resume = Resumes.create(user, command.getTitle(), extractedText);
+        // 3. 이력서 생성 및 저장 (Legacy: 직접 텍스트 추출 방식)
+        String dummyFilePath = "legacy/" + UUID.randomUUID() + "_" + command.getFileName();
+        Resumes resume = Resumes.create(user, command.getTitle(), dummyFilePath);
+        resume.completeProcessing(extractedText, "[]"); // legacy는 이미지 추출 없음
+
         Resumes savedResume = saveResumePort.save(resume);
 
-        log.info("이력서 저장 완료: resumeId={}, userId={}", savedResume.getId(), command.getUserId());
+        log.info("이력서 저장 완료(Legacy): resumeId={}, userId={}", savedResume.getId(), command.getUserId());
         return savedResume.getId();
     }
 }

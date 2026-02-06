@@ -2,23 +2,48 @@ import { Injectable, OnModuleInit, Inject } from "@nestjs/common";
 import type { ClientGrpc } from "@nestjs/microservices";
 import { firstValueFrom, type Observable } from "rxjs";
 
+export interface ResumeItem {
+    id: string;
+    title: string;
+    status: string;
+    createdAt: string;
+}
+
+export interface ResumeDetail {
+    id: string;
+    title: string;
+    content: string;
+    status: string;
+    createdAt: string;
+}
+
 interface ResumeServiceGrpc {
+    getUploadUrl(data: {
+        userId: string;
+        fileName: string;
+        title: string;
+    }): Observable<{ uploadUrl: string; resumeId: string }>;
+
+    completeUpload(data: { resumeId: string }): Observable<{ success: boolean }>;
+
     uploadResume(data: {
-        userId: number;
+        userId: string;
         title: string;
         fileData: Buffer;
         fileName: string;
         contentType: string;
-    }): Observable<{ resumeId: number }>;
+    }): Observable<{ resumeId: string }>;
+
+    listResumes(data: { userId: string }): Observable<{ resumes: ResumeItem[] }>;
+
+    getResume(data: {
+        resumeId: string;
+        userId: string;
+    }): Observable<{ resume?: ResumeDetail }>;
 }
 
 /**
  * Resumes Service
- *
- * onModuleInit 사용 이유:
- * NestJS에서 gRPC Client는 모듈이 완전히 초기화된 후에야 서비스 인스턴스를 가져올 수 있습니다.
- * ClientGrpc.getService()는 모듈 초기화 전에는 undefined를 반환하므로,
- * OnModuleInit 라이프사이클 훅을 사용하여 초기화 후에 서비스를 가져옵니다.
  */
 @Injectable()
 export class ResumesService implements OnModuleInit {
@@ -30,14 +55,32 @@ export class ResumesService implements OnModuleInit {
         this.resumeService = this.client.getService<ResumeServiceGrpc>("ResumeService");
     }
 
+    async getUploadUrl(
+        userId: string,
+        fileName: string,
+        title: string,
+    ): Promise<{ uploadUrl: string; resumeId: string }> {
+        return firstValueFrom(
+            this.resumeService.getUploadUrl({
+                userId,
+                fileName,
+                title,
+            }),
+        );
+    }
+
+    async completeUpload(resumeId: string): Promise<{ success: boolean }> {
+        return firstValueFrom(this.resumeService.completeUpload({ resumeId }));
+    }
+
     async uploadResume(
-        userId: number,
+        userId: string,
         title: string,
         fileData: Buffer,
         fileName: string,
         contentType: string,
-    ): Promise<{ resumeId: number }> {
-        const response = (await firstValueFrom(
+    ): Promise<{ resumeId: string }> {
+        const response = await firstValueFrom(
             this.resumeService.uploadResume({
                 userId,
                 title,
@@ -45,10 +88,22 @@ export class ResumesService implements OnModuleInit {
                 fileName,
                 contentType,
             }),
-        )) as { resumeId: number };
+        );
 
         return {
-            resumeId: Number(response.resumeId),
+            resumeId: response.resumeId,
         };
+    }
+
+    async listResumes(userId: string): Promise<ResumeItem[]> {
+        const response = await firstValueFrom(this.resumeService.listResumes({ userId }));
+        return response.resumes ?? [];
+    }
+
+    async getResume(resumeId: string, userId: string): Promise<ResumeDetail | null> {
+        const response = await firstValueFrom(
+            this.resumeService.getResume({ resumeId, userId }),
+        );
+        return response.resume ?? null;
     }
 }

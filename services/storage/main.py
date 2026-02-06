@@ -53,6 +53,42 @@ app = FastAPI(lifespan=lifespan)
 storage_service = None
 
 
+@app.get("/health")
+def health():
+    """Liveness probe: process is alive."""
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+def health_ready():
+    """Readiness probe: service and worker are ready to accept traffic."""
+    return {"status": "ready"}
+
+
+from pydantic import BaseModel
+
+class PresignedUrlRequest(BaseModel):
+    object_key: str
+    method: str = "put_object"  # default to upload for existing clients
+    expiration_sec: int = 3600
+
+@app.post("/presigned-url")
+def generate_presigned_url(request: PresignedUrlRequest):
+    """Generate a presigned URL for upload or download"""
+    if not storage_service or not storage_service.storage_engine:
+        return {"error": "storage engine not initialized"}, 503
+    
+    url = storage_service.storage_engine.generate_presigned_url(
+        request.object_key, 
+        method=request.method,
+        expiration=request.expiration_sec
+    )
+    
+    if url:
+        return {"url": url}
+    return {"error": "failed to generate URL"}, 500
+
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
