@@ -1,0 +1,132 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.modal {
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(24px);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.header {
+  padding: 1.5rem 1.5rem 0.5rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.body {
+  padding: 0.5rem 1.5rem 1.5rem;
+}
+
+.message {
+  color: #cbd5e1;
+  line-height: 1.6;
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+.footer {
+  padding: 1.25rem 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.cancelButton {
+  background: rgba(51, 65, 85, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  padding: 0.6rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.cancelButton:hover {
+  background: rgba(71, 85, 105, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.confirmButton {
+  border: none;
+  padding: 0.6rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  color: white;
+}
+
+.primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.3);
+}
+
+.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -2px rgba(16, 185, 129, 0.4);
+}
+
+.danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px -2px rgba(239, 68, 68, 0.3);
+}
+
+.danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -2px rgba(239, 68, 68, 0.4);
+}
+
+.confirmButton:active {
+  transform: translateY(0) scale(0.98);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
