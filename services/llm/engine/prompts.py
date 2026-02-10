@@ -41,12 +41,12 @@ Output Fields:
    - False if understanding is too low and topic needs changing.
 
 Example Output:
-{
+{{
   "understanding_score": 75,
   "is_off_topic": false,
   "suggested_difficulty_adjustment": 0,
   "follow_up_needed": true
-}
+}}
 """
 
 ANALYZER_PROMPT = ChatPromptTemplate.from_messages([
@@ -190,3 +190,25 @@ STAGE_INSTRUCTIONS = {
     # "오늘 고생하셨습니다. 좋은 결과 있으시길 바랍니다." 같은 멘트로 마무리하세요.
     "LAST_ANSWER": "Current Stage: 'Candidate's Last Answer'. You have heard the candidate's final remarks or questions. Provide a warm response to their last statement and wrap up the entire interview session decorously. **DO NOT ASK ANY MORE QUESTIONS.** End with a polite closing like '오늘 고생하셨습니다. 좋은 결과 있으시길 바랍니다.'."
 }
+
+# ------------------------------------------------------------------------------
+# 4. Resume Classification Prompt (이력서 판별)
+# ==============================================================================
+RESUME_CLASSIFICATION_SYSTEM_PROMPT = """You are a 'Resume Validator'. 
+Determine if the provided text is a 'Resume'.
+To be considered a resume, it must contain at least one of the following: 
+Education, Work Experience, Project Experience, or Skills. 
+Personal information (Name, Email, Phone, etc.) may be masked, so judge based on the overall structure and keywords of the document.
+
+You MUST output the result ONLY in the following JSON format:
+{{
+  "is_resume": true or false,
+  "reason": "A single sentence reason for the decision in Korean",
+  "score": 0.95
+}}
+"""
+
+RESUME_CLASSIFICATION_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", RESUME_CLASSIFICATION_SYSTEM_PROMPT),
+    ("user", "Text to classify:\n{text}")
+])

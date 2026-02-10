@@ -1,6 +1,7 @@
 from typing import Optional
 from io import BytesIO
 from datetime import datetime
+from urllib.parse import urlparse, urlunparse
 import boto3
 from botocore.client import Config
 
@@ -17,24 +18,44 @@ class ObjectStorageEngine:
         secret_key: str,
         bucket: str,
         region: str = "ap-seoul-1",
+        public_endpoint: str = "",
     ):
         self.bucket = bucket
         self.endpoint = endpoint
+        self.public_endpoint = public_endpoint
         self.client = None
+        self.presigned_client = None
 
         if endpoint and access_key and secret_key:
             try:
+                s3_config = Config(
+                    signature_version="s3v4",
+                    s3={'addressing_style': 'path'}
+                )
+                
                 self.client = boto3.client(
                     "s3",
                     endpoint_url=endpoint,
                     aws_access_key_id=access_key,
                     aws_secret_access_key=secret_key,
                     region_name=region,
-                    config=Config(signature_version="s3v4"),
+                    config=s3_config,
                 )
-                # Verify bucket exists
+                
+                # Dedicated client for presigned URLs uses the public endpoint
+                # to ensure the Host header in the signature matches external access.
+                self.presigned_client = boto3.client(
+                    "s3",
+                    endpoint_url=public_endpoint if public_endpoint else endpoint,
+                    aws_access_key_id=access_key,
+                    aws_secret_access_key=secret_key,
+                    region_name=region,
+                    config=s3_config,
+                )
+                
+                # Verify bucket exists (using internal client)
                 self.client.head_bucket(Bucket=bucket)
-                log_json("s3_connected", bucket=bucket, endpoint=endpoint)
+                log_json("s3_connected", bucket=bucket, endpoint=endpoint, public_endpoint=public_endpoint)
             except Exception as e:
                 log_json("s3_connection_failed", error=str(e), bucket=bucket)
                 raise
@@ -95,7 +116,7 @@ class ObjectStorageEngine:
             log_json("file_upload_failed", interview_id=interview_id, error=str(e))
             return None
 
-    def generate_presigned_url(self, object_key: str, method: str = "get_object", expiration: int = 3600) -> Optional[str]:
+    def generate_presigned_url(self, object_key: str, method: str = "get_object", expiration: int = 3600, internal_access: bool = False) -> Optional[str]:
         """
         Generate a presigned URL for an object
 
@@ -103,6 +124,7 @@ class ObjectStorageEngine:
             object_key: S3 object key
             method: S3 client method (e.g., 'get_object' for download, 'put_object' for upload)
             expiration: URL expiration time in seconds (default 1 hour)
+            internal_access: If True, returns a URL usable within the cluster (minio.unbrdn...), otherwise public (minio.localhost)
 
         Returns:
             Presigned URL string, or None if generation failed
@@ -112,12 +134,22 @@ class ObjectStorageEngine:
             return None
 
         try:
-            url = self.client.generate_presigned_url(
+            # Select client based on access type
+            # internal_access=True -> Use self.client (Internal Endpoint)
+            # internal_access=False -> Use self.presigned_client (Public Endpoint)
+            # Note: self.presigned_client might be None if public_endpoint wasn't provided, fallback to self.client
+            
+            client_to_use = self.client
+            if not internal_access and self.presigned_client:
+                client_to_use = self.presigned_client
+            
+            url = client_to_use.generate_presigned_url(
                 method,
                 Params={"Bucket": self.bucket, "Key": object_key},
                 ExpiresIn=expiration,
             )
-            log_json("presigned_url_generated", object_key=object_key)
+            
+            log_json("presigned_url_generated", object_key=object_key, url=url, internal=internal_access)
             return url
         except Exception as e:
             log_json("presigned_url_generation_failed", object_key=object_key, error=str(e))

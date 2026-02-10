@@ -19,9 +19,10 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
         from config import OPENAI_API_KEY
         from engine.graph import create_interview_graph
         from engine.nodes import InterviewNodes
-        from langchain_openai import ChatOpenAI
+        from langchain_openai import ChatOpenAI, OpenAIEmbeddings
         
         self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY, streaming=True)
+        self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=OPENAI_API_KEY)
         self.graph = create_interview_graph(openai_api_key=OPENAI_API_KEY)
         # Helper to get prompt messages
         self.nodes = InterviewNodes(self.llm)
@@ -48,12 +49,7 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                 else:
                     history.append(AIMessage(content=h.content))
 
-            # Map Proto PersonaProfile to Dict or Object
-            # We use the repeated field available_personas
-            # Deprecated: available = []
-            
             # Map Proto Roles (Enum) to Strings
-            # request.available_roles is a list of Integers (Enum values)
             roles = []
             for r in request.available_roles:
                 role_name = llm_pb2.InterviewRoleProto.Name(r)
@@ -70,9 +66,9 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             state = {
                 "history": history,
                 "user_input": request.user_text,
-                "available_roles": roles, # New
-                "personality": personality, # New
-                "input_role": getattr(request, "input_role", "user"), # New
+                "available_roles": roles,
+                "personality": personality,
+                "input_role": getattr(request, "input_role", "user"),
                 "current_difficulty": request.current_difficulty_level or 3,
                 "remaining_time": request.remaining_time_seconds,
                 "total_duration": request.total_duration_seconds,
@@ -85,7 +81,6 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             }
 
             # 2. Run Graph (Decision Making)
-            # invoke() is sync, blocks until decision is made
             log_json("llm_graph_invoke_start")
             final_state = self.graph.invoke(state)
             log_json("llm_graph_invoke_end", 
@@ -101,11 +96,6 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             reduce_time = final_state.get("reduce_total_time", False)
             is_ending = final_state.get("is_ending", False)
 
-            # Send Thinking/Meta info (Optional, client might expect 'thinking' field)
-            # We can skip specific "thinking" text logic for now or restore it if needed.
-            # Let's send one meta chunk to ensure client gets the update even if stream fails later?
-            # Or just piggyback on first token.
-            
             log_json("llm_stream_start")
             first_chunk = True
             accumulated = ""
@@ -116,15 +106,8 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                     continue
                     
                 accumulated += token
-                
-                # Check sentence end for TTS optimized buffering (Client/Core handles this, 
-                # but we need to mark is_sentence_end for Core's buffering logic)
                 is_sentence_end = (token in [".", "?", "!", "\n"] or 
                                   accumulated.strip().endswith((".", "?", "!"))) 
-                # Simple check, Core has robust logic too? 
-                # Ref: Core's logic relies on LLM flagging it? 
-                # Previous `grpc_handler` used `engine.is_sentence_end`. 
-                # We can implement a simple one here.
                 
                 yield llm_pb2.TokenChunk(
                     token=token,
@@ -155,6 +138,63 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"{type(e).__name__}: {str(e)}")
             raise e
+
+    def ClassifyResume(self, request, context):
+        """이력서 여부 판별 (gpt-4o-mini 사용)"""
+        try:
+            log_json("llm_classify_resume_start", textLength=len(request.text))
+            
+            from engine.prompts import RESUME_CLASSIFICATION_PROMPT
+            from langchain_core.output_parsers import JsonOutputParser
+            
+            chain = RESUME_CLASSIFICATION_PROMPT | self.llm | JsonOutputParser()
+            
+            # gpt-4o-mini를 사용하여 빠르게 판별
+            result = chain.invoke({"text": request.text})
+            
+            is_resume = result.get("is_resume", False)
+            raw_score = result.get("score")
+            
+            # 점수 로직 보정: is_resume가 False이면 점수를 강제로 낮춤
+            if is_resume:
+                score = raw_score if raw_score is not None else 0.95
+            else:
+                score = 0.1 # 이력서가 아니면 낮은 점수 부여
+
+            log_json("llm_classify_resume_completed", 
+                     is_resume=is_resume, 
+                     reason=result.get("reason"),
+                     score=score)
+            
+            return llm_pb2.ClassifyResumeResponse(
+                is_resume=is_resume,
+                reason=result.get("reason", ""),
+                score=float(score)
+            )
+            
+        except Exception as e:
+            log_json("llm_classify_error", error=str(e))
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return llm_pb2.ClassifyResumeResponse(is_resume=False, reason="서버 오류 발생")
+
+    def GetEmbedding(self, request, context):
+        """텍스트 벡터 임베딩 생성"""
+        try:
+            log_json("llm_get_embedding_start", textLength=len(request.text))
+            
+            # 단일 텍스트 임베딩 생성
+            vector = self.embeddings.embed_query(request.text)
+            
+            log_json("llm_get_embedding_completed", dimension=len(vector))
+            
+            return llm_pb2.GetEmbeddingResponse(embedding=vector)
+            
+        except Exception as e:
+            log_json("llm_embedding_error", error=str(e))
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return llm_pb2.GetEmbeddingResponse(embedding=[])
 
 
 def serve_grpc():

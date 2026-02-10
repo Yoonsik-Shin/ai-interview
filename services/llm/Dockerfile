@@ -14,6 +14,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 RUN useradd -m -u 1000 appuser
 
 ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app:/app/generated"
 
 WORKDIR /app
 

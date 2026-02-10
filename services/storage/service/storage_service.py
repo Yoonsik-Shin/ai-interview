@@ -39,6 +39,7 @@ class StorageService:
             secret_key=config.OBJECT_STORAGE_SECRET_KEY,
             bucket=config.OBJECT_STORAGE_BUCKET,
             region=config.OBJECT_STORAGE_REGION,
+            public_endpoint=config.OBJECT_STORAGE_PUBLIC_ENDPOINT,
         )
 
         log_json("storage_service_initialized")
