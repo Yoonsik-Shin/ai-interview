@@ -23,6 +23,7 @@ data:
 
   # Object Storage (S3/MinIO) - 로컬 환경
   OBJECT_STORAGE_ENDPOINT: "http://minio.unbrdn.svc.cluster.local:9000"
+  OBJECT_STORAGE_PUBLIC_ENDPOINT: "http://minio.localhost"
   OBJECT_STORAGE_BUCKET: "interview-archives"
   OBJECT_STORAGE_REGION: "us-east-1"
 

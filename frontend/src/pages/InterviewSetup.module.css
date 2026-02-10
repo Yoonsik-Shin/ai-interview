@@ -317,33 +317,6 @@
   color: #10b981;
 }
 
-.uploadBox {
-  border: 2px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 2.5rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.01);
-  text-align: center;
-}
-
-.uploadIcon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
-
-.fileLabel {
-  cursor: pointer;
-}
-
-.fileLabel:hover .uploadBox {
-  border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.04);
-}
-
 .resumesLoading {
   text-align: center;
   padding: 2rem;
@@ -379,14 +352,14 @@
 
 @media (min-width: 640px) {
   /* 도메인, 면접타입 등 짧은 입력창이 있는 필드는 가로 정렬 */
-  .field:has(input),
+  .field:has(input):not(.durationField),
   .field:has(select) {
     flex-direction: row;
     align-items: center;
     gap: 2rem;
   }
 
-  .field:has(input) label,
+  .field:has(input):not(.durationField) label,
   .field:has(select) label {
     min-width: 140px;
   }
@@ -408,44 +381,6 @@
   outline: none;
   border-color: rgba(16, 185, 129, 0.6);
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
-}
-
-/* File Input Custom Design */
-.fileInputWrapper {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  width: 100%;
-}
-
-.fileInput {
-  display: none; /* 실제 input은 숨김 */
-}
-
-.customFileBtn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.6rem 1rem;
-  border-radius: 10px;
-  color: #f8fafc;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.customFileBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.fileName {
-  font-size: 0.875rem;
-  color: #64748b;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .personaGrid {
@@ -559,4 +494,219 @@
   .formSection {
     padding: 1.5rem;
   }
+}
+
+/* 상세보기 모달 스타일 */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.modalContent {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 45, 58, 0.98) 0%,
+    rgba(20, 40, 50, 0.98) 100%
+  );
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 24px;
+  width: 90vw;
+  max-width: 1200px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.15);
+  background: rgba(30, 45, 58, 0.95);
+}
+
+.modalHeader h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.modalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(30, 45, 58, 0.95) 0%,
+    rgba(20, 40, 50, 0.95) 100%
+  );
+}
+
+.pdfViewerContainer {
+  padding: 2rem;
+  min-height: 100%;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  color: #94a3b8;
+  font-size: 1rem;
+}
+
+.resumeCardClickable {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  cursor: pointer;
+}
+
+.viewDetailBtn {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.viewDetailBtn:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-1px);
+}
+
+.durationSelector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 1rem 1.5rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.durationBtns {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.durationBtn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 55px;
+}
+
+.durationBtn:hover {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.durationDisplay {
+  min-width: 90px;
+  height: 60px; /* Reduced fixed height */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.durationValue {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 8px;
+  transition: background 0.2s;
+  height: 100%;
+  width: 100%;
+}
+
+.durationValue:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.durationValue span {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #10b981;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.durationValue small {
+  font-size: 0.8125rem;
+  color: #64748b;
+  font-weight: 700;
+  margin-top: 0.15rem;
+}
+
+.durationInput {
+  width: 100%;
+  max-width: 90px;
+  height: 45px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  color: #10b981;
+  text-align: center;
+  font-size: 1.75rem;
+  font-weight: 800;
+  padding: 0;
+  outline: none;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+.durationInput::-webkit-inner-spin-button,
+.durationInput::-webkit-outer-spin-button {
+  display: none;
 }

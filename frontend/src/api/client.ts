@@ -6,12 +6,17 @@ export async function api<T>(
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${BASE}${path}`;
   const token = localStorage.getItem("accessToken");
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>),
-  };
-  if (token)
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+
+  const headers = new Headers(options.headers);
+
+  // body가 FormData가 아닐 때만 기본 Content-Type 설정
+  if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
 
   let res = await fetch(url, { ...options, headers, credentials: "include" });
 
@@ -37,8 +42,7 @@ export async function api<T>(
           localStorage.setItem("accessToken", newAccessToken);
 
           // 새 토큰으로 헤더 업데이트 후 재요청
-          (headers as Record<string, string>)["Authorization"] =
-            `Bearer ${newAccessToken}`;
+          headers.set("Authorization", `Bearer ${newAccessToken}`);
           res = await fetch(url, {
             ...options,
             headers,

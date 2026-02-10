@@ -1,5 +1,49 @@
 # Changelog
 
+## [2026-02-09]
+
+### 추가
+
+- **Postgres 포트포워딩 자동화**:
+  - `scripts/deploy-local.sh`: PostgreSQL 배포 후 자동으로 5432 포트포워딩을 백그라운드에서 실행하는 로직 추가.
+  - 중복 실행 방지 로직 및 실행 결과 로그(`/tmp/postgres-pf.log`) 기록 기능 포함.
+
+- **컨텍스트 인식 RAG 청킹 (Context-Aware Chunking)**:
+  - **Document**: 이력서 추출 시 페이지 번호를 유지하도록 `ExtractionEngine` 고도화.
+  - **Document**: 텍스트 청킹 시 페이지 번호(`pageNum`)와 청크 유형(`chunkType`: TEXT/IMAGE) 메타데이터 포함.
+  - **Core**: `DocumentProcessedEvent` DTO에 `pageNum`, `chunkType` 필드 추가 및 유연한 역직렬화(`@JsonIgnoreProperties`) 적용.
+  - **Database**: `vector_store` 테이블의 메타데이터에 페이지 번호를 포함하여 저장하도록 개선.
+
+### 수정
+
+- **임베딩 유사도 불일치 해결 (Logic Sync)**:
+  - 프론트엔드(`resume-validator.ts`)와 백엔드(`text_processor.py`) 간의 텍스트 정규화 및 마스킹 로직 완전 동기화.
+  - 전화번호 마스킹 시 공백, 마침표 등 다양한 구분자 지원 확대.
+  - 모든 연속 공백(줄바꿈 포함)을 단일 공백으로 치환하는 정규화 규칙 통일.
+- **의사결정 기록**: 텍스트 처리 로직 파편화에 따른 아키텍처 부채를 `design-decisions.md`에 공식 기록하고 향후 개선 방향 제시.
+
+## [2026-02-07]
+
+### 추가
+
+- **하이브리드 벡터 검색 및 지능형 중복 방지 시스템**:
+  - **Core**: `SHA-256` 해시(Exact Match) 및 `Vector Similarity`(Semantic Match) 이중 검증 파이프라인 구축
+  - **Hybrid DB**: 로컬(`pgvector`) 및 운영(`Oracle AI Search`) 네이티브 쿼리 분기 처리
+  - **LLM**: `text-embedding-3-small` 모델 연동을 위한 gRPC 임베딩 생성 기능 추가
+- **프론트엔드 개인정보 보호 및 유효성 검사**:
+  - **PII Masking**: 이메일, 전화번호, 주소 등 민감 정보 자동 마스킹 도구 구현
+  - **Client-side Parsing**: 브라우저 내 PDF/Word 텍스트 추출 기능 추가 (`pdfjs-dist`, `mammoth`)
+  - **UI/UX**: 중복/유사 이력서 업로드 시 경고 안내 및 업로드 전 LLM 기반 내용 유효성 검사 단계 통합
+
+### 수정
+
+- Core 서비스 내 gRPC 생성 코드 중복 문제 해결 및 Spotless 포맷팅 적용
+- API 가이드 문서(`resume_vector_architecture.md`) 최신 구현 내용으로 업데이트
+- **Storage 서비스 gRPC 전환**:
+  - `storage.proto` 정의 및 Python gRPC 서버 구현 (FastAPI 제거)
+  - Core 서비스 내 `StorageGrpcAdapter` 도입 및 `StorageRestAdapter` 제거
+  - 오디오 업로드 워커와 gRPC 서버의 병렬 실행 구조 확립
+
 ## [2026-02-06]
 
 ### 수정

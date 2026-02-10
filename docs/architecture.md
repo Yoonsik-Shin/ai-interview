@@ -12,7 +12,7 @@
 
 - 패턴: Redis 기반 스트리밍(Queue/Streams/Pub/Sub/Cache) + gRPC 스트리밍 + Socket 실시간 전달
 - 서비스: Socket, STT, Core, LLM, TTS, Redis Cluster, PostgreSQL, Storage/MinIO
-- 인터페이스: Socket↔Client, Socket→STT gRPC streaming, Core↔LLM gRPC streaming, LLM↔Inference gRPC, Redis, PostgreSQL, MinIO
+- 인터페이스: Socket↔Client, Socket→STT gRPC streaming, Core↔LLM gRPC streaming, Core→Storage gRPC, LLM↔Inference gRPC, Redis, PostgreSQL, MinIO
 - STT 결과: Redis Streams와 Redis Pub/Sub에 publish하여 실시간 자막 제공
 - Core/LLM 처리: 스트림 즉시 Pub/Sub, Redis Cache APPEND 백업, 문장 단위 Pub/Sub, 완료 시 PostgreSQL 저장; TTS 결과는 Pub/Sub→Socket으로 전달
 

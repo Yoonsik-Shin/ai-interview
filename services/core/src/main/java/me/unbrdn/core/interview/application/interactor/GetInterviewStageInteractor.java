@@ -12,17 +12,35 @@ import org.springframework.stereotype.Service;
 public class GetInterviewStageInteractor implements GetInterviewStageUseCase {
 
     private final InterviewPort interviewPort;
-    private final me.unbrdn.core.interview.application.port.out.ManageSessionStatePort sessionStatePort;
+    private final me.unbrdn.core.interview.application.port.out.ManageSessionStatePort
+            sessionStatePort;
 
     @Override
     public InterviewStageResult execute(GetInterviewStageQuery query) {
-        InterviewSession session = interviewPort.loadById(query.interviewSessionId()).orElseThrow(
-                () -> new IllegalArgumentException("Interview session not found: " + query.interviewSessionId()));
+        InterviewSession session =
+                interviewPort
+                        .loadById(query.interviewSessionId())
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Interview session not found: "
+                                                        + query.interviewSessionId()));
 
-        Integer retryCount = sessionStatePort.getState(query.interviewSessionId().toString())
-                .map(me.unbrdn.core.interview.domain.model.InterviewSessionState::getSelfIntroRetryCount).orElse(0);
+        Integer retryCount =
+                sessionStatePort
+                        .getState(query.interviewSessionId().toString())
+                        .map(
+                                me.unbrdn.core.interview.domain.model.InterviewSessionState
+                                        ::getSelfIntroRetryCount)
+                        .orElse(0);
 
-        return new InterviewStageResult(session.getStage(), session.getSelfIntroElapsedSeconds(), session.getRoles(),
-                session.getPersonality(), session.getInterviewerCount(), session.getDomain(), retryCount);
+        return new InterviewStageResult(
+                session.getStage(),
+                session.getSelfIntroElapsedSeconds(),
+                session.getRoles(),
+                session.getPersonality(),
+                session.getInterviewerCount(),
+                session.getDomain(),
+                retryCount);
     }
 }

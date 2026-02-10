@@ -1,11 +1,17 @@
 import os
+import sys
 import threading
 from contextlib import asynccontextmanager
+
+# Add generated directory to sys.path to fix gRPC internal import issues
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'generated')))
+
 from fastapi import FastAPI
 import uvicorn
 from dotenv import load_dotenv
 
 from service.document_service import DocumentService
+from service.grpc_server import serve_grpc
 from utils.log_format import log_json
 
 load_dotenv()
@@ -13,7 +19,7 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events"""
-    global document_service
+    global document_service, grpc_server
     log_json("document_service_startup")
     
     try:
@@ -24,7 +30,11 @@ async def lifespan(app: FastAPI):
         worker_thread = threading.Thread(target=document_service.start, daemon=True)
         worker_thread.start()
 
-        log_json("document_service_ready")
+        # Start gRPC server in background thread
+        grpc_port = int(os.getenv("GRPC_PORT", "50053"))
+        grpc_server = serve_grpc(grpc_port)
+        
+        log_json("document_service_ready", grpc_port=grpc_port)
     except Exception as e:
         log_json("document_service_startup_failed", error=str(e))
         raise
@@ -35,9 +45,12 @@ async def lifespan(app: FastAPI):
     log_json("document_service_shutdown")
     if document_service:
         document_service.stop()
+    if grpc_server:
+        grpc_server.stop(grace=5)
 
 app = FastAPI(lifespan=lifespan)
 document_service = None
+grpc_server = None
 
 @app.get("/health")
 def health():

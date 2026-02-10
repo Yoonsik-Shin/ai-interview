@@ -43,7 +43,8 @@ public class InterviewReports extends BaseTimeEntity {
     @Column(name = "detail_metrics", columnDefinition = "JSON")
     private Map<String, Object> detailMetrics;
 
-    private InterviewReports(InterviewSession interviewSession, Integer totalScore, PassFailStatus passFailStatus) {
+    private InterviewReports(
+            InterviewSession interviewSession, Integer totalScore, PassFailStatus passFailStatus) {
         this.interview = interviewSession;
         this.totalScore = totalScore;
         this.passFailStatus = passFailStatus;
@@ -53,8 +54,8 @@ public class InterviewReports extends BaseTimeEntity {
         return new InterviewReports(interviewSession, totalScore, PassFailStatus.HOLD);
     }
 
-    public static InterviewReports create(InterviewSession interviewSession, Integer totalScore,
-            PassFailStatus passFailStatus) {
+    public static InterviewReports create(
+            InterviewSession interviewSession, Integer totalScore, PassFailStatus passFailStatus) {
         return new InterviewReports(interviewSession, totalScore, passFailStatus);
     }
 }

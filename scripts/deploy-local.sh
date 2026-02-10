@@ -276,7 +276,7 @@ show_pod_status() {
     local error_count=0  # 연속 에러 카운트
     
     while [ $elapsed -lt $timeout ]; do
-        local total_pods=$(kubectl get pods -n $namespace -l $label --no-headers 2>/dev/null | wc -l | tr -d ' ')
+        local total_pods=$(kubectl get pods -n $namespace -l $label --no-headers 2>/dev/null | grep -vE "Completed|Succeeded" | wc -l | tr -d ' ')
         local running_pods=$(kubectl get pods -n $namespace -l $label --no-headers 2>/dev/null | grep "Running" | wc -l | tr -d ' ')
         local ready_pods=$(kubectl get pods -n $namespace -l $label --no-headers 2>/dev/null | awk '$2 ~ /^[0-9]+\/[0-9]+$/ {split($2,a,"/"); if(a[1]==a[2]) print}' | wc -l | tr -d ' ')
         
@@ -649,6 +649,22 @@ stop_spinner "success" "PostgreSQL 매니페스트 적용 완료"
 show_pod_status "${NAMESPACE}" "app=postgres" 60 "PostgreSQL" || {
     log_warning "로그 확인: kubectl logs -l app=postgres -n ${NAMESPACE}"
 }
+
+# Step 2.5: Postgres Port Forwarding (Daemon)
+if ! ps aux | grep -v grep | grep -q "port-forward svc/postgres 5432:5432"; then
+    log_task "Postgres 포트포워딩 시작 중 (5432:5432)..."
+    # 백그라운드 실행, 로그는 /tmp에 저장
+    nohup kubectl port-forward svc/postgres 5432:5432 -n ${NAMESPACE} > /tmp/postgres-pf.log 2>&1 &
+    # 약간의 대기 후 성공 여부 확인 (기본적인 프로세스 실행 확인)
+    sleep 1
+    if ps aux | grep -v grep | grep -q "port-forward svc/postgres 5432:5432"; then
+        log_success "Postgres 포트포워딩 백그라운드 실행 완료"
+    else
+        log_error "Postgres 포트포워딩 실행 실패 (/tmp/postgres-pf.log 확인)"
+    fi
+else
+    log_success "Postgres 포트포워딩 이미 실행 중"
+fi
 
 # Step 3: Redis Sentinel 배포 (Bitnami Helm Chart)
 # log_task "Redis Sentinel 배포 중 (Helm)..."
@@ -1278,7 +1294,7 @@ INTERVAL=3
 
 while [ $ELAPSED -lt $TIMEOUT ]; do
     # 전체 Pod 개수
-    TOTAL_PODS=$(kubectl get pods -n ${NAMESPACE} --no-headers 2>/dev/null | wc -l | tr -d ' ')
+    TOTAL_PODS=$(kubectl get pods -n ${NAMESPACE} --no-headers 2>/dev/null | grep -vE "Completed|Succeeded" | wc -l | tr -d ' ')
     RUNNING_PODS=$(kubectl get pods -n ${NAMESPACE} --no-headers 2>/dev/null | grep "Running" | wc -l | tr -d ' ')
     READY_PODS=$(kubectl get pods -n ${NAMESPACE} --no-headers 2>/dev/null | awk '$2 ~ /^[0-9]+\/[0-9]+$/ {split($2,a,"/"); if(a[1]==a[2]) print}' | wc -l | tr -d ' ')
     
@@ -1358,7 +1374,7 @@ echo ""
 
 # Kafka Pod 상태
 KAFKA_RUNNING=$(kubectl get pods -n ${KAFKA_NAMESPACE} --no-headers 2>/dev/null | grep "Running" | wc -l | tr -d ' ')
-KAFKA_TOTAL=$(kubectl get pods -n ${KAFKA_NAMESPACE} --no-headers 2>/dev/null | wc -l | tr -d ' ')
+KAFKA_TOTAL=$(kubectl get pods -n ${KAFKA_NAMESPACE} --no-headers 2>/dev/null | grep -vE "Completed|Succeeded" | wc -l | tr -d ' ')
 echo -e "${CYAN}📦 Kafka Pods: ${KAFKA_RUNNING}/${KAFKA_TOTAL} Running${NC}"
 kubectl get pods -n ${KAFKA_NAMESPACE} 2>/dev/null | head -10
 echo ""
@@ -1369,7 +1385,7 @@ echo ""
 
 # Monitoring Pod 상태
 MONITORING_RUNNING=$(kubectl get pods -n ${MONITORING_NAMESPACE} --no-headers 2>/dev/null | grep "Running" | wc -l | tr -d ' ')
-MONITORING_TOTAL=$(kubectl get pods -n ${MONITORING_NAMESPACE} --no-headers 2>/dev/null | wc -l | tr -d ' ')
+MONITORING_TOTAL=$(kubectl get pods -n ${MONITORING_NAMESPACE} --no-headers 2>/dev/null | grep -vE "Completed|Succeeded" | wc -l | tr -d ' ')
 echo -e "${CYAN}📦 Monitoring Pods: ${MONITORING_RUNNING}/${MONITORING_TOTAL} Running${NC}"
 kubectl get pods -n ${MONITORING_NAMESPACE} 2>/dev/null | head -10
 echo ""

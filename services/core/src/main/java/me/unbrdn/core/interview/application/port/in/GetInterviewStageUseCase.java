@@ -12,11 +12,15 @@ public interface GetInterviewStageUseCase {
     InterviewStageResult execute(GetInterviewStageQuery query);
 
     /** Query DTO */
-    record GetInterviewStageQuery(UUID interviewSessionId) {
-    }
+    record GetInterviewStageQuery(UUID interviewSessionId) {}
 
     /** Result DTO */
-    record InterviewStageResult(InterviewStage stage, Long selfIntroElapsedSeconds, List<InterviewRole> roles,
-            InterviewPersonality personality, Integer interviewerCount, String domain, Integer selfIntroRetryCount) {
-    }
+    record InterviewStageResult(
+            InterviewStage stage,
+            Long selfIntroElapsedSeconds,
+            List<InterviewRole> roles,
+            InterviewPersonality personality,
+            Integer interviewerCount,
+            String domain,
+            Integer selfIntroRetryCount) {}
 }

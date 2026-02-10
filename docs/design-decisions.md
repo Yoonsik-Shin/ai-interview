@@ -68,3 +68,95 @@ Core 서비스 기동 시 Flyway 마이그레이션이 실행되지 않아 Hiber
 
 - **Pros**: `document` 서비스가 완벽하게 Stateless하고 시크릿에 독립적인(Worker) 구조로 진화. 보안성 및 유지보수성 대폭 향상.
 - **Cons**: Kafka 메시지 크기가 다소 증가(URL 포함)하고, 스토리지 접근 시마다 Presigned URL 발급 절차를 거쳐야 함.
+
+---
+
+## 2026-02-07: Hybrid Vector Search & Client-side PII Masking
+
+### Context
+
+이력서 업로드 시 중복 데이터를 방지하고 보안을 유지하면서 유효성을 검사해야 함. 로컬 개발 환경과 실제 운영 환경의 DB 인터페이스가 다르며, LLM 전송 시 개인정보 노출 위험이 있음.
+
+### Decisions
+
+1.  **Hybrid Vector Search Implementation**:
+    - **Local**: `pgvector`를 사용하여 가벼운 벡터 연산 수행.
+    - **Prod**: `Oracle AI Search (Vector Distance)`를 사용하여 대용량 데이터 환경에 최적화.
+    - `SearchResumeByVectorPort` 인터페이스를 통해 인프라를 추상화함.
+2.  **SHA-256 File Hashing**:
+    - 벡터 검색 전, 완전히 동일한 파일에 한해 빠른 해시 비교(Exact Match)를 선행하여 연산 비용을 절감함.
+3.  **Client-side PII Masking & Local Text Extraction**:
+    - 서버 부하를 줄이고 LLM 전송 전 보안을 강화하기 위해 프론트엔드에서 직접 텍스트를 추출(`pdfjs-dist`, `mammoth`)하고 민감 정보(이메일, 전화번호 등)를 마스킹 처리함.
+4.  **Similarity Threshold (0.95)**:
+    - 95% 이상의 코사인 유사도를 가진 이력서를 동일 이력서로 간주하여 중복 업로드를 방지함.
+
+### Consequences
+
+- **Pros**: 인프라 종속성 해결, LLM API 비용 절감(중복 방지), 데이터 보안성 확보.
+- **Cons**: 프론트엔드 번들 크기 증가(추출 라이브러리 포함), DB별 네이티브 쿼리 유지보수 필요.
+
+---
+
+## 2026-02-07: Client-side AI Inference & Backend Cleanup Logic
+
+### Context
+
+업로드 전 이력서 판별 속도를 높이고, 백엔드 검증 실패 시 이미 업로드된 물리 파일이 스토리지에 남는 문제를 해결해야 함.
+
+### Decisions
+
+1.  **Client-side AI (Transformers.js)**:
+    - 브라우저 내에서 직접 `distilbert-base-uncased-mnli` 모델을 실행하여 이력서 여부를 즉시 판별.
+2.  **Dual-Gate Architecture**:
+    - 프론트엔드(로컬 AI)와 백엔드(해시/벡터/LLM)의 이중 검증 구조 채택.
+3.  **Automated Storage Cleanup**:
+    - 백엔드 검증(중복 감지 등) 실패 시, `DeleteFilePort`를 호출하여 스토리지에서 즉시 파일을 제거함.
+
+### Consequences
+
+- **Pros**: 사용자에게 0.5초 내 피드백 제공, 서버 부하 감소, 스토리지 자원 최적화.
+- **Cons**: 초기 모델 로딩 시간(약 1-2초) 발생, 스토리지 삭제 REST API 의존성 추가.
+
+---
+
+## 2026-02-07: Storage Service gRPC Conversion
+
+### Context
+
+기존 FastAPI 기반 REST API로 운영되던 `storage` 서비스를 시스템 내 다른 마이크로서비스(`stt`, `tts`, `llm` 등)와의 통신 일관성을 위해 gRPC로 전환해야 함.
+
+### Decisions
+
+1.  **gRPC Protocol Adoption**:
+    - `storage.proto`를 정의하여 `GetPresignedUrl` 및 `DeleteObject` 인터페이스 명세화.
+2.  **Hybrid Server Pattern**:
+    - Python 기반 gRPC 서버를 구현하되, 기존의 Redis Queue 기반 비동기 오디오 업로드 워커(Worker)를 백그라운드 스레드로 병렬 유지.
+3.  **Core-Storage gRPC Client**:
+    - Core 서비스(Java)의 `StorageRestAdapter`를 `StorageGrpcAdapter`로 교체하여 타입 안정성 및 통신 효율 개선.
+
+### Consequences
+
+- **Pros**: 전체 시스템의 통신 프로토콜 단일화(gRPC), REST 오버헤드 제거, 강력한 타입 체크 보장.
+- **Cons**: REST API를 직접 호출하던 기존 개발/테스트 도구 사용 불가 (gRPC 클라이언트 필요).
+
+---
+
+## 2026-02-09: Synchronization of Shared Text-Processing Logic
+
+### Context
+
+동일한 이력서를 업로드했음에도 프론트엔드와 백엔드의 임베딩 값이 달라 유사도가 낮게(0.3) 나오는 문제 발생. 이는 양측의 텍스트 정규화(Whitespace) 및 마스킹(PII) 로직이 미세하게 다르기 때문임.
+
+### Decisions
+
+1.  **Regex & Normalization Synchronization**:
+    - 프론트엔드(`resume-validator.ts`)와 백엔드(`text_processor.py`)의 정규식을 하이픈 뿐만 아니라 공백, 마침표를 포함하도록 동일하게 업데이트.
+    - 양측 모두 줄바꿈을 포함한 모든 연속 공백을 단일 공백으로 치환하도록 통일.
+2.  **Explicit Architectural Debt Recording**:
+    - 현재의 "복제된 로직" 방식은 유지보수 시 한쪽이 누락될 위험이 있는 **아키텍처 부채**로 간주함.
+
+### Consequences
+
+- **Pros**: 즉시 동일 파일에 대한 높은 유사도(0.95+) 확보 가능. 별도의 API 호출 없이 로컬에서의 즉각적인 피드백 유지.
+- **Cons**: 로직 변경 시 두 곳을 모두 수정해야 하는 강한 결합(Coupling) 발생.
+- **Future Work (Improvement)**: 로직 파편화를 완전히 해결하기 위해, 프론트엔드가 텍스트를 추출한 뒤 서버의 `Validation API`를 호출하여 **서버가 생성한 공식 임베딩**을 받아와서 비교하는 구조로 전환을 권장함.

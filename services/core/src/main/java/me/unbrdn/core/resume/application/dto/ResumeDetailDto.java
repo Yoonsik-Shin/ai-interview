@@ -13,4 +13,5 @@ public class ResumeDetailDto {
     private String content;
     private String status;
     private Instant createdAt;
+    private String fileUrl;
 }

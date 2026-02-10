@@ -5,9 +5,15 @@ type ToastProps = {
   message: string;
   onClose: () => void;
   autoDismissMs?: number;
+  type?: "success" | "error" | "info";
 };
 
-export function Toast({ message, onClose, autoDismissMs = 5000 }: ToastProps) {
+export function Toast({
+  message,
+  onClose,
+  autoDismissMs = 5000,
+  type = "error",
+}: ToastProps) {
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
@@ -26,11 +32,11 @@ export function Toast({ message, onClose, autoDismissMs = 5000 }: ToastProps) {
 
   return (
     <div
-      className={`${styles.toast} ${leaving ? styles.leaving : ""}`}
+      className={`${styles.toast} ${styles[type]} ${leaving ? styles.leaving : ""}`}
       role="alert"
     >
       <span className={styles.toastIcon} aria-hidden>
-        ⚠
+        {type === "success" ? "✓" : type === "info" ? "ℹ" : "⚠"}
       </span>
       <span className={styles.toastContent}>{message}</span>
       <button

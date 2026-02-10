@@ -6,9 +6,10 @@ import me.unbrdn.core.resume.application.dto.CompleteUploadCommand;
 import me.unbrdn.core.resume.application.port.in.CompleteUploadUseCase;
 import me.unbrdn.core.resume.application.port.out.GeneratePresignedUrlPort;
 import me.unbrdn.core.resume.application.port.out.LoadResumePort;
-import me.unbrdn.core.resume.application.port.out.ProduceResumeEventPort;
 import me.unbrdn.core.resume.application.port.out.SaveResumePort;
 import me.unbrdn.core.resume.domain.entity.Resumes;
+import me.unbrdn.core.resume.domain.event.ResumeUploadedEvent;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,26 +20,52 @@ public class CompleteUploadInteractor implements CompleteUploadUseCase {
 
     private final LoadResumePort loadResumePort;
     private final SaveResumePort saveResumePort;
-    private final ProduceResumeEventPort produceResumeEventPort;
     private final GeneratePresignedUrlPort generatePresignedUrlPort;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ResumeVectorService resumeVectorService;
+
+    private static final String TOPIC_RESUME_UPLOADED = "resume.uploaded"; // Should match Python consumer config
 
     @Override
     @Transactional
     public void execute(CompleteUploadCommand command) {
-        // 1. 이력서 조회
+        // 1. Load Resume
         Resumes resume = loadResumePort.loadResumeById(command.getResumeId())
-                .orElseThrow(() -> new IllegalArgumentException("이력서를 찾을 수 없습니다. ID: " + command.getResumeId()));
+                .orElseThrow(() -> new IllegalArgumentException("Resume not found: " + command.getResumeId()));
 
-        // 2. 상태 변경 (PROCESSING)
-        resume.startProcessing();
-        saveResumePort.save(resume);
+        try {
+            // 2. Generate Download URL for the Document Service
+            String downloadUrl = generatePresignedUrlPort.generateDownloadUrl(resume.getFilePath());
 
-        // 3. 분석용 다운로드 URL 생성 (1시간 유효)
-        String downloadUrl = generatePresignedUrlPort.generateDownloadUrl(resume.getFilePath());
+            // 3. Update Status to PROCESSING
+            resume.startProcessing();
+            saveResumePort.save(resume);
 
-        // 4. Kafka 분석 요청 이벤트 발행
-        produceResumeEventPort.sendProcessEvent(resume.getId(), resume.getFilePath(), downloadUrl);
+            // 4. Publish Event to Kafka
+            ResumeUploadedEvent event = new ResumeUploadedEvent(resume.getId().toString(), resume.getFilePath(),
+                    downloadUrl, command.getValidationText());
 
-        log.info("이력서 업로드 완료 처리 및 분석 이벤트 발행: resumeId={}, downloadUrl={}", resume.getId(), downloadUrl);
+            // Using ID as key for partitioning order
+            kafkaTemplate.send(TOPIC_RESUME_UPLOADED, resume.getId().toString(), event);
+
+            // 5. Save Embedding if provided by Frontend (Same-Source Strategy)
+            if (command.getEmbedding() != null && command.getEmbedding().length > 0) {
+                log.info("Saving frontend-provided embedding for resume: {}", resume.getId());
+                resumeVectorService.saveEmbedding(resume.getUser().getId(), resume.getId().toString(),
+                        command.getValidationText() != null ? command.getValidationText() : "", command.getEmbedding(),
+                        "VALIDATION");
+            }
+
+            log.info(
+                    "Resume upload completed. Event published to Kafka: resumeId={}, validationTextPresent={}, embeddingPresent={}",
+                    resume.getId(), command.getValidationText() != null && !command.getValidationText().isEmpty(),
+                    command.getEmbedding() != null);
+
+        } catch (Exception e) {
+            log.error("Failed to complete upload process: {}", e.getMessage());
+            resume.failProcessing();
+            saveResumePort.save(resume);
+            throw e;
+        }
     }
 }

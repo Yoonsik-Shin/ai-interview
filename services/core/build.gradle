@@ -2,8 +2,8 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '4.0.1'
 	id 'io.spring.dependency-management' version '1.1.7'
-  id 'com.google.protobuf' version '0.9.4' // Protobuf 플러그인 추가
-  id "com.diffplug.spotless" version "6.23.3"
+	id 'com.google.protobuf' version '0.9.4'
+	id "com.diffplug.spotless" version "6.23.3"
 }
 
 group = 'me.unbrdn'
@@ -24,45 +24,36 @@ configurations {
 
 repositories {
 	mavenCentral()
+	maven { url 'https://repo.spring.io/milestone' }
 }
 
 dependencies {
-// 1. 웹 서버 기능 (REST API)
+	// 1. 웹 서버 기능 (REST API)
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	// JSON 직렬화/역직렬화(ObjectMapper, TypeReference 등)
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
 	// 2. 데이터베이스 (JPA)
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	
-	// PostgreSQL 드라이버 (로컬 개발용)
-	// 로컬 환경: PostgreSQL (빠른 시작 5-10초)
 	runtimeOnly 'org.postgresql:postgresql'
-	
-	// Oracle Database 드라이버 (프로덕션용)
-	// 프로덕션 환경: Oracle Autonomous Database
-	// Java 21 호환 최신 버전 - ojdbc11 사용 (Java 11+)
 	runtimeOnly 'com.oracle.database.jdbc:ojdbc11:23.3.0.23.09'
-	runtimeOnly 'com.oracle.database.jdbc:ucp:23.3.0.23.09' // Connection Pool 최적화
-	
+	runtimeOnly 'com.oracle.database.jdbc:ucp:23.3.0.23.09'
+
 	// 2-1. Health Check (Actuator)
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 	// 2-2. Database Migration (Flyway)
-	implementation 'org.springframework.boot:spring-boot-starter-flyway'
 	implementation 'org.flywaydb:flyway-core'
-	// PostgreSQL용 Flyway 드라이버 (Spring Boot 3.3+ 필수)
-	implementation 'org.flywaydb:flyway-database-postgresql'
+	runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 
 	// 2-3. Password Encoding (BCrypt)
 	implementation 'org.springframework.security:spring-security-crypto'
 
-	// 2-4. Apache Tika (문서 파싱: PDF, Word 등)
+	// 2-4. Apache Tika (문서 파싱)
 	implementation 'org.apache.tika:tika-core:2.9.1'
 	implementation 'org.apache.tika:tika-parsers-standard-package:2.9.1'
 
-	// 2-5. JWT (Access/Refresh Token)
+	// 2-5. JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
@@ -70,8 +61,12 @@ dependencies {
 	// 3. 메시지 브로커 (Kafka)
 	implementation 'org.springframework.kafka:spring-kafka'
 
-	// 3-1. Redis (대화 맥락 저장용)
+	// 3-1. Redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// 3-2. Spring AI Vector Store
+	implementation platform('org.springframework.ai:spring-ai-bom:1.0.0-M4')
+	implementation 'org.springframework.ai:spring-ai-pgvector-store-spring-boot-starter'
 
 	// 4. 편의 도구 (Lombok)
 	compileOnly 'org.projectlombok:lombok'
@@ -81,71 +76,59 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
 
-  // 🔥 gRPC Server Starter (이거 하나면 netty 서버 설정 끝)
-    implementation 'net.devh:grpc-server-spring-boot-starter:2.15.0.RELEASE'
-    // 🔥 gRPC Client Starter (LLM 서비스 호출용)
-    implementation 'net.devh:grpc-client-spring-boot-starter:2.15.0.RELEASE'
-    // Protobuf & gRPC Stub 필수 의존성
-    implementation 'io.grpc:grpc-protobuf:1.58.0'
-    implementation 'io.grpc:grpc-stub:1.58.0'
-    compileOnly 'jakarta.annotation:jakarta.annotation-api:1.3.5' // 생성된 코드 호환성용
+	// 6. gRPC
+	implementation 'net.devh:grpc-server-spring-boot-starter:2.15.0.RELEASE'
+	implementation 'net.devh:grpc-client-spring-boot-starter:2.15.0.RELEASE'
+	implementation 'io.grpc:grpc-protobuf:1.58.0'
+	implementation 'io.grpc:grpc-stub:1.58.0'
+	compileOnly 'jakarta.annotation:jakarta.annotation-api:1.3.5'
 
-    // UUID v7 생성을 위한 라이브러리 (성능과 표준 준수 우수)
-    implementation 'com.github.f4b6a3:uuid-creator:6.1.1'
+	implementation 'com.github.f4b6a3:uuid-creator:6.1.1'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
 }
 
-// Protobuf 코드 생성 설정
 protobuf {
-    protoc {
-        artifact = "com.google.protobuf:protoc:3.24.0"
-    }
-    plugins {
-        grpc {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.58.0"
-        }
-    }
-    generateProtoTasks {
-        all().configureEach { task ->
-            task.builtins {
-                java {}
-            }
-            task.plugins {
-                grpc {}
-            }
-        }
-    }
+	protoc {
+		artifact = "com.google.protobuf:protoc:3.24.0"
+	}
+	plugins {
+		grpc {
+			artifact = "io.grpc:protoc-gen-grpc-java:1.58.0"
+		}
+	}
+	generateProtoTasks {
+		all().configureEach { task ->
+			task.builtins {
+				java {}
+			}
+			task.plugins {
+				grpc {}
+			}
+		}
+	}
 }
 
-// ✅ Proto 파일 위치를 services/proto로 변경
 sourceSets {
-    main {
-        proto {
-            srcDir '../proto'
-        }
-    }
+	main {
+		proto {
+			srcDir '../proto'
+		}
+	}
 }
 
 spotless {
-    java {
-        // 2. 타겟 파일 지정 (모든 Java 파일)
-        target '**/*.java'
-        
-        // 3. Google Java Format 적용 (가장 대중적)
-        googleJavaFormat() 
-            .aosp() // 들여쓰기 4칸을 선호하면 주석 해제 (기본은 2칸)
-        
-        // 4. 기타 유용한 정리 옵션
-        removeUnusedImports() // 사용하지 않는 import 제거
-        trimTrailingWhitespace() // 줄 끝 공백 제거
-        endWithNewline() // 파일 끝에 개행 추가
-    }
+	java {
+		target '**/*.java'
+		googleJavaFormat().aosp()
+		removeUnusedImports()
+		trimTrailingWhitespace()
+		endWithNewline()
+	}
 }
 
-// 컴파일 전에 proto 코드 생성이 완료되도록 보장
 tasks.named('compileJava').configure {
-    dependsOn tasks.named('generateProto')
+	dependsOn tasks.named('generateProto')
 }

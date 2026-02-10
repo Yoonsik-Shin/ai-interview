@@ -24,7 +24,9 @@ public class ResumeProcessedKafkaConsumer {
     private final RedisTemplate<String, Object> redisTemplate;
 
     @Transactional
-    @KafkaListener(topics = "${kafka.document-processed-topic}", groupId = "${spring.kafka.consumer.group-id:core-group}")
+    @KafkaListener(
+            topics = "${kafka.document-processed-topic}",
+            groupId = "${spring.kafka.consumer.group-id:core-group}")
     public void consume(String message) {
         log.info("Kafka 메시지 수신 (document.processed): {}", message);
         try {
@@ -34,8 +36,13 @@ public class ResumeProcessedKafkaConsumer {
             UUID resumeId = UUID.fromString((String) event.get("resumeId"));
             String status = (String) event.get("status");
 
-            Resumes resume = loadResumePort.loadResumeById(resumeId)
-                    .orElseThrow(() -> new IllegalArgumentException("이력서를 찾을 수 없습니다. ID: " + resumeId));
+            Resumes resume =
+                    loadResumePort
+                            .loadResumeById(resumeId)
+                            .orElseThrow(
+                                    () ->
+                                            new IllegalArgumentException(
+                                                    "이력서를 찾을 수 없습니다. ID: " + resumeId));
 
             if ("COMPLETED".equals(status)) {
                 String content = (String) event.get("content");
@@ -49,8 +56,14 @@ public class ResumeProcessedKafkaConsumer {
             log.info("이력서 처리 결과 반영 완료: resumeId={}, status={}", resumeId, status);
 
             // Redis Pub/Sub 알림 발송 (Socket 서비스용)
-            Map<String, String> notification = Map.of("resumeId", resumeId.toString(), "status", status, "userId",
-                    resume.getUser().getId().toString());
+            Map<String, String> notification =
+                    Map.of(
+                            "resumeId",
+                            resumeId.toString(),
+                            "status",
+                            status,
+                            "userId",
+                            resume.getUser().getId().toString());
             redisTemplate.convertAndSend("resume:processed", notification);
             log.info("Redis Pub/Sub 알림 발송 완료: channel=resume:processed, resumeId={}", resumeId);
 

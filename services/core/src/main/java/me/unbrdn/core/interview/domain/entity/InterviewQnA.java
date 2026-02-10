@@ -15,8 +15,9 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
-@Table(name = "interview_qna", uniqueConstraints = {
-        @UniqueConstraint(columnNames = { "interview_id", "turn_number" }) })
+@Table(
+        name = "interview_qna",
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"interview_id", "turn_number"})})
 @Getter
 @NoArgsConstructor
 public class InterviewQnA extends BaseTimeEntity {
@@ -44,7 +45,8 @@ public class InterviewQnA extends BaseTimeEntity {
     @Column(name = "media_url")
     private String mediaUrl;
 
-    public InterviewQnA(InterviewSession interviewSession, Integer turnNumber, String questionText) {
+    public InterviewQnA(
+            InterviewSession interviewSession, Integer turnNumber, String questionText) {
         this.interview = interviewSession;
         this.turnNumber = turnNumber;
         this.questionText = questionText;

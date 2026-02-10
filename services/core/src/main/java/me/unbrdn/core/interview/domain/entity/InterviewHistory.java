@@ -47,10 +47,8 @@ public class InterviewHistory extends BaseTimeEntity {
     // 3. ID(PK)만 같으면 "같은 데이터"로 취급하겠다.
     @Override
     public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (!(o instanceof InterviewHistory that))
-            return false;
+        if (this == o) return true;
+        if (!(o instanceof InterviewHistory that)) return false;
         return id != null && Objects.equals(id, that.id);
     }
 

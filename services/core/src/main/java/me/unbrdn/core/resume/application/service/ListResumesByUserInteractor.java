@@ -22,12 +22,14 @@ public class ListResumesByUserInteractor implements ListResumesByUserUseCase {
     public List<ResumeItemDto> execute(UUID userId) {
         List<Resumes> resumes = loadResumesByUserPort.loadResumesByUserId(userId);
         return resumes.stream()
-                .map(r -> ResumeItemDto.builder()
-                        .id(r.getId())
-                        .title(r.getTitle())
-                        .status(r.getStatus().name())
-                        .createdAt(r.getCreatedAt())
-                        .build())
+                .map(
+                        r ->
+                                ResumeItemDto.builder()
+                                        .id(r.getId())
+                                        .title(r.getTitle())
+                                        .status(r.getStatus().name())
+                                        .createdAt(r.getCreatedAt())
+                                        .build())
                 .collect(Collectors.toList());
     }
 }

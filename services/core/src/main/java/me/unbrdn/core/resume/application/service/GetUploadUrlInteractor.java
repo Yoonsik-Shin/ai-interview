@@ -29,27 +29,40 @@ public class GetUploadUrlInteractor implements GetUploadUrlUseCase {
     @Transactional
     public GetUploadUrlResult execute(GetUploadUrlCommand command) {
         // 1. 사용자 조회
-        User user = loadUserPort.loadUserById(command.getUserId())
-                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다. ID: " + command.getUserId()));
+        User user =
+                loadUserPort
+                        .loadUserById(command.getUserId())
+                        .orElseThrow(
+                                () ->
+                                        new UserNotFoundException(
+                                                "사용자를 찾을 수 없습니다. ID: " + command.getUserId()));
 
         // 2. Resume ID 미리 생성 (Object Key와 맞추기 위함)
         UUID resumeId = UuidHolder.generate();
-        String objectKey = String.format("resumes/%s/%s_%s", command.getUserId(), resumeId, command.getFileName());
+        String objectKey =
+                String.format(
+                        "resumes/%s/%s_%s", command.getUserId(), resumeId, command.getFileName());
 
         // 3. Presigned URL 생성 요청
         String uploadUrl = generatePresignedUrlPort.generateUploadUrl(objectKey);
         if (uploadUrl == null) {
-            log.error("Presigned URL 생성 실패: userId={}, fileName={}", command.getUserId(), command.getFileName());
+            log.error(
+                    "Presigned URL 생성 실패: userId={}, fileName={}",
+                    command.getUserId(),
+                    command.getFileName());
             throw new RuntimeException("업로드 URL 생성에 실패했습니다.");
         }
 
         // 4. Resume 메타데이터 저장 (PENDING)
-        Resumes resume = Resumes.create(user, command.getTitle(), objectKey);
+        Resumes resume = Resumes.create(user, command.getTitle(), objectKey, null);
         resume.setId(resumeId);
         saveResumePort.save(resume);
 
         log.info("이력서 업로드 URL 발급 완료: resumeId={}, userId={}", resumeId, command.getUserId());
 
-        return GetUploadUrlResult.builder().uploadUrl(uploadUrl).resumeId(resumeId.toString()).build();
+        return GetUploadUrlResult.builder()
+                .uploadUrl(uploadUrl)
+                .resumeId(resumeId.toString())
+                .build();
     }
 }

@@ -6,4 +6,6 @@ import me.unbrdn.core.resume.domain.entity.Resumes;
 
 public interface LoadResumePort {
     Optional<Resumes> loadResumeById(UUID id);
+
+    Optional<Resumes> loadByUserIdAndFileHash(UUID userId, String fileHash);
 }

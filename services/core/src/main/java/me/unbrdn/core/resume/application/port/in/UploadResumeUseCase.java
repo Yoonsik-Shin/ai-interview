@@ -1,6 +1,6 @@
 package me.unbrdn.core.resume.application.port.in;
 
-import java.util.UUID;
+import me.unbrdn.core.resume.application.dto.UploadResumeResult;
 import me.unbrdn.core.resume.application.service.UploadResumeCommand;
 
 /**
@@ -14,7 +14,7 @@ public interface UploadResumeUseCase {
      * 이력서 파일을 업로드하고 텍스트를 추출하여 저장합니다.
      *
      * @param command 업로드 명령 (파일 데이터, 사용자 ID 등)
-     * @return 생성된 이력서 ID
+     * @return 업로드 결과 (성공 시 resumeId, 유사 이력서 발견 시 similarResume)
      */
-    UUID execute(UploadResumeCommand command);
+    UploadResumeResult execute(UploadResumeCommand command);
 }

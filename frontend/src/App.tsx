@@ -7,18 +7,48 @@ import { Landing } from "./pages/Landing";
 import { InterviewSetup } from "./pages/InterviewSetup";
 import { Interview } from "./pages/Interview";
 import { ResumeManage } from "./pages/ResumeManage";
+import { useEffect } from "react";
+import { preloadModel } from "@/services/resume-validator";
 
 export default function App() {
+  useEffect(() => {
+    // 앱 실행 시 로컬 AI 모델 미리 로드 (백그라운드)
+    preloadModel();
+  }, []);
+
   return (
     <Routes>
-      <Route path="/login" element={<PageFrame><Login /></PageFrame>} />
-      <Route path="/register" element={<PageFrame><Register /></PageFrame>} />
-      <Route path="/" element={<PageFrame><Landing /></PageFrame>} />
+      <Route
+        path="/login"
+        element={
+          <PageFrame>
+            <Login />
+          </PageFrame>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PageFrame>
+            <Register />
+          </PageFrame>
+        }
+      />
+      <Route
+        path="/"
+        element={
+          <PageFrame>
+            <Landing />
+          </PageFrame>
+        }
+      />
       <Route
         path="/setup"
         element={
           <AuthGuard>
-            <PageFrame><InterviewSetup /></PageFrame>
+            <PageFrame>
+              <InterviewSetup />
+            </PageFrame>
           </AuthGuard>
         }
       />
@@ -26,7 +56,9 @@ export default function App() {
         path="/resumes"
         element={
           <AuthGuard>
-            <PageFrame><ResumeManage /></PageFrame>
+            <PageFrame>
+              <ResumeManage />
+            </PageFrame>
           </AuthGuard>
         }
       />

@@ -8,12 +8,13 @@ import {
 } from "@/api/interview";
 import {
   listResumes,
-  getUploadUrl,
-  uploadToPresignedUrl,
-  completeUpload,
+  getResume,
   type ResumeItem,
+  type ResumeDetail,
 } from "@/api/resumes";
 import { Toast } from "@/components/Toast";
+import { ResumeUploadZone } from "@/components/ResumeUploadZone";
+import { PremiumResumeViewer } from "@/components/PremiumResumeViewer";
 import styles from "./InterviewSetup.module.css";
 
 export function InterviewSetup() {
@@ -53,10 +54,22 @@ export function InterviewSetup() {
   const [existingResumes, setExistingResumes] = useState<ResumeItem[]>([]);
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [isNewUpload, setIsNewUpload] = useState(false);
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resumesLoading, setResumesLoading] = useState(true);
+  const [validating, setValidating] = useState(false);
+  const [uploadedResumeId, setUploadedResumeId] = useState<string | null>(null);
+  const [success, setSuccess] = useState("");
+  const [detail, setDetail] = useState<ResumeDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [isEditingDuration, setIsEditingDuration] = useState(false);
+
+  const handleFileSelect = (file: File | null) => {
+    if (!file) {
+      setError("");
+      setUploadedResumeId(null);
+    }
+  };
 
   // 이력서 목록 가져오기
   useEffect(() => {
@@ -77,6 +90,23 @@ export function InterviewSetup() {
     }
     loadResumes();
   }, []);
+
+  const handleViewDetail = async (id: string) => {
+    setDetailLoading(true);
+    setDetail(null);
+    try {
+      const data = await getResume(id);
+      setDetail(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "이력서를 불러올 수 없습니다.");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setDetail(null);
+  };
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -282,23 +312,31 @@ export function InterviewSetup() {
     }
   }
 
+  function adjustDuration(amount: number) {
+    setForm((f) => {
+      const next = f.targetDurationMinutes + amount;
+      return {
+        ...f,
+        targetDurationMinutes: Math.max(10, Math.min(120, next)),
+      };
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
       let resumeId: string | undefined =
-        selectedResumeId && !isNewUpload ? selectedResumeId : undefined;
+        selectedResumeId && !isNewUpload
+          ? selectedResumeId
+          : uploadedResumeId || undefined;
 
-      if (isNewUpload && resumeFile) {
-        // Presigned URL flow
-        const { uploadUrl, resumeId: id } = await getUploadUrl(
-          resumeFile.name,
-          resumeFile.name,
-        );
-        await uploadToPresignedUrl(uploadUrl, resumeFile);
-        await completeUpload(id);
-        resumeId = id;
+      // 새 업로드인데 업로드가 안 되어 있으면 에러
+      if (isNewUpload && !uploadedResumeId) {
+        setError("이력서를 먼저 업로드해주세요.");
+        setLoading(false);
+        return;
       }
       const payload: CreateInterviewReq = {
         ...form,
@@ -435,29 +473,22 @@ export function InterviewSetup() {
                     </button>
                   )}
                 </div>
-                <div className={styles.uploadBox}>
-                  <span className={styles.uploadIcon}>📄</span>
-                  <div className={styles.fileInputWrapper}>
-                    <label
-                      htmlFor="resume-upload"
-                      className={styles.customFileBtn}
-                    >
-                      파일 선택
-                    </label>
-                    <span className={styles.fileName}>
-                      {resumeFile
-                        ? resumeFile.name
-                        : "파일을 선택하거나 드래그하세요"}
-                    </span>
-                  </div>
-                  <p className={styles.fileHint}>PDF, DOC, DOCX (최대 10MB)</p>
-                </div>
-                <input
-                  id="resume-upload"
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
-                  className={styles.fileInput}
+                <ResumeUploadZone
+                  onFileSelect={handleFileSelect}
+                  onAnalyzeStart={() => {
+                    setValidating(true);
+                  }}
+                  onAnalyzeEnd={() => {
+                    setValidating(false);
+                  }}
+                  onError={setError}
+                  onSuccess={setSuccess}
+                  enableUpload={true}
+                  onUploadComplete={(resumeId) => {
+                    setUploadedResumeId(resumeId);
+                    setSuccess("이력서가 업로드되었습니다!");
+                  }}
+                  existingResumes={existingResumes}
                 />
               </div>
             ) : (
@@ -477,20 +508,34 @@ export function InterviewSetup() {
                     <div
                       key={resume.id}
                       className={`${styles.resumeCard} ${selectedResumeId === resume.id ? styles.resumeSelected : ""}`}
-                      onClick={() => setSelectedResumeId(resume.id)}
                     >
-                      <div className={styles.resumeCardIcon}>📄</div>
-                      <div className={styles.resumeCardBody}>
-                        <div className={styles.resumeCardTitle}>
-                          {resume.title}
+                      <div
+                        className={styles.resumeCardClickable}
+                        onClick={() => setSelectedResumeId(resume.id)}
+                      >
+                        <div className={styles.resumeCardIcon}>📄</div>
+                        <div className={styles.resumeCardBody}>
+                          <div className={styles.resumeCardTitle}>
+                            {resume.title}
+                          </div>
+                          <div className={styles.resumeCardDate}>
+                            {new Date(resume.createdAt).toLocaleDateString()}
+                          </div>
                         </div>
-                        <div className={styles.resumeCardDate}>
-                          {new Date(resume.createdAt).toLocaleDateString()}
-                        </div>
+                        {selectedResumeId === resume.id && (
+                          <div className={styles.checkIcon}>✓</div>
+                        )}
                       </div>
-                      {selectedResumeId === resume.id && (
-                        <div className={styles.checkIcon}>✓</div>
-                      )}
+                      <button
+                        type="button"
+                        className={styles.viewDetailBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetail(resume.id);
+                        }}
+                      >
+                        상세보기
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -527,9 +572,9 @@ export function InterviewSetup() {
                 <option value="PRACTICE">모의 면접 (빠른 처리, 무료)</option>
               </select>
             </div>
-            <p className={styles.fieldHint}>
+            {/* <p className={styles.fieldHint}>
               ⚡ 빠른 처리 | STT: Fast Whisper, TTS: Edge TTS
-            </p>
+            </p> */}
 
             <div className={styles.field}>
               <label htmlFor="personality">면접 분위기 (성격)</label>
@@ -593,23 +638,76 @@ export function InterviewSetup() {
               </div>
             </div>
 
-            <div className={styles.field}>
+            <div className={`${styles.field} ${styles.durationField}`}>
               <label>목표 시간 (분, 10~120)</label>
-              <input
-                type="number"
-                min={10}
-                max={120}
-                value={form.targetDurationMinutes}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    targetDurationMinutes: Number(e.target.value),
-                  }))
-                }
-                className={styles.input}
-              />
+              <div className={styles.durationSelector}>
+                <div className={styles.durationBtns}>
+                  <button
+                    type="button"
+                    className={styles.durationBtn}
+                    onClick={() => adjustDuration(-30)}
+                  >
+                    -30m
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.durationBtn}
+                    onClick={() => adjustDuration(-10)}
+                  >
+                    -10m
+                  </button>
+                </div>
+
+                <div className={styles.durationDisplay}>
+                  {isEditingDuration ? (
+                    <input
+                      type="number"
+                      min={10}
+                      max={120}
+                      autoFocus
+                      className={styles.durationInput}
+                      value={form.targetDurationMinutes}
+                      onBlur={() => setIsEditingDuration(false)}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && setIsEditingDuration(false)
+                      }
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          targetDurationMinutes: Number(e.target.value),
+                        }))
+                      }
+                    />
+                  ) : (
+                    <div
+                      className={styles.durationValue}
+                      onClick={() => setIsEditingDuration(true)}
+                    >
+                      <span>{form.targetDurationMinutes}</span>
+                      <small>분</small>
+                    </div>
+                  )}
+                </div>
+
+                <div className={styles.durationBtns}>
+                  <button
+                    type="button"
+                    className={styles.durationBtn}
+                    onClick={() => adjustDuration(10)}
+                  >
+                    +10m
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.durationBtn}
+                    onClick={() => adjustDuration(30)}
+                  >
+                    +30m
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className={styles.field}>
+            {/* <div className={styles.field}>
               <label>자기소개</label>
               <textarea
                 value={form.selfIntroduction}
@@ -620,23 +718,58 @@ export function InterviewSetup() {
                 placeholder="간단한 자기소개를 입력하세요."
                 className={styles.input}
               />
-            </div>
-            <button type="submit" disabled={loading} className={styles.btn}>
-              {loading ? "생성 중…" : "면접 시작"}
+            </div> */}
+            <button
+              type="submit"
+              disabled={loading || validating}
+              className={styles.btn}
+            >
+              {loading ? "생성 중…" : validating ? "AI 분석 중…" : "면접 시작"}
             </button>
           </form>
         </div>
       </div>
 
-      {(error || mediaError) && (
+      {(error || mediaError || success) && (
         <Toast
-          message={error || mediaError}
+          message={error || mediaError || success}
           onClose={() => {
             setError("");
             setMediaError("");
+            setSuccess("");
           }}
           autoDismissMs={5000}
         />
+      )}
+
+      {/* 이력서 상세보기 모달 */}
+      {detail && (
+        <div className={styles.modalOverlay} onClick={closeDetail}>
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h2>{detail.title}</h2>
+              <button className={styles.closeBtn} onClick={closeDetail}>
+                ✕
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              {detailLoading ? (
+                <div className={styles.loading}>로딩 중...</div>
+              ) : detail.fileUrl ? (
+                <div className={styles.pdfViewerContainer}>
+                  <PremiumResumeViewer fileUrl={detail.fileUrl} />
+                </div>
+              ) : (
+                <div className={styles.loading}>
+                  파일 URL을 찾을 수 없습니다.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

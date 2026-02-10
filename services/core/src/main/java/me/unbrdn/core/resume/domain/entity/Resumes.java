@@ -13,6 +13,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import me.unbrdn.core.common.domain.BaseTimeEntity;
 import me.unbrdn.core.user.domain.entity.User;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes; // Keep SqlTypes for UUID if needed, but vector uses are gone.
+
+// actually SqlTypes is used for JSON, let's check
 
 @Entity
 @Table(name = "resumes")
@@ -30,6 +34,9 @@ public class Resumes extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "file_hash", length = 64)
+    private String fileHash;
+
     @Column(name = "file_path", length = 500)
     private String filePath;
 
@@ -37,21 +44,23 @@ public class Resumes extends BaseTimeEntity {
     @Column(nullable = false, length = 20)
     private ResumeStatus status;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "image_urls", columnDefinition = "JSONB")
     private String imageUrls;
 
     @Column(name = "vector_status", length = 20)
     private String vectorStatus;
 
-    private Resumes(User user, String title, String filePath) {
+    private Resumes(User user, String title, String filePath, String fileHash) {
         this.user = user;
         this.title = title;
         this.filePath = filePath;
+        this.fileHash = fileHash;
         this.status = ResumeStatus.PENDING;
     }
 
-    public static Resumes create(User user, String title, String filePath) {
-        return new Resumes(user, title, filePath);
+    public static Resumes create(User user, String title, String filePath, String fileHash) {
+        return new Resumes(user, title, filePath, fileHash);
     }
 
     public void startProcessing() {
@@ -70,5 +79,26 @@ public class Resumes extends BaseTimeEntity {
 
     public void updateVectorStatus(String vectorStatus) {
         this.vectorStatus = vectorStatus;
+    }
+
+    /**
+     * 이력서 내용 업데이트 (파일 교체)
+     *
+     * @param title 새 제목
+     * @param filePath 새 파일 경로
+     * @param content 새 텍스트 내용
+     */
+    public void updateContent(String title, String filePath, String content) {
+        this.title = title;
+        this.filePath = filePath;
+        this.content = content;
+        this.status = ResumeStatus.COMPLETED;
+    }
+
+    // Embedding field removed in favor of ResumeEmbedding entity via 1:N relation.
+    // public void setEmbedding(float[] embedding) { ... }
+
+    public void setFileHash(String fileHash) {
+        this.fileHash = fileHash;
     }
 }

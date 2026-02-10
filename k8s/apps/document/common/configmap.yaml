@@ -6,8 +6,8 @@ metadata:
 data:
   # Kafka
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
-  KAFKA_GROUP_ID: "document-group"
-  KAFKA_DOCUMENT_PROCESS_TOPIC: "document.process"
+  KAFKA_GROUP_ID: "document-group-v3"
+  KAFKA_DOCUMENT_PROCESS_TOPIC: "resume.uploaded"
   KAFKA_DOCUMENT_PROCESSED_TOPIC: "document.processed"
 
   # Redis
@@ -17,8 +17,6 @@ data:
 
   # Object Storage
   STORAGE_SERVICE_URL: "http://storage.unbrdn.svc.cluster.local:8000"
-  OBJECT_STORAGE_BUCKET: "interview-archives"
-  OBJECT_STORAGE_REGION: "us-east-1"
 
   # Server
   PORT: "8100"

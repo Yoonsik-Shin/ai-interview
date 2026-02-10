@@ -52,11 +52,14 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
         }
 
         String accumulatorKey = interviewId + ":" + persona;
-        TokenAccumulator accumulator = accumulators.computeIfAbsent(accumulatorKey, k -> new TokenAccumulator());
+        TokenAccumulator accumulator =
+                accumulators.computeIfAbsent(accumulatorKey, k -> new TokenAccumulator());
 
         // 0. Update Session State (Adaptive Logic)
-        if (command.isReduceTotalTime() || command.getNextDifficultyLevel() > 0
-                || (command.getCurrentPersonaId() != null && !command.getCurrentPersonaId().isEmpty())) {
+        if (command.isReduceTotalTime()
+                || command.getNextDifficultyLevel() > 0
+                || (command.getCurrentPersonaId() != null
+                        && !command.getCurrentPersonaId().isEmpty())) {
 
             boolean shouldUpdate = false;
             if (command.isReduceTotalTime() && !accumulator.isTimeReduced()) {
@@ -86,18 +89,31 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
         }
 
         // 2. Pub/Sub 발행 (실시간 자막 + THINKING)
-        PublishTranscriptCommand publishCommand = PublishTranscriptCommand.builder().interviewId(interviewId)
-                .token(command.getToken()).thinking(command.getThinking()).build();
+        PublishTranscriptCommand publishCommand =
+                PublishTranscriptCommand.builder()
+                        .interviewId(interviewId)
+                        .token(command.getToken())
+                        .thinking(command.getThinking())
+                        .build();
         publishTranscriptPort.publish(publishCommand);
 
         if (command.isSentenceEnd() && accumulator.hasSentence()) {
-            PushTtsQueueCommand ttsCommand = PushTtsQueueCommand.builder().interviewId(interviewId)
-                    .interviewSessionId(command.getInterviewSessionId()).sentence(accumulator.getCurrentSentence())
-                    .sentenceIndex(accumulator.getSentenceIndex()).persona(persona).mode(command.getMode()).build();
+            PushTtsQueueCommand ttsCommand =
+                    PushTtsQueueCommand.builder()
+                            .interviewId(interviewId)
+                            .interviewSessionId(command.getInterviewSessionId())
+                            .sentence(accumulator.getCurrentSentence())
+                            .sentenceIndex(accumulator.getSentenceIndex())
+                            .persona(persona)
+                            .mode(command.getMode())
+                            .build();
             pushTtsQueuePort.push(ttsCommand);
             accumulator.clearSentence();
 
-            log.info("Pushed TTS sentence: interviewId={}, persona={}, sentenceIndex={}", interviewId, persona,
+            log.info(
+                    "Pushed TTS sentence: interviewId={}, persona={}, sentenceIndex={}",
+                    interviewId,
+                    persona,
                     accumulator.getSentenceIndex() - 1);
         }
 
@@ -108,11 +124,14 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
         }
     }
 
-    private void updateSessionStateInCache(ProcessLlmTokenCommand command, TokenAccumulator accumulator) {
+    private void updateSessionStateInCache(
+            ProcessLlmTokenCommand command, TokenAccumulator accumulator) {
         try {
             String sessionId = command.getInterviewSessionId();
-            InterviewSessionState state = sessionStatePort.getState(sessionId)
-                    .orElseGet(InterviewSessionState::createDefault);
+            InterviewSessionState state =
+                    sessionStatePort
+                            .getState(sessionId)
+                            .orElseGet(InterviewSessionState::createDefault);
 
             boolean updated = false;
 
@@ -124,7 +143,8 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
 
             if (command.getNextDifficultyLevel() > 0
                     && (state.getCurrentDifficulty() == null
-                            || !state.getCurrentDifficulty().equals(command.getNextDifficultyLevel()))
+                            || !state.getCurrentDifficulty()
+                                    .equals(command.getNextDifficultyLevel()))
                     && !accumulator.isDifficultyUpdated()) {
                 state.setCurrentDifficulty(command.getNextDifficultyLevel());
                 accumulator.setDifficultyUpdated(true);
@@ -132,7 +152,8 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
                 log.info("Updated difficulty (cached) to: {}", command.getNextDifficultyLevel());
             }
 
-            if (command.getCurrentPersonaId() != null && !command.getCurrentPersonaId().isEmpty()
+            if (command.getCurrentPersonaId() != null
+                    && !command.getCurrentPersonaId().isEmpty()
                     && !accumulator.isLastInterviewerUpdated()) {
                 state.setLastInterviewerId(command.getCurrentPersonaId());
                 accumulator.setLastInterviewerUpdated(true);
@@ -147,35 +168,52 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
         }
     }
 
-    private void handleFinalCompletion(ProcessLlmTokenCommand command, TokenAccumulator accumulator) {
+    private void handleFinalCompletion(
+            ProcessLlmTokenCommand command, TokenAccumulator accumulator) {
         String fullResponse = accumulator.getFullResponse();
 
-        log.info("LLM response completed: interviewId={}, responseLength={}", command.getInterviewId(),
+        log.info(
+                "LLM response completed: interviewId={}, responseLength={}",
+                command.getInterviewId(),
                 fullResponse.length());
 
-        SaveInterviewResultCommand saveCommand = SaveInterviewResultCommand.builder()
-                .interviewId(command.getInterviewId()).userId(command.getUserId()).userAnswer(command.getUserText())
-                .aiAnswer(fullResponse).build();
+        SaveInterviewResultCommand saveCommand =
+                SaveInterviewResultCommand.builder()
+                        .interviewId(command.getInterviewId())
+                        .userId(command.getUserId())
+                        .userAnswer(command.getUserText())
+                        .aiAnswer(fullResponse)
+                        .build();
         saveInterviewResultPort.save(saveCommand);
 
-        conversationHistoryPort.appendExchange(command.getInterviewId(), command.getInputRole(), command.getUserText(),
+        conversationHistoryPort.appendExchange(
+                command.getInterviewId(),
+                command.getInputRole(),
+                command.getUserText(),
                 fullResponse);
 
         if (accumulator.isEndSignal()) {
             log.info("Interview End Signal received. Transitioning to LAST_QUESTION_PROMPT.");
             try {
-                var sessionOpt = interviewPort.loadById(java.util.UUID.fromString(command.getInterviewSessionId()));
-                sessionOpt.ifPresent(session -> {
-                    session.transitionToLastQuestionPrompt();
-                    interviewPort.save(session);
-                });
+                var sessionOpt =
+                        interviewPort.loadById(
+                                java.util.UUID.fromString(command.getInterviewSessionId()));
+                sessionOpt.ifPresent(
+                        session -> {
+                            session.transitionToLastQuestionPrompt();
+                            interviewPort.save(session);
+                        });
             } catch (Exception e) {
                 log.error("Failed to transition to LAST_QUESTION_PROMPT", e);
             }
         } else {
-            eventPublisher.publishEvent(InterviewerIntroFinishedEvent.builder().interviewId(command.getInterviewId())
-                    .interviewSessionId(command.getInterviewSessionId()).userId(command.getUserId())
-                    .mode(command.getMode()).build());
+            eventPublisher.publishEvent(
+                    InterviewerIntroFinishedEvent.builder()
+                            .interviewId(command.getInterviewId())
+                            .interviewSessionId(command.getInterviewSessionId())
+                            .userId(command.getUserId())
+                            .mode(command.getMode())
+                            .build());
         }
     }
 }

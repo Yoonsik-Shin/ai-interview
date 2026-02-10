@@ -22,7 +22,10 @@ public class RedisCacheAdapter implements AppendRedisCachePort {
         // 아니면 리스트(RPUSH)로 저장하고 TTL 설정.
 
         // 사용자의 요청대로 "누가 한말인지 제대로 처리"하기 위해 JSON 객체로 저장
-        String jsonValue = String.format("{\"persona\":\"%s\",\"token\":\"%s\"}", persona, token.replace("\"", "\\\""));
+        String jsonValue =
+                String.format(
+                        "{\"persona\":\"%s\",\"token\":\"%s\"}",
+                        persona, token.replace("\"", "\\\""));
         redisTemplate.opsForList().rightPush(key, jsonValue);
         redisTemplate.expire(key, Duration.ofHours(1));
     }
