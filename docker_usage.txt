@@ -1,0 +1,101 @@
+Images space usage:
+
+REPOSITORY     TAG       IMAGE ID       CREATED             SIZE      SHARED SIZE   UNIQUE SIZE   CONTAINERS
+document       latest    e8ab1d14d734   5 minutes ago       2.64GB    149.7MB       2.488GB       0
+storage        latest    8de9ab9e1d55   11 minutes ago      280MB     279.7MB       65.79kB       0
+core           latest    b2b2560b79ff   About an hour ago   374MB     8.701MB       365.3MB       0
+bff            latest    67cc29594301   About an hour ago   248MB     160.4MB       87.65MB       0
+stt            latest    ebc6abaca0ea   3 hours ago         1.82GB    786MB         1.03GB        0
+llm            latest    4b1a301d8d53   3 hours ago         1.03GB    786MB         244.9MB       0
+socket         latest    3c2eef0f1d20   3 hours ago         216MB     160.4MB       55.4MB        0
+storage        v1.0.3    51fc446e3ecf   3 hours ago         280MB     279.7MB       63.6kB        0
+tts            latest    a3e45071d2f4   3 hours ago         399MB     149.7MB       249.6MB       0
+kindest/node   v1.35.0   b200139c59c4   7 weeks ago         930MB     0B            930.4MB       4
+
+Containers space usage:
+
+CONTAINER ID   IMAGE                  COMMAND                  LOCAL VOLUMES   SIZE      CREATED       STATUS                  NAMES
+00d272e5965d   kindest/node:v1.35.0   "/usr/local/bin/entr…"   1               141kB     3 hours ago   Up Less than a second   unbrdn-local-worker
+38e7c32f2004   kindest/node:v1.35.0   "/usr/local/bin/entr…"   1               3.11MB    3 hours ago   Up Less than a second   unbrdn-local-control-plane
+39a7ae7bed45   kindest/node:v1.35.0   "/usr/local/bin/entr…"   1               141kB     3 hours ago   Up Less than a second   unbrdn-local-worker2
+25177f27ad59   kindest/node:v1.35.0   "/usr/local/bin/entr…"   1               141kB     3 hours ago   Up Less than a second   unbrdn-local-worker3
+
+Local Volumes space usage:
+
+VOLUME NAME                                                        LINKS     SIZE
+1fce829480389cf1361dd2894fcf38b0d867f5a4238b2c969afe166ecf972873   1         27.1GB
+611f59154de7cc8af458f855bca236495faa78e21874c79ea5516f0d6c6f126b   1         30.03GB
+9fbd748d2d76b223baff4d235bba54d90dda4a59ae48e1b91f890e563117d5b7   1         29.85GB
+c794ce463dfe9862f1a1d9e77c0cf8dee507341c1e6aef46dabbb1e63fe53f0d   1         28.88GB
+
+Build cache usage: 5.088GB
+
+CACHE ID       CACHE TYPE   SIZE      CREATED             LAST USED           USAGE     SHARED
+x6a3dkt1p06r   regular      0B        3 hours ago         3 hours ago         1         true
+da4vny0ezzji   regular      0B        3 hours ago         3 hours ago         1         true
+rs66h2gwpout   regular      0B        3 hours ago         3 hours ago         1         true
+ua1oohswg42a   regular      0B        3 hours ago         3 hours ago         1         true
+wofh8q8novwg   regular      0B        3 hours ago         3 hours ago         1         true
+rw6jpvzs17qs   regular      0B        3 hours ago         3 hours ago         3         true
+0dgs866l4f8h   regular      0B        3 hours ago         3 hours ago         1         true
+lcmdxezf76c0   regular      0B        3 hours ago         3 hours ago         1         true
+7h5yvdfdtej2   regular      0B        3 hours ago         3 hours ago         1         true
+lfnkt31kv9yx   regular      0B        3 hours ago         3 hours ago         1         true
+j0xxu1z5pzj6   regular      44.1MB    3 hours ago         3 hours ago         1         true
+wbmojy55w2nu   regular      65.2MB    3 hours ago         3 hours ago         1         true
+phhu49d67w8h   regular      95.1MB    3 hours ago         3 hours ago         1         true
+gh4cxgo3fokf   regular      248kB     3 hours ago         3 hours ago         1         true
+2rxmpgbm7tie   regular      45MB      3 hours ago         3 hours ago         1         true
+gqjqrzphdqaa   regular      8.92kB    3 hours ago         3 hours ago         1         true
+iae7cx1fj65t   regular      58.4MB    3 hours ago         3 hours ago         1         true
+3ysy6gl1k7j4   regular      492B      3 hours ago         3 hours ago         1         true
+z5085yacgll4   regular      0B        3 hours ago         3 hours ago         1         true
+bks3mc1b1mex   regular      252kB     3 hours ago         3 hours ago         1         true
+ol9hhledgklm   regular      112kB     3 hours ago         3 hours ago         1         true
+uyl5tsztvzkp   regular      3.22kB    3 hours ago         3 hours ago         1         true
+izh77terj502   regular      17.7MB    3 hours ago         3 hours ago         1         true
+98sxo2grey4d   regular      0B        3 hours ago         3 hours ago         1         true
+7hw4sdxip97j   regular      36.8MB    3 hours ago         3 hours ago         1         true
+gfmn89j1ppri   regular      568kB     3 hours ago         3 hours ago         1         true
+p6gndv3d9xh7   regular      17.7MB    3 hours ago         3 hours ago         1         true
+ytjxe4dc5zzk   regular      260kB     3 hours ago         3 hours ago         1         true
+an54mznplmsh   regular      0B        3 hours ago         3 hours ago         1         true
+wqmzwamcdbzc   regular      147MB     3 hours ago         3 hours ago         1         true
+r2wdwczp218f   regular      0B        3 hours ago         3 hours ago         1         true
+gqak4cwuksv5   regular      476B      3 hours ago         3 hours ago         1         true
+7c5qowyiwelp   regular      97.3MB    3 hours ago         3 hours ago         1         true
+uuiweoccxb4w   regular      183kB     3 hours ago         3 hours ago         1         true
+pr2smmeufmtu   regular      514MB     3 hours ago         3 hours ago         1         true
+rnhi43vm33si   regular      208kB     3 hours ago         3 hours ago         1         true
+sa1krx3v5t8s   regular      45MB      3 hours ago         3 hours ago         1         true
+484b0fcslkxb   regular      0B        3 hours ago         3 hours ago         1         true
+jozi4fa2npim   regular      591MB     3 hours ago         3 hours ago         1         true
+68qak3skuh4x   regular      278kB     3 hours ago         3 hours ago         1         true
+6yzb6gdj4vgs   regular      9.88kB    3 hours ago         3 hours ago         1         true
+ub8nctb3bwyy   regular      112kB     3 hours ago         3 hours ago         1         true
+7johxeqnwcys   regular      1.38MB    3 hours ago         3 hours ago         1         true
+pgnk7am37r7e   regular      514MB     3 hours ago         3 hours ago         1         true
+wjqfhaii3oze   regular      0B        3 hours ago         3 hours ago         1         true
+wok5b71qqtwi   regular      0B        3 hours ago         3 hours ago         1         true
+l07vf2e90srs   regular      8.92kB    3 hours ago         3 hours ago         1         true
+z0uvu2vi6wis   regular      0B        3 hours ago         3 hours ago         1         true
+k6wl9q69s2k9   regular      45MB      3 hours ago         3 hours ago         1         true
+bv6p7iabyiac   regular      288MB     3 hours ago         3 hours ago         1         true
+o05amgwtrf3y   regular      0B        3 hours ago         3 hours ago         1         true
+cxilq64dkw6c   regular      3.06kB    3 hours ago         3 hours ago         1         true
+rd8riaryghjw   regular      63.6kB    3 hours ago         3 hours ago         2         true
+s5w0zruyx2wy   regular      0B        3 hours ago         About an hour ago   2         true
+thbfkcx41nr1   regular      608kB     About an hour ago   About an hour ago   1         true
+a8npoqrxrwfn   regular      68.8MB    3 hours ago         About an hour ago   2         true
+t5qz9hqmvuoq   regular      112kB     About an hour ago   About an hour ago   1         true
+3ucduu92b39c   regular      136kB     About an hour ago   About an hour ago   1         true
+syx2l0s9wk8m   regular      0B        3 hours ago         About an hour ago   7         true
+kdenibxd58l1   regular      167MB     About an hour ago   About an hour ago   1         true
+shs366hfrd3n   regular      0B        3 hours ago         18 minutes ago      2         true
+j3ue6dmdv4fa   regular      520B      18 minutes ago      18 minutes ago      1         true
+ofolq041ehzp   regular      71.6MB    3 hours ago         11 minutes ago      8         true
+rzqtmn6mxrko   regular      65.8kB    11 minutes ago      11 minutes ago      1         true
+jkz4w9063xb8   frontend     0B        3 hours ago         5 minutes ago       13        false
+vtdokqif9yxd   regular      379kB     7 minutes ago       5 minutes ago       1         true
+dxpps061kwnl   regular      1.05GB    5 minutes ago       5 minutes ago       1         true
+4l3ydswfeyvu   regular      1.1GB     18 minutes ago      5 minutes ago       3         true
