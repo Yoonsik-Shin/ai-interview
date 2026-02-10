@@ -8,6 +8,26 @@ option java_outer_classname = "LlmProto";
 service LlmService {
   rpc GenerateResponse(GenerateRequest) returns (stream TokenChunk);
   rpc TextToSpeech(TTSRequest) returns (stream TTSChunk);
+  rpc ClassifyResume(ClassifyResumeRequest) returns (ClassifyResumeResponse);
+  rpc GetEmbedding(GetEmbeddingRequest) returns (GetEmbeddingResponse);
+}
+
+message ClassifyResumeRequest {
+  string text = 1;
+}
+
+message ClassifyResumeResponse {
+  bool is_resume = 1;
+  string reason = 2; // 판별 이유 (optional)
+  float score = 3;  // 매칭 점수 (0.0 ~ 1.0)
+}
+
+message GetEmbeddingRequest {
+  string text = 1;
+}
+
+message GetEmbeddingResponse {
+  repeated float embedding = 1;
 }
 
 enum InterviewStageProto {
