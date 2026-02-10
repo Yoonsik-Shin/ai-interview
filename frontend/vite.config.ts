@@ -12,5 +12,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    proxy: {
+      "/api": {
+        target: "http://localhost:80", // Kind 클러스터 Ingress
+        changeOrigin: true,
+      },
+    },
   },
 });
