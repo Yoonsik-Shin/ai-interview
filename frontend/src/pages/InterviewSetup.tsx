@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   createInterview,
   type CreateInterviewReq,
@@ -15,6 +15,7 @@ import {
 import { Toast } from "@/components/Toast";
 import { ResumeUploadZone } from "@/components/ResumeUploadZone";
 import { PremiumResumeViewer } from "@/components/PremiumResumeViewer";
+import { Skeleton } from "@/components/Skeleton";
 import styles from "./InterviewSetup.module.css";
 
 export function InterviewSetup() {
@@ -375,360 +376,365 @@ export function InterviewSetup() {
   return (
     <div className={styles.wrap}>
       <header className={styles.header}>
-        <button className={styles.backButton} onClick={() => navigate("/")}>
+        <Link to="/" className={styles.backButton}>
           ← 홈으로
-        </button>
-        <h1>면접 설정</h1>
-        <p>카메라와 마이크를 테스트하고 면접을 시작하세요</p>
+        </Link>
+        <h1 className={styles.headerTitle}>면접 설정</h1>
       </header>
 
-      <div className={styles.container}>
-        {/* 미디어 테스트 섹션 */}
-        <div className={styles.mediaSection}>
-          <h2>미디어 테스트</h2>
+      <main className={styles.content}>
+        <div className={styles.container}>
+          {/* 미디어 테스트 섹션 */}
+          <section className={styles.mediaSection}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.sectionIcon}>🎥</span>
+              <h2>미디어 테스트</h2>
+            </div>
 
-          {/* 카메라 프리뷰 */}
-          <div className={styles.videoContainer}>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={styles.video}
-            />
-          </div>
-
-          {/* 카메라 선택 */}
-          <div className={styles.deviceSelect}>
-            <label>카메라</label>
-            <select
-              value={selectedCamera}
-              onChange={(e) => changeDevice("video", e.target.value)}
-              className={styles.select}
-            >
-              <option value="none">사용 안 함</option>
-              {devices.cameras.map((device) => (
-                <option key={device.deviceId} value={device.deviceId}>
-                  {device.label || `카메라 ${device.deviceId.slice(0, 5)}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 마이크 선택 및 레벨 */}
-          <div className={styles.deviceSelect}>
-            <label>마이크</label>
-            <select
-              value={selectedMicrophone}
-              onChange={(e) => changeDevice("audio", e.target.value)}
-              className={styles.select}
-            >
-              <option value="none">사용 안 함</option>
-              {devices.microphones.map((device) => (
-                <option key={device.deviceId} value={device.deviceId}>
-                  {device.label || `마이크 ${device.deviceId.slice(0, 5)}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 오디오 레벨 표시 */}
-          <div className={styles.audioLevel}>
-            <label>마이크 레벨</label>
-            <div className={styles.levelBar}>
-              <div
-                className={styles.levelFill}
-                style={{ width: `${audioLevel * 100}%` }}
+            <div className={styles.videoContainer}>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={styles.video}
               />
             </div>
-          </div>
-        </div>
 
-        {/* 프로필 및 면접 설정 */}
-        <div className={styles.formSection}>
-          <div className={styles.profileSection}>
-            <div className={styles.profileHeader}>
-              <div className={styles.profileAvatar}>
-                <span className={styles.avatarIcon}>👤</span>
+            <div className={styles.mediaControls}>
+              {/* 카메라 선택 */}
+              <div className={styles.deviceSelect}>
+                <label>카메라</label>
+                <select
+                  value={selectedCamera}
+                  onChange={(e) => changeDevice("video", e.target.value)}
+                  className={styles.select}
+                >
+                  <option value="none">사용 안 함</option>
+                  {devices.cameras.map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `카메라 ${device.deviceId.slice(0, 5)}`}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className={styles.profileText}>
-                <h2>이력서 설정</h2>
-                <p>기존 이력서를 선택하거나 새 파일을 업로드하세요.</p>
+
+              {/* 마이크 선택 및 레벨 */}
+              <div className={styles.deviceSelect}>
+                <label>마이크 및 오디오 레벨</label>
+                <select
+                  value={selectedMicrophone}
+                  onChange={(e) => changeDevice("audio", e.target.value)}
+                  className={styles.select}
+                  style={{ marginBottom: "1rem" }}
+                >
+                  <option value="none">사용 안 함</option>
+                  {devices.microphones.map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `마이크 ${device.deviceId.slice(0, 5)}`}
+                    </option>
+                  ))}
+                </select>
+                <div className={styles.levelBar}>
+                  <div
+                    className={styles.levelFill}
+                    style={{ width: `${audioLevel * 100}%` }}
+                  />
+                </div>
               </div>
             </div>
+          </section>
 
-            {resumesLoading ? (
-              <div className={styles.resumesLoading}>이력서 불러오는 중...</div>
-            ) : isNewUpload ? (
-              <div className={styles.uploadArea}>
-                <div className={styles.uploadHeader}>
-                  <h3>새 이력서 업로드</h3>
-                  {existingResumes.length > 0 && (
-                    <button
-                      type="button"
-                      className={styles.textBtn}
-                      onClick={() => setIsNewUpload(false)}
-                    >
-                      기존 목록에서 선택
-                    </button>
-                  )}
+          <section className={styles.formSection}>
+            <div className={styles.profileSection}>
+              <div className={styles.profileHeader}>
+                <div className={styles.profileAvatar}>
+                  <span className={styles.avatarIcon}>👤</span>
                 </div>
-                <ResumeUploadZone
-                  onFileSelect={handleFileSelect}
-                  onAnalyzeStart={() => {
-                    setValidating(true);
-                  }}
-                  onAnalyzeEnd={() => {
-                    setValidating(false);
-                  }}
-                  onError={setError}
-                  onSuccess={setSuccess}
-                  enableUpload={true}
-                  onUploadComplete={(resumeId) => {
-                    setUploadedResumeId(resumeId);
-                    setSuccess("이력서가 업로드되었습니다!");
-                  }}
-                  existingResumes={existingResumes}
-                />
+                <div className={styles.profileText}>
+                  <h2>이력서 설정</h2>
+                  <p>기존 이력서를 선택하거나 새 파일을 업로드하세요.</p>
+                </div>
               </div>
-            ) : (
-              <div className={styles.resumeListArea}>
-                <div className={styles.uploadHeader}>
-                  <h3>내 이력서 목록</h3>
-                  <button
-                    type="button"
-                    className={styles.addBtn}
-                    onClick={() => setIsNewUpload(true)}
-                  >
-                    + 새 이력서 추가
-                  </button>
-                </div>
+
+              {resumesLoading ? (
                 <div className={styles.resumeGrid}>
-                  {existingResumes.map((resume) => (
-                    <div
-                      key={resume.id}
-                      className={`${styles.resumeCard} ${selectedResumeId === resume.id ? styles.resumeSelected : ""}`}
-                    >
-                      <div
-                        className={styles.resumeCardClickable}
-                        onClick={() => setSelectedResumeId(resume.id)}
-                      >
-                        <div className={styles.resumeCardIcon}>📄</div>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className={styles.resumeCard}>
+                      <div className={styles.resumeCardClickable}>
+                        <Skeleton width={30} height={30} circle />
                         <div className={styles.resumeCardBody}>
-                          <div className={styles.resumeCardTitle}>
-                            {resume.title}
-                          </div>
-                          <div className={styles.resumeCardDate}>
-                            {new Date(resume.createdAt).toLocaleDateString()}
-                          </div>
+                          <Skeleton
+                            width={120}
+                            height={18}
+                            className={styles.mb05}
+                          />
+                          <Skeleton width={80} height={14} />
                         </div>
-                        {selectedResumeId === resume.id && (
-                          <div className={styles.checkIcon}>✓</div>
-                        )}
                       </div>
-                      <button
-                        type="button"
-                        className={styles.viewDetailBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewDetail(resume.id);
-                        }}
-                      >
-                        상세보기
-                      </button>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-
-          <h2 className={styles.formTitle}>면접 상세 설정</h2>
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <div className={styles.field}>
-              <label htmlFor="domain">도메인</label>
-              <input
-                id="domain"
-                type="text"
-                value={form.domain}
-                onChange={(e) => setForm({ ...form, domain: e.target.value })}
-                className={styles.input}
-                placeholder="예: 프론트엔드, 자바 백엔드"
-                required
-              />
-            </div>
-
-            <div className={styles.field}>
-              <label htmlFor="interview-type">면접 타입</label>
-              <select
-                id="interview-type"
-                value={form.type}
-                onChange={(e) =>
-                  setForm({ ...form, type: e.target.value as any })
-                }
-                className={styles.input}
-              >
-                <option value="REAL">실전 면접 (정밀 분석, 유료)</option>
-                <option value="PRACTICE">모의 면접 (빠른 처리, 무료)</option>
-              </select>
-            </div>
-            {/* <p className={styles.fieldHint}>
-              ⚡ 빠른 처리 | STT: Fast Whisper, TTS: Edge TTS
-            </p> */}
-
-            <div className={styles.field}>
-              <label htmlFor="personality">면접 분위기 (성격)</label>
-              <select
-                id="personality"
-                value={personality}
-                onChange={(e) =>
-                  setPersonality(e.target.value as InterviewPersonality)
-                }
-                className={styles.input}
-              >
-                <option value="COMFORTABLE">편안한 (격려하는 분위기)</option>
-                <option value="PRESSURE">엄격한 (압박 면접 분위기)</option>
-                <option value="RANDOM">랜덤</option>
-              </select>
-            </div>
-
-            <div className={styles.field}>
-              <label>면접관 구성 (복수 선택 가능)</label>
-              <div className={styles.personaGrid}>
-                {[
-                  {
-                    id: "LEADER",
-                    title: "리드 면접관",
-                    desc: "리더십 및 종합 및 경험 평가",
-                    icon: "👨‍💼",
-                  },
-                  {
-                    id: "TECH",
-                    title: "기술 면접관",
-                    desc: "기술 역량 검증",
-                    icon: "💻",
-                  },
-                  {
-                    id: "HR",
-                    title: "인사 면접관",
-                    desc: "조직 적합성 및 인성 확인",
-                    icon: "🤝",
-                  },
-                ].map((p) => {
-                  const isSelected = selectedRoles.includes(
-                    p.id as InterviewRole,
-                  );
-                  return (
-                    <div
-                      key={p.id}
-                      className={`${styles.personaCard} ${isSelected ? styles.selected : ""} ${p.id === "LEADER" ? styles.mandatory : ""}`}
-                      onClick={() => toggleRole(p.id as InterviewRole)}
+              ) : isNewUpload ? (
+                <div className={styles.uploadArea}>
+                  <div className={styles.uploadHeader}>
+                    <h3>새 이력서 업로드</h3>
+                    {existingResumes.length > 0 && (
+                      <button
+                        type="button"
+                        className={styles.textBtn}
+                        onClick={() => setIsNewUpload(false)}
+                      >
+                        기존 목록에서 선택
+                      </button>
+                    )}
+                  </div>
+                  <ResumeUploadZone
+                    onFileSelect={handleFileSelect}
+                    onAnalyzeStart={() => {
+                      setValidating(true);
+                    }}
+                    onAnalyzeEnd={() => {
+                      setValidating(false);
+                    }}
+                    onError={setError}
+                    onSuccess={setSuccess}
+                    enableUpload={true}
+                    onUploadComplete={(resumeId) => {
+                      setUploadedResumeId(resumeId);
+                      setSuccess("이력서가 업로드되었습니다!");
+                    }}
+                    existingResumes={existingResumes}
+                  />
+                </div>
+              ) : (
+                <div className={styles.resumeListArea}>
+                  <div className={styles.uploadHeader}>
+                    <h3>내 이력서 목록</h3>
+                    <button
+                      type="button"
+                      className={styles.addBtn}
+                      onClick={() => setIsNewUpload(true)}
                     >
-                      <div className={styles.cardIcon}>{p.icon}</div>
-                      <div className={styles.cardTitle}>
-                        {p.title}
-                        {p.id === "LEADER" && (
-                          <span className={styles.mandatoryBadge}>필수</span>
-                        )}
+                      + 새 이력서 추가
+                    </button>
+                  </div>
+                  <div className={styles.resumeGrid}>
+                    {existingResumes.map((resume) => (
+                      <div
+                        key={resume.id}
+                        className={`${styles.resumeCard} ${selectedResumeId === resume.id ? styles.resumeSelected : ""}`}
+                      >
+                        <div
+                          className={styles.resumeCardClickable}
+                          onClick={() => setSelectedResumeId(resume.id)}
+                        >
+                          <div className={styles.resumeCardIcon}>📄</div>
+                          <div className={styles.resumeCardBody}>
+                            <div className={styles.resumeCardTitle}>
+                              {resume.title}
+                            </div>
+                            <div className={styles.resumeCardDate}>
+                              {new Date(resume.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                          {selectedResumeId === resume.id && (
+                            <div className={styles.checkIcon}>✓</div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.viewDetailBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetail(resume.id);
+                          }}
+                        >
+                          상세보기
+                        </button>
                       </div>
-                      <div className={styles.cardDescription}>{p.desc}</div>
-                    </div>
-                  );
-                })}
-              </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className={`${styles.field} ${styles.durationField}`}>
-              <label>목표 시간 (분, 10~120)</label>
-              <div className={styles.durationSelector}>
-                <div className={styles.durationBtns}>
-                  <button
-                    type="button"
-                    className={styles.durationBtn}
-                    onClick={() => adjustDuration(-30)}
-                  >
-                    -30m
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.durationBtn}
-                    onClick={() => adjustDuration(-10)}
-                  >
-                    -10m
-                  </button>
-                </div>
+            <h2 className={styles.formTitle}>면접 상세 설정</h2>
+            <form onSubmit={handleSubmit} className={styles.form}>
+              <div className={styles.field}>
+                <label htmlFor="domain">도메인</label>
+                <input
+                  id="domain"
+                  type="text"
+                  value={form.domain}
+                  onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                  className={styles.input}
+                  placeholder="예: 프론트엔드, 자바 백엔드"
+                  required
+                />
+              </div>
 
-                <div className={styles.durationDisplay}>
-                  {isEditingDuration ? (
-                    <input
-                      type="number"
-                      min={10}
-                      max={120}
-                      autoFocus
-                      className={styles.durationInput}
-                      value={form.targetDurationMinutes}
-                      onBlur={() => setIsEditingDuration(false)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && setIsEditingDuration(false)
-                      }
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          targetDurationMinutes: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  ) : (
-                    <div
-                      className={styles.durationValue}
-                      onClick={() => setIsEditingDuration(true)}
+              <div className={styles.field}>
+                <label htmlFor="interview-type">면접 타입</label>
+                <select
+                  id="interview-type"
+                  value={form.type}
+                  onChange={(e) =>
+                    setForm({ ...form, type: e.target.value as any })
+                  }
+                  className={styles.input}
+                >
+                  <option value="REAL">실전 면접 (정밀 분석, 유료)</option>
+                  <option value="PRACTICE">모의 면접 (빠른 처리, 무료)</option>
+                </select>
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="personality">면접 분위기 (성격)</label>
+                <select
+                  id="personality"
+                  value={personality}
+                  onChange={(e) =>
+                    setPersonality(e.target.value as InterviewPersonality)
+                  }
+                  className={styles.input}
+                >
+                  <option value="COMFORTABLE">편안한 (격려하는 분위기)</option>
+                  <option value="PRESSURE">엄격한 (압박 면접 분위기)</option>
+                  <option value="RANDOM">랜덤</option>
+                </select>
+              </div>
+
+              <div className={styles.field}>
+                <label>면접관 구성 (복수 선택 가능)</label>
+                <div className={styles.personaGrid}>
+                  {[
+                    {
+                      id: "LEADER",
+                      title: "리드 면접관",
+                      desc: "리더십 및 종합 및 경험 평가",
+                      icon: "👨‍💼",
+                    },
+                    {
+                      id: "TECH",
+                      title: "기술 면접관",
+                      desc: "기술 역량 검증",
+                      icon: "💻",
+                    },
+                    {
+                      id: "HR",
+                      title: "인사 면접관",
+                      desc: "조직 적합성 및 인성 확인",
+                      icon: "🤝",
+                    },
+                  ].map((p) => {
+                    const isSelected = selectedRoles.includes(
+                      p.id as InterviewRole,
+                    );
+                    return (
+                      <div
+                        key={p.id}
+                        className={`${styles.personaCard} ${isSelected ? styles.selected : ""} ${p.id === "LEADER" ? styles.mandatory : ""}`}
+                        onClick={() => toggleRole(p.id as InterviewRole)}
+                      >
+                        <div className={styles.cardIcon}>{p.icon}</div>
+                        <div className={styles.cardTitle}>
+                          {p.title}
+                          {p.id === "LEADER" && (
+                            <span className={styles.mandatoryBadge}>필수</span>
+                          )}
+                        </div>
+                        <div className={styles.cardDescription}>{p.desc}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={`${styles.field} ${styles.durationField}`}>
+                <label>목표 시간 (분, 10~120)</label>
+                <div className={styles.durationSelector}>
+                  <div className={styles.durationBtns}>
+                    <button
+                      type="button"
+                      className={styles.durationBtn}
+                      onClick={() => adjustDuration(-30)}
                     >
-                      <span>{form.targetDurationMinutes}</span>
-                      <small>분</small>
-                    </div>
-                  )}
-                </div>
+                      -30m
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.durationBtn}
+                      onClick={() => adjustDuration(-10)}
+                    >
+                      -10m
+                    </button>
+                  </div>
 
-                <div className={styles.durationBtns}>
-                  <button
-                    type="button"
-                    className={styles.durationBtn}
-                    onClick={() => adjustDuration(10)}
-                  >
-                    +10m
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.durationBtn}
-                    onClick={() => adjustDuration(30)}
-                  >
-                    +30m
-                  </button>
+                  <div className={styles.durationDisplay}>
+                    {isEditingDuration ? (
+                      <input
+                        type="number"
+                        min={10}
+                        max={120}
+                        autoFocus
+                        className={styles.durationInput}
+                        value={form.targetDurationMinutes}
+                        onBlur={() => setIsEditingDuration(false)}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && setIsEditingDuration(false)
+                        }
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            targetDurationMinutes: Number(e.target.value),
+                          }))
+                        }
+                      />
+                    ) : (
+                      <div
+                        className={styles.durationValue}
+                        onClick={() => setIsEditingDuration(true)}
+                      >
+                        <span>{form.targetDurationMinutes}</span>
+                        <small>분</small>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.durationBtns}>
+                    <button
+                      type="button"
+                      className={styles.durationBtn}
+                      onClick={() => adjustDuration(10)}
+                    >
+                      +10m
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.durationBtn}
+                      onClick={() => adjustDuration(30)}
+                    >
+                      +30m
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-            {/* <div className={styles.field}>
-              <label>자기소개</label>
-              <textarea
-                value={form.selfIntroduction}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, selfIntroduction: e.target.value }))
-                }
-                rows={4}
-                placeholder="간단한 자기소개를 입력하세요."
-                className={styles.input}
-              />
-            </div> */}
-            <button
-              type="submit"
-              disabled={loading || validating}
-              className={styles.btn}
-            >
-              {loading ? "생성 중…" : validating ? "AI 분석 중…" : "면접 시작"}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading || validating}
+                className={styles.btn}
+              >
+                {loading
+                  ? "생성 중…"
+                  : validating
+                    ? "AI 분석 중…"
+                    : "면접 시작"}
+              </button>
+            </form>
+          </section>
         </div>
-      </div>
+      </main>
 
       {(error || mediaError || success) && (
         <Toast
@@ -757,7 +763,12 @@ export function InterviewSetup() {
             </div>
             <div className={styles.modalBody}>
               {detailLoading ? (
-                <div className={styles.loading}>로딩 중...</div>
+                <div className={styles.detailLoadingSkeleton}>
+                  <Skeleton width="100%" height={24} className={styles.mb1} />
+                  <Skeleton width="90%" height={24} className={styles.mb1} />
+                  <Skeleton width="95%" height={24} className={styles.mb1} />
+                  <Skeleton width="80%" height={24} />
+                </div>
               ) : detail.fileUrl ? (
                 <div className={styles.pdfViewerContainer}>
                   <PremiumResumeViewer fileUrl={detail.fileUrl} />
