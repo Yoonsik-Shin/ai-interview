@@ -1,6 +1,7 @@
 import {
     Body,
     Controller,
+    Get,
     Post,
     StreamableFile,
     Header,
@@ -12,8 +13,9 @@ import {
     Request,
 } from "@nestjs/common";
 import { startInterviewUseCase } from "./usecases/interview.usecase";
+import { ListInterviewsUseCase } from "./usecases/list-interviews.usecase";
 import { CreateInterviewDto } from "./dto/create-interview.dto";
-import type { ClientGrpc } from "@nestjs/microservices";
+import * as microservices from "@nestjs/microservices";
 import { lastValueFrom, Observable } from "rxjs";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
@@ -34,17 +36,25 @@ interface LlmServiceGrpc {
     textToSpeech(data: TTSRequest): Observable<TTSChunk>;
 }
 
-@Controller({ path: "interview", version: "1" })
+@Controller({ path: "interviews", version: "1" })
 export class InterviewController implements OnModuleInit {
     private llmGrpcService: LlmServiceGrpc;
 
     constructor(
         private readonly startInterviewUseCase: startInterviewUseCase,
-        @Inject("LLM_PACKAGE") private readonly llmClient: ClientGrpc,
+        private readonly listInterviewsUseCase: ListInterviewsUseCase,
+        @Inject("LLM_PACKAGE") private readonly llmClient: microservices.ClientGrpc,
     ) {}
 
     onModuleInit() {
         this.llmGrpcService = this.llmClient.getService<LlmServiceGrpc>("LlmService");
+    }
+
+    @Get()
+    @UseGuards(JwtAuthGuard)
+    async listInterviews(@Request() req) {
+        const userId = req.user.userId;
+        return await this.listInterviewsUseCase.execute(userId);
     }
 
     @Post()

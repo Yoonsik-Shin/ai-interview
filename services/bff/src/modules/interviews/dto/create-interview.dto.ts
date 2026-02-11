@@ -7,6 +7,7 @@ import {
     Min,
     Max,
     IsArray,
+    IsUUID,
 } from "class-validator";
 
 // .proto의 Enum 값과 문자열이 일치해야 합니다.
@@ -29,9 +30,10 @@ export enum InterviewPersonality {
 
 export class CreateInterviewDto {
     // userId는 토큰에서 추출하므로 여기선 제외 (일단 하드코딩 예정)
-    @IsInt()
+    @IsString()
     @IsOptional()
-    resumeId?: number;
+    @IsUUID()
+    resumeId?: string;
 
     @IsString()
     @IsNotEmpty()
