@@ -16,8 +16,6 @@ import me.unbrdn.core.grpc.ResumeProto.ListResumesRequest;
 import me.unbrdn.core.grpc.ResumeProto.ListResumesResponse;
 import me.unbrdn.core.grpc.ResumeProto.ResumeDetail;
 import me.unbrdn.core.grpc.ResumeProto.ResumeItem;
-import me.unbrdn.core.grpc.ResumeProto.UploadResumeRequest;
-import me.unbrdn.core.grpc.ResumeProto.UploadResumeResponse;
 import me.unbrdn.core.grpc.ResumeServiceGrpc.ResumeServiceImplBase;
 import me.unbrdn.core.resume.application.dto.CompleteUploadCommand;
 import me.unbrdn.core.resume.application.dto.GetUploadUrlCommand;
@@ -27,8 +25,7 @@ import me.unbrdn.core.resume.application.port.in.DeleteResumeUseCase;
 import me.unbrdn.core.resume.application.port.in.GetResumeUseCase;
 import me.unbrdn.core.resume.application.port.in.GetUploadUrlUseCase;
 import me.unbrdn.core.resume.application.port.in.ListResumesByUserUseCase;
-import me.unbrdn.core.resume.application.port.in.UploadResumeUseCase;
-import me.unbrdn.core.resume.application.service.UploadResumeCommand;
+import me.unbrdn.core.resume.application.port.in.ValidateResumeUseCase;
 import net.devh.boot.grpc.server.service.GrpcService;
 
 /**
@@ -43,13 +40,13 @@ public class ResumeGrpcController extends ResumeServiceImplBase {
 
     private final GetUploadUrlUseCase getUploadUrlUseCase;
     private final CompleteUploadUseCase completeUploadUseCase;
-    private final UploadResumeUseCase uploadResumeUseCase;
-    private final me.unbrdn.core.resume.application.port.in.UpdateResumeUseCase updateResumeUseCase;
+
     private final ListResumesByUserUseCase listResumesByUserUseCase;
     private final GetResumeUseCase getResumeUseCase;
     private final DeleteResumeUseCase deleteResumeUseCase;
     private final me.unbrdn.core.resume.application.port.in.GetResumeEmbeddingsUseCase
             getResumeEmbeddingsUseCase;
+    private final ValidateResumeUseCase validateResumeUseCase;
 
     @Override
     public void getUploadUrl(
@@ -84,14 +81,17 @@ public class ResumeGrpcController extends ResumeServiceImplBase {
             StreamObserver<CompleteUploadResponse> responseObserver) {
         log.info("gRPC 요청 수신: CompleteUpload - resumeId={}", request.getResumeId());
         try {
-            CompleteUploadCommand command =
+            CompleteUploadCommand.CompleteUploadCommandBuilder commandBuilder =
                     CompleteUploadCommand.builder()
                             .resumeId(UUID.fromString(request.getResumeId()))
                             .validationText(request.getValidationText())
-                            .embedding(floatsToArray(request.getEmbeddingList()))
-                            .build();
+                            .embedding(floatsToArray(request.getEmbeddingList()));
 
-            completeUploadUseCase.execute(command);
+            if (request.hasExistingResumeId()) {
+                commandBuilder.existingResumeId(UUID.fromString(request.getExistingResumeId()));
+            }
+
+            completeUploadUseCase.execute(commandBuilder.build());
 
             CompleteUploadResponse response =
                     CompleteUploadResponse.newBuilder().setSuccess(true).build();
@@ -100,103 +100,6 @@ public class ResumeGrpcController extends ResumeServiceImplBase {
             responseObserver.onCompleted();
         } catch (Exception e) {
             log.error("gRPC 에러 (completeUpload): ", e);
-            responseObserver.onError(
-                    me.unbrdn.core.common.infrastructure.grpc.GlobalGrpcExceptionHandler
-                            .toGrpcStatus(e)
-                            .asRuntimeException());
-        }
-    }
-
-    @Override
-    public void uploadResume(
-            UploadResumeRequest request, StreamObserver<UploadResumeResponse> responseObserver) {
-        log.info(
-                "gRPC 요청 수신(Legacy): UploadResume - userId={}, fileName={}",
-                request.getUserId(),
-                request.getFileName());
-        try {
-            UploadResumeCommand command =
-                    UploadResumeCommand.builder()
-                            .userId(java.util.UUID.fromString(request.getUserId()))
-                            .title(request.getTitle())
-                            .fileData(request.getFileData().toByteArray())
-                            .fileName(request.getFileName())
-                            .contentType(request.getContentType())
-                            .forceUpload(request.getForceUpload())
-                            .validationText(request.getValidationText())
-                            .embedding(floatsToArray(request.getEmbeddingList()))
-                            .build();
-
-            me.unbrdn.core.resume.application.dto.UploadResumeResult result =
-                    uploadResumeUseCase.execute(command);
-
-            UploadResumeResponse.Builder responseBuilder = UploadResumeResponse.newBuilder();
-
-            if (result.isHasSimilarResume()) {
-                // 유사 이력서 발견 - SimilarResumeInfo 반환
-                var similarResume = result.getSimilarResume();
-                responseBuilder.setSimilarResume(
-                        me.unbrdn.core.grpc.ResumeProto.SimilarResumeInfo.newBuilder()
-                                .setExistingResumeId(similarResume.resumeId())
-                                .setSimilarity(similarResume.similarity())
-                                .setTitle(similarResume.title())
-                                .setUploadedAt(similarResume.uploadedAt())
-                                .build());
-                log.info(
-                        "유사 이력서 발견 응답: userId={}, existingResumeId={}, similarity={}",
-                        request.getUserId(),
-                        similarResume.resumeId(),
-                        similarResume.similarity());
-            } else {
-                // 정상 업로드 성공 - resumeId 반환
-                responseBuilder.setResumeId(result.getResumeId());
-                log.info("gRPC 응답 전송 완료: resumeId={}", result.getResumeId());
-            }
-
-            responseObserver.onNext(responseBuilder.build());
-            responseObserver.onCompleted();
-        } catch (Exception e) {
-            log.error("gRPC 에러 (uploadResume): ", e);
-            responseObserver.onError(
-                    me.unbrdn.core.common.infrastructure.grpc.GlobalGrpcExceptionHandler
-                            .toGrpcStatus(e)
-                            .asRuntimeException());
-        }
-    }
-
-    @Override
-    public void updateResume(
-            me.unbrdn.core.grpc.ResumeProto.UpdateResumeRequest request,
-            StreamObserver<me.unbrdn.core.grpc.ResumeProto.UpdateResumeResponse> responseObserver) {
-        log.info(
-                "gRPC 요청 수신: UpdateResume - userId={}, existingResumeId={}",
-                request.getUserId(),
-                request.getExistingResumeId());
-        try {
-            me.unbrdn.core.resume.application.service.UpdateResumeCommand command =
-                    me.unbrdn.core.resume.application.service.UpdateResumeCommand.builder()
-                            .userId(UUID.fromString(request.getUserId()))
-                            .existingResumeId(UUID.fromString(request.getExistingResumeId()))
-                            .title(request.getTitle())
-                            .fileData(request.getFileData().toByteArray())
-                            .fileName(request.getFileName())
-                            .contentType(request.getContentType())
-                            .embedding(floatsToArray(request.getEmbeddingList()))
-                            .build();
-
-            UUID resumeId = updateResumeUseCase.execute(command);
-
-            me.unbrdn.core.grpc.ResumeProto.UpdateResumeResponse response =
-                    me.unbrdn.core.grpc.ResumeProto.UpdateResumeResponse.newBuilder()
-                            .setResumeId(resumeId.toString())
-                            .build();
-
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-
-            log.info("gRPC 응답 전송 완료: resumeId={}", resumeId);
-        } catch (Exception e) {
-            log.error("gRPC 에러 (updateResume): ", e);
             responseObserver.onError(
                     me.unbrdn.core.common.infrastructure.grpc.GlobalGrpcExceptionHandler
                             .toGrpcStatus(e)
@@ -314,6 +217,39 @@ public class ResumeGrpcController extends ResumeServiceImplBase {
         } catch (Exception e) {
             log.error("gRPC 에러 (GetResumeEmbeddings): ", e);
             responseObserver.onError(e);
+        }
+    }
+
+    @Override
+    public void validateResume(
+            me.unbrdn.core.grpc.ResumeProto.ValidateResumeRequest request,
+            io.grpc.stub.StreamObserver<me.unbrdn.core.grpc.ResumeProto.ValidateResumeResponse>
+                    responseObserver) {
+        log.info("gRPC 요청 수신: ValidateResume");
+        try {
+            me.unbrdn.core.resume.application.dto.ValidateResumeCommand command =
+                    me.unbrdn.core.resume.application.dto.ValidateResumeCommand.builder()
+                            .text(request.getText())
+                            .build();
+
+            me.unbrdn.core.resume.application.dto.ValidateResumeResult result =
+                    validateResumeUseCase.execute(command);
+
+            me.unbrdn.core.grpc.ResumeProto.ValidateResumeResponse response =
+                    me.unbrdn.core.grpc.ResumeProto.ValidateResumeResponse.newBuilder()
+                            .setIsResume(result.isResume())
+                            .setReason(result.getReason() != null ? result.getReason() : "")
+                            .setScore(result.getScore())
+                            .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("gRPC 에러 (validateResume): ", e);
+            responseObserver.onError(
+                    me.unbrdn.core.common.infrastructure.grpc.GlobalGrpcExceptionHandler
+                            .toGrpcStatus(e)
+                            .asRuntimeException());
         }
     }
 
