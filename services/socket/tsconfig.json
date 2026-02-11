@@ -23,7 +23,7 @@
         "noFallthroughCasesInSwitch": false,
         "paths": {
             "@/*": ["./src/*"],
-            "@grpc-types/*": ["../proto/generated/ts/*"],
+            "@grpc-types/*": ["./src/generated/*"],
             "@bufbuild/protobuf/wire": [
                 "./node_modules/@bufbuild/protobuf/dist/cjs/wire/index.d.ts"
             ],
@@ -31,5 +31,6 @@
             "@nestjs/microservices": ["./node_modules/@nestjs/microservices"],
             "rxjs": ["./node_modules/rxjs"]
         }
-    }
+    },
+    "include": ["src/**/*", "../../proto/generated/ts/**/*"]
 }

@@ -13,7 +13,11 @@ export class ProcessAudioService {
         private readonly sttStorageService: SttStorageService,
     ) {}
 
-    async processAudio(client: Socket, payload: AudioChunkDto): Promise<void> {
+    async processAudio(
+        client: Socket,
+        payload: AudioChunkDto,
+        stage: string = "unknown",
+    ): Promise<void> {
         try {
             const userId = (client as any).userId;
             const traceId = (client as any).traceId || "unknown";
@@ -49,6 +53,7 @@ export class ProcessAudioService {
                     userId,
                     timestamp,
                     traceId,
+                    stage, // Pass stage info
                 );
             } catch (grpcError) {
                 // gRPC 에러는 로그만 남기고 전체 흐름을 방해하지 않음

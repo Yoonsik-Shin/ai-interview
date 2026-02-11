@@ -37,22 +37,28 @@ export class SttGrpcService implements OnModuleInit {
         userId: string,
         timestamp: string,
         traceId: string,
+        stage: string = "unknown",
     ) {
         // payload에서 mode 직접 사용 (클라이언트가 전달)
         const mode = payload.mode || "practice";
 
         const audioChunkGrpc: AudioChunk = {
             audioData: audioData,
-            interviewId: payload.interviewSessionId,
-            userId: userId,
             isFinal: payload.isFinal || false,
             audioFormat: metadata.format,
             sampleRate: metadata.sampleRate,
             inputGain: metadata.inputGain,
             threshold: metadata.threshold,
             timestamp,
-            traceId,
-            mode: mode,
+            context: {
+                traceId: traceId,
+                mode: mode,
+                interview: {
+                    interviewId: payload.interviewSessionId,
+                    userId: userId,
+                    stage: stage,
+                },
+            },
         };
 
         let streamEntry = this.sttStreams.get(payload.interviewSessionId);

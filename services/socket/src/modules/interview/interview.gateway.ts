@@ -251,7 +251,7 @@ export class InterviewGateway {
      */
     private async processCandidateGreeting(client: Socket, payload: AudioChunkDto): Promise<void> {
         // 일반 오디오 처리 (STT)
-        await this.processAudioService.processAudio(client, payload);
+        await this.processAudioService.processAudio(client, payload, "CANDIDATE_GREETING");
 
         // isFinal인 경우 다음 stage로 전환 (면접관 자기소개)
         if (payload.isFinal) {
@@ -280,7 +280,7 @@ export class InterviewGateway {
      */
     private async processSelfIntro(client: Socket, payload: AudioChunkDto): Promise<void> {
         // 일반 오디오 처리 (STT)
-        await this.processAudioService.processAudio(client, payload);
+        await this.processAudioService.processAudio(client, payload, "SELF_INTRO");
 
         // 90초 경과 확인 (isFinal 시점에만)
         if (payload.isFinal) {
@@ -443,7 +443,7 @@ export class InterviewGateway {
      */
     private async processNormalQA(client: Socket, payload: AudioChunkDto): Promise<void> {
         // 일반 오디오 처리 (STT → LLM)
-        await this.processAudioService.processAudio(client, payload);
+        await this.processAudioService.processAudio(client, payload, "IN_PROGRESS");
     }
 
     /**
@@ -451,7 +451,7 @@ export class InterviewGateway {
      * - 답변 완료 시 CLOSING_GREETING 단계로 전환
      */
     private async processLastAnswer(client: Socket, payload: AudioChunkDto): Promise<void> {
-        await this.processAudioService.processAudio(client, payload);
+        await this.processAudioService.processAudio(client, payload, "LAST_ANSWER");
 
         if (payload.isFinal) {
             this.logger.log(client, "last_answer_completed", {
@@ -477,7 +477,7 @@ export class InterviewGateway {
      * - 사용자의 끝인사("수고하셨습니다" 등)를 듣고 면접 완료 처리
      */
     private async processClosingGreeting(client: Socket, payload: AudioChunkDto): Promise<void> {
-        await this.processAudioService.processAudio(client, payload);
+        await this.processAudioService.processAudio(client, payload, "CLOSING_GREETING");
 
         if (payload.isFinal) {
             this.logger.log(client, "closing_greeting_completed", {
