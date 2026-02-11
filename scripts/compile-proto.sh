@@ -60,6 +60,8 @@ if [ "$GENERATE_TYPESCRIPT" = true ]; then
     PROTO_DIR="services/proto"
     OUT_DIR="services/proto/generated/ts"
     
+    # 기존 생성 파일 정리
+    rm -rf "$OUT_DIR"
     mkdir -p "$OUT_DIR"
     
     if command -v protoc &> /dev/null && command -v protoc-gen-ts_proto &> /dev/null; then
@@ -71,6 +73,22 @@ if [ "$GENERATE_TYPESCRIPT" = true ]; then
           --ts_proto_opt=useOptionals=none \
           -I "$PROTO_DIR" "$PROTO_DIR"/*.proto
         echo "✅ TypeScript gRPC 타입 생성 완료: $OUT_DIR"
+
+        # 생성된 파일을 각 서비스로 복사
+        echo ""
+        echo "📦 각 서비스로 타입 정의 복사 중..."
+        
+        # Socket Service
+        SOCKET_DEST="services/socket/src/generated"
+        mkdir -p "$SOCKET_DEST"
+        cp -r "$OUT_DIR"/* "$SOCKET_DEST/"
+        echo "   -> Socket Service ($SOCKET_DEST)"
+
+        # BFF Service
+        BFF_DEST="services/bff/src/generated"
+        mkdir -p "$BFF_DEST"
+        cp -r "$OUT_DIR"/* "$BFF_DEST/"
+        echo "   -> BFF Service ($BFF_DEST)"
     else
         echo "⚠️  protoc 또는 protoc-gen-ts_proto가 설치되지 않았습니다."
         echo "   설치 방법: brew install protobuf && npm install -g ts-proto"

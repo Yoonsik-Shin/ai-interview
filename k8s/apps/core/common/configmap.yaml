@@ -37,7 +37,7 @@ data:
 
   # Logging
   LOG_LEVEL: "INFO"
-  LOG_LEVEL_CORE: "DEBUG"
+  LOG_LEVEL_CORE: "INFO"
 
   # Database (PostgreSQL - 로컬 환경)
   datasource-url: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/unbrdn"
