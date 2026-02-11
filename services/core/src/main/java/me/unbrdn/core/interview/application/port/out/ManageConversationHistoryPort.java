@@ -10,4 +10,8 @@ public interface ManageConversationHistoryPort {
     void appendExchange(String interviewId, String userText, String aiAnswer);
 
     void appendExchange(String interviewId, String role, String userText, String aiAnswer);
+
+    void appendUserMessage(String interviewId, String role, String userText);
+
+    void appendAiMessage(String interviewId, String aiAnswer);
 }

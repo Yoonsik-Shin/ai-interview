@@ -19,8 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 이력서 업로드 UseCase 구현체 (Interactor)
  *
- * <p>
- * 비즈니스 로직: 1. 사용자 조회 2. 문서에서 텍스트 추출 (Apache Tika) 3. 이력서 저장
+ * <p>비즈니스 로직: 1. 사용자 조회 2. 문서에서 텍스트 추출 (Apache Tika) 3. 이력서 저장
  */
 @Slf4j
 @Service
@@ -38,36 +37,56 @@ public class UploadResumeInteractor implements UploadResumeUseCase {
     @Transactional
     public UploadResumeResult execute(UploadResumeCommand command) {
         // 1. 사용자 조회
-        User user = loadUserPort.loadUserById(command.getUserId())
-                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다. ID: " + command.getUserId()));
+        User user =
+                loadUserPort
+                        .loadUserById(command.getUserId())
+                        .orElseThrow(
+                                () ->
+                                        new UserNotFoundException(
+                                                "사용자를 찾을 수 없습니다. ID: " + command.getUserId()));
 
         // 2. 해시 계산 및 중복 체크 (Exact Match)
         String fileHash = calculateHash(command.getFileData());
-        loadResumePort.loadByUserIdAndFileHash(user.getId(), fileHash).ifPresent(r -> {
-            throw new me.unbrdn.core.resume.application.exception.DuplicateResumeException("이미 등록된 동일한 이력서가 존재합니다.");
-        });
+        loadResumePort
+                .loadByUserIdAndFileHash(user.getId(), fileHash)
+                .ifPresent(
+                        r -> {
+                            throw new me.unbrdn.core.resume.application.exception
+                                    .DuplicateResumeException("이미 등록된 동일한 이력서가 존재합니다.");
+                        });
 
         // 3. 문서에서 텍스트 추출
-        String extractedText = documentParser.extractText(command.getFileData(), command.getContentType());
-        log.info("이력서 텍스트 추출 완료: userId={}, textLength={}", command.getUserId(), extractedText.length());
+        String extractedText =
+                documentParser.extractText(command.getFileData(), command.getContentType());
+        log.info(
+                "이력서 텍스트 추출 완료: userId={}, textLength={}",
+                command.getUserId(),
+                extractedText.length());
 
         // 4. 의미론적 유사도 검증 (forceUpload가 아닌 경우에만)
-        String textForEmbedding = (command.getValidationText() != null && !command.getValidationText().isEmpty())
-                ? command.getValidationText()
-                : extractedText;
+        String textForEmbedding =
+                (command.getValidationText() != null && !command.getValidationText().isEmpty())
+                        ? command.getValidationText()
+                        : extractedText;
 
         // 임베딩 생성 (프론트엔드 제공 데이터 우선, 없을 경우에만 백엔드 생성)
-        String truncatedText = textForEmbedding.length() > 3000 ? textForEmbedding.substring(0, 3000)
-                : textForEmbedding;
+        String truncatedText =
+                textForEmbedding.length() > 3000
+                        ? textForEmbedding.substring(0, 3000)
+                        : textForEmbedding;
 
-        float[] embedding = (command.getEmbedding() != null && command.getEmbedding().length > 0)
-                ? command.getEmbedding()
-                : documentGrpcClient.generateEmbedding(truncatedText);
+        float[] embedding =
+                (command.getEmbedding() != null && command.getEmbedding().length > 0)
+                        ? command.getEmbedding()
+                        : documentGrpcClient.generateEmbedding(truncatedText);
 
         if (!command.isForceUpload()) {
-            var similarResume = resumeVectorService.findSimilarResume(user.getId(), embedding, 0.85);
+            var similarResume =
+                    resumeVectorService.findSimilarResume(user.getId(), embedding, 0.85);
             if (similarResume.isPresent()) {
-                log.info("유사 이력서 발견 - 사용자 확인 필요: userId={}, similarity={}", user.getId(),
+                log.info(
+                        "유사 이력서 발견 - 사용자 확인 필요: userId={}, similarity={}",
+                        user.getId(),
                         similarResume.get().similarity());
                 return UploadResumeResult.withSimilarResume(similarResume.get());
             }
@@ -82,7 +101,11 @@ public class UploadResumeInteractor implements UploadResumeUseCase {
         Resumes savedResume = saveResumePort.save(resume);
 
         // 6. 임베딩 저장 (Spring AI VectorStore)
-        resumeVectorService.saveEmbedding(user.getId(), savedResume.getId().toString(), extractedText, embedding,
+        resumeVectorService.saveEmbedding(
+                user.getId(),
+                savedResume.getId().toString(),
+                extractedText,
+                embedding,
                 "VALIDATION"); // category를 VALIDATION으로 통일
 
         log.info("이력서 저장 완료: resumeId={}, userId={}", savedResume.getId(), command.getUserId());
@@ -96,8 +119,7 @@ public class UploadResumeInteractor implements UploadResumeUseCase {
             StringBuilder hexString = new StringBuilder();
             for (byte b : hash) {
                 String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1)
-                    hexString.append('0');
+                if (hex.length() == 1) hexString.append('0');
                 hexString.append(hex);
             }
             return hexString.toString();

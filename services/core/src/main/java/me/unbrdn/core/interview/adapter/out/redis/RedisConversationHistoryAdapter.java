@@ -48,6 +48,24 @@ public class RedisConversationHistoryAdapter implements ManageConversationHistor
         history.add(new ConversationHistory(role, userText));
         history.add(new ConversationHistory("assistant", aiAnswer));
 
+        saveHistory(interviewId, history);
+    }
+
+    @Override
+    public void appendUserMessage(String interviewId, String role, String userText) {
+        List<ConversationHistory> history = loadHistory(interviewId);
+        history.add(new ConversationHistory(role, userText));
+        saveHistory(interviewId, history);
+    }
+
+    @Override
+    public void appendAiMessage(String interviewId, String aiAnswer) {
+        List<ConversationHistory> history = loadHistory(interviewId);
+        history.add(new ConversationHistory("assistant", aiAnswer));
+        saveHistory(interviewId, history);
+    }
+
+    private void saveHistory(String interviewId, List<ConversationHistory> history) {
         // 최대 20개 유지
         if (history.size() > MAX_HISTORY) {
             history = history.subList(history.size() - MAX_HISTORY, history.size());

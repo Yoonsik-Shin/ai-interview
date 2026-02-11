@@ -127,7 +127,9 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
     private void updateSessionStateInCache(
             ProcessLlmTokenCommand command, TokenAccumulator accumulator) {
         try {
-            String sessionId = command.getInterviewSessionId();
+            // Use interviewId (UUID) for Redis Key consistency, NOT interviewSessionId (DB
+            // ID)
+            String sessionId = command.getInterviewId();
             InterviewSessionState state =
                     sessionStatePort
                             .getState(sessionId)
@@ -186,11 +188,9 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
                         .build();
         saveInterviewResultPort.save(saveCommand);
 
-        conversationHistoryPort.appendExchange(
-                command.getInterviewId(),
-                command.getInputRole(),
-                command.getUserText(),
-                fullResponse);
+        // Only append AI message, as User message was already appended in
+        // ProcessUserAnswerInteractor
+        conversationHistoryPort.appendAiMessage(command.getInterviewId(), fullResponse);
 
         if (accumulator.isEndSignal()) {
             log.info("Interview End Signal received. Transitioning to LAST_QUESTION_PROMPT.");

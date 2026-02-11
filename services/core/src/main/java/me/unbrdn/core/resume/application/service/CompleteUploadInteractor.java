@@ -24,14 +24,20 @@ public class CompleteUploadInteractor implements CompleteUploadUseCase {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ResumeVectorService resumeVectorService;
 
-    private static final String TOPIC_RESUME_UPLOADED = "resume.uploaded"; // Should match Python consumer config
+    private static final String TOPIC_RESUME_UPLOADED =
+            "resume.uploaded"; // Should match Python consumer config
 
     @Override
     @Transactional
     public void execute(CompleteUploadCommand command) {
         // 1. Load Resume
-        Resumes resume = loadResumePort.loadResumeById(command.getResumeId())
-                .orElseThrow(() -> new IllegalArgumentException("Resume not found: " + command.getResumeId()));
+        Resumes resume =
+                loadResumePort
+                        .loadResumeById(command.getResumeId())
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Resume not found: " + command.getResumeId()));
 
         try {
             // 2. Generate Download URL for the Document Service
@@ -42,8 +48,12 @@ public class CompleteUploadInteractor implements CompleteUploadUseCase {
             saveResumePort.save(resume);
 
             // 4. Publish Event to Kafka
-            ResumeUploadedEvent event = new ResumeUploadedEvent(resume.getId().toString(), resume.getFilePath(),
-                    downloadUrl, command.getValidationText());
+            ResumeUploadedEvent event =
+                    new ResumeUploadedEvent(
+                            resume.getId().toString(),
+                            resume.getFilePath(),
+                            downloadUrl,
+                            command.getValidationText());
 
             // Using ID as key for partitioning order
             kafkaTemplate.send(TOPIC_RESUME_UPLOADED, resume.getId().toString(), event);
@@ -51,14 +61,18 @@ public class CompleteUploadInteractor implements CompleteUploadUseCase {
             // 5. Save Embedding if provided by Frontend (Same-Source Strategy)
             if (command.getEmbedding() != null && command.getEmbedding().length > 0) {
                 log.info("Saving frontend-provided embedding for resume: {}", resume.getId());
-                resumeVectorService.saveEmbedding(resume.getUser().getId(), resume.getId().toString(),
-                        command.getValidationText() != null ? command.getValidationText() : "", command.getEmbedding(),
+                resumeVectorService.saveEmbedding(
+                        resume.getUser().getId(),
+                        resume.getId().toString(),
+                        command.getValidationText() != null ? command.getValidationText() : "",
+                        command.getEmbedding(),
                         "VALIDATION");
             }
 
             log.info(
                     "Resume upload completed. Event published to Kafka: resumeId={}, validationTextPresent={}, embeddingPresent={}",
-                    resume.getId(), command.getValidationText() != null && !command.getValidationText().isEmpty(),
+                    resume.getId(),
+                    command.getValidationText() != null && !command.getValidationText().isEmpty(),
                     command.getEmbedding() != null);
 
         } catch (Exception e) {
