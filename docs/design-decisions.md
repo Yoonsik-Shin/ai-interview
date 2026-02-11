@@ -160,3 +160,52 @@ Core 서비스 기동 시 Flyway 마이그레이션이 실행되지 않아 Hiber
 - **Pros**: 즉시 동일 파일에 대한 높은 유사도(0.95+) 확보 가능. 별도의 API 호출 없이 로컬에서의 즉각적인 피드백 유지.
 - **Cons**: 로직 변경 시 두 곳을 모두 수정해야 하는 강한 결합(Coupling) 발생.
 - **Future Work (Improvement)**: 로직 파편화를 완전히 해결하기 위해, 프론트엔드가 텍스트를 추출한 뒤 서버의 `Validation API`를 호출하여 **서버가 생성한 공식 임베딩**을 받아와서 비교하는 구조로 전환을 권장함.
+
+---
+
+## 2026-02-11: Core Service Logging Level Optimization
+
+### Context
+
+Core 서비스에서 불필요하게 많은 `DEBUG` 로그(특히 Actuator health check)와 SQL 로그가 출력되어 운영 및 디버깅 가독성이 떨어지는 문제 발생.
+
+### Decisions
+
+1. **Reduce Log Level from DEBUG to INFO**:
+   - `ConfigMap`의 `LOG_LEVEL_CORE` 환경변수 기본값을 `INFO`로 변경.
+   - 불필요한 프레임워크 수준의 디버그 로그 차단.
+2. **Flyway Noise Reduction**:
+   - 로컬 환경(`application-local.properties`)에서 Flyway 로그 레벨을 `INFO`로 조정.
+
+### Consequences
+
+- **Pros**: 로그 가시성 향상, 불필요한 I/O 및 저장 공간 절약.
+- **Pros**: 로그 가시성 향상, 불필요한 I/O 및 저장 공간 절약.
+- **Cons**: 심층 디버깅 시 일시적으로 로그 레벨을 다시 `DEBUG`로 높여야 함.
+
+---
+
+## 2026-02-11: Interview API Refactoring and List/Resume Functionality
+
+### Context
+
+사용자가 과거 면접 기록을 확인하고, 중단된 면접을 이어할 수 있는 기능이 필요함. 기존 `/v1/interview` 엔드포인트는 단수형을 사용하고 있어 RESTful 관례에 어긋나며, 목록 조회 기능을 추가하기에 부적합함.
+
+### Decisions
+
+1.  **Endpoint Pluralization (`/v1/interview` -> `/v1/interviews`)**:
+    - 리소스 컬렉션을 나타내기 위해 엔드포인트 명칭을 복수형으로 변경.
+2.  **gRPC `ListInterviews` RPC 추가**:
+    - Core 서비스에 `userId`를 통해 해당 사용자의 모든 면접 세션을 조회하는 RPC 정의.
+    - `InterviewSessionSummary` 메시지를 통해 필요한 최소 정보(ID, 시작시간, 상태, 도메인 등)만 반환하도록 최적화.
+3.  **Core Service: Repository-level Ordering**:
+    - `InterviewSessionRepository`에서 `findByCandidate_IdOrderByStartedAtDesc`를 사용하여 항상 최신 면접이 상단에 오도록 보장.
+4.  **BFF Service logic**:
+    - `GET /v1/interviews` 엔드포인트를 구현하여 프론트엔드와 Core gRPC 간의 가교 역할 수행.
+5.  **Frontend: Landing Page Integration**:
+    - 메인 페이지(Landing)에 면접 이력을 표시하고, 세션 ID를 기반으로 `/interview/:id` 경로로 이동하여 면접을 재개(Resume)할 수 있도록 구현.
+
+### Consequences
+
+- **Pros**: RESTful 규격 준수, 사용자 편의성(이어하기) 증대, 면접 데이터의 체계적 관리 가능.
+- **Cons**: 기존 단수형 API를 호출하던 프론트엔드 코드의 수정이 필요함 (Breaking change).

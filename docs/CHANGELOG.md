@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-02-11]
+
+### 수정
+
+- **Core Service**: 끈질기게 지속되던 `DEBUG` 및 SQL 로그 문제를 최종 해결
+  - 클러스터의 `Deployment` 명세에 숨겨져 있던 `DEBUG: "true"` 환경 변수 발견 및 제거
+  - `application.properties` 및 `application-local.properties`에 방어적 로깅 설정 추가 (`INFO` 고정)
+  - `ConfigMap`의 `LOG_LEVEL_CORE`를 `INFO`로 일관되게 정렬하여 노이즈 제거
+  - `hibernate.show_sql`이 `false`임을 재확인하여 SQL 로깅 비활성화 유지.
+
+- **면접 목록 조회 및 이어하기 기능 (Full Stack)**:
+  - **Proto**: `ListInterviews` RPC 및 `InterviewSessionSummary` 메시지 추가
+  - **Core**: `ListInterviewsUseCase` 구현 및 `InterviewGrpcController` 엔드포인트 추가. 최신순 정렬 보장.
+  - **BFF**: `/v1/interview` -> `/v1/interviews` 리팩토링 및 `GET` 목록 조회 API 구현.
+  - **Frontend**: 메인 페이지(`Landing.tsx`)에 히스토리 목록 UI 추가 및 중단된 면접 이어하기 링크 연결.
+
 ## [2026-02-09]
 
 ### 추가
