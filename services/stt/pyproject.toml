@@ -19,6 +19,8 @@ dependencies = [
     "grpcio-health-checking==1.62.0",
     "protobuf<5.0.0",
     "confluent-kafka==2.3.0",
+    "torch>=2.2.0",
+    "torchaudio>=2.2.0",
 
 ]
 

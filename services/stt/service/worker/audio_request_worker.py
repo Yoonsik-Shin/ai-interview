@@ -21,6 +21,10 @@ from service.publisher import SttPublisher
 publisher = SttPublisher()
 
 
+import torch
+import numpy as np
+from service.worker.vad_engine import VadEngine
+
 def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
     """
     gRPC 요청 스트림을 받아 STT 전체 비즈니스 로직을 처리합니다.
@@ -44,15 +48,21 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
     input_gain = 1.0
     client_threshold_percent = 5.0
     mode = "practice"
+    stage = "unknown"
     last_chunk_timestamp = None
 
-    silence_start_time = None  # 침묵 구간 시작 시각
-    has_speech = False  # 음성 감지 여부
-    total_speech_samples = 0  # 누적 음성 샘플 수
-    auto_finalize = False  # 자동 종료 플래그
+    # VAD 감지 여부 플래그
+    has_vad_speech = False
 
-    # 1. 오디오 청크 수집 및 VAD(음성 감지)
+    # Silero VAD Iterator 초기화 (stage별 동적 임계값 적용 전 임시)
+    vad_engine = VadEngine()
+    vad_iterator = None  # stage 확인 후 초기화
+
     for chunk in request_iterator:
+        # 빈 청크 무시
+        if not chunk.audio_data:
+            continue
+
         audio_chunks.append(chunk.audio_data)
         # 최초 청크에서 interview_id 등 메타데이터 추출
         if interview_id is None:
@@ -64,44 +74,46 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
             sample_rate = meta["sample_rate"]
             input_gain = meta["input_gain"]
             client_threshold_percent = meta["client_threshold_percent"]
-            client_threshold_percent = meta["client_threshold_percent"]
             mode = meta["mode"]
+            stage = meta.get("stage", "unknown")
+            
+            # Stage별 동적 VAD 임계값 적용
+            if stage == "SELF_INTRO":
+                min_silence_ms = 1000  # 1.0초 (생각할 시간 필요)
+            else:
+                min_silence_ms = 700   # 0.7초 (티키타카)
+            
+            vad_iterator = vad_engine.get_iterator_with_silence(min_silence_ms)
         
         # 마지막 청크의 타임스탬프 갱신
         if chunk.timestamp:
             last_chunk_timestamp = chunk.timestamp
 
-        # RMS(루트평균제곱)로 음성 세기 측정
-        chunk_rms = calculate_chunk_rms(chunk.audio_data)
-        chunk_samples = len(chunk.audio_data) // 2  # 16bit PCM 기준 샘플 수
+        # Silero VAD Processing (vad_iterator가 초기화된 후에만 실행)
+        if vad_iterator is not None:
+            # PCM16 bytes -> Float32 Tensor 변환
+            audio_int16 = np.frombuffer(chunk.audio_data, dtype=np.int16)
+            audio_float32 = torch.from_numpy(audio_int16.astype(np.float32) / 32768.0)
+            
+            # VAD 판별 (return_seconds=True이면 초 단위 타임스탬프 반환)
+            speech_dict = vad_iterator(audio_float32, return_seconds=True)
+            
+            if speech_dict:
+                if 'start' in speech_dict:
+                    # print(f"Speech start detected: {speech_dict['start']}")
+                    has_vad_speech = True
+                
+                if 'end' in speech_dict:
+                    # 발화 종료 감지 -> 자동 Finalize
+                    # print(f"Speech end detected: {speech_dict['end']}")
+                    break
 
-        # VAD 상태 갱신 및 자동 finalize 판단
-        has_speech, total_speech_samples, silence_start_time, auto_finalize = (
-            vad_update(
-                chunk_rms,
-                chunk_samples,
-                sample_rate,
-                has_speech,
-                total_speech_samples,
-                silence_start_time,
-                time,
-            )
-        )
-
-        # 자동 finalize 조건(충분한 음성 후 침묵 지속) 시 로그 및 루프 종료
-        if auto_finalize:
-            silence_duration = (
-                time.time() - silence_start_time if silence_start_time else 0
-            )
-                # log_vad_auto_finalize(
-                #     interview_id, silence_duration, total_speech_samples / sample_rate
-                # )
-            break
         if chunk.is_final:
             break
 
-    # 2. 입력 없음 처리 (오디오 청크가 하나도 없을 때)
-    if not audio_chunks:
+    # 2. 입력 없음 처리 (오디오 청크가 하나도 없거나 VAD가 말을 감지하지 못했을 때)
+    if not audio_chunks or not has_vad_speech:
+        log_transcription_complete("none (vad_rejected)", interview_id or 0, "", None)
         return stt_pb2.STTResponse(
             text="",
             interview_id=interview_id or 0,
