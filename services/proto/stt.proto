@@ -7,26 +7,49 @@ service SttService {
   rpc SpeechToText(stream AudioChunk) returns (STTResponse);
 }
 
+// 면접 컨텍스트
+message InterviewContext {
+  string interview_id = 1;
+  string user_id = 2;
+  string stage = 3;             // "SELF_INTRO", "IN_PROGRESS", "LAST_ANSWER", etc.
+}
+
+// 일반 STT 컨텍스트 (향후 확장용)
+message GeneralContext {
+  string session_id = 1;
+  string app_name = 2;
+}
+
+// 오디오 컨텍스트 (비즈니스 메타데이터)
+message AudioContext {
+  string trace_id = 1;          // 추적 ID
+  string mode = 2;              // "practice" (로컬 Whisper) or "real" (OpenAI API)
+  
+  oneof context_type {
+    InterviewContext interview = 10;
+    GeneralContext general = 11;
+  }
+}
+
+// 오디오 청크 (순수 오디오 데이터 + 컨텍스트)
 message AudioChunk {
-  bytes audio_data = 1;          // Base64 오디오 데이터
-  string interview_id = 2;       // 인터뷰 ID (UUID)
-  string user_id = 3;            // 사용자 ID
-  bool is_final = 4;             // 마지막 청크 여부
-  string audio_format = 5;       // "pcm16" or "webm"
-  int32 sample_rate = 6;         // 샘플 레이트 (기본 16000)
-  double input_gain = 7;         // 입력 게인 (기본 1.0)
-  double threshold = 8;          // 임계값 (기본 5.0)
-  string timestamp = 9;          // ISO 8601 타임스탬프
-  string trace_id = 10;          // 추적 ID
-  string mode = 11;              // "practice" (로컬 Whisper) or "real" (OpenAI API)
+  bytes audio_data = 1;         // 오디오 데이터
+  bool is_final = 2;            // 마지막 청크 여부
+  string audio_format = 3;      // "pcm16" or "webm"
+  int32 sample_rate = 4;        // 샘플 레이트 (기본 16000)
+  double input_gain = 5;        // 입력 게인 (기본 1.0)
+  double threshold = 6;         // 임계값 (기본 5.0)
+  string timestamp = 7;         // ISO 8601 타임스탬프
+  
+  AudioContext context = 8;     // 비즈니스 컨텍스트
 }
 
 message STTResponse {
-  string text = 1;               // 변환된 텍스트
-  string interview_id = 2;       // 인터뷰 ID (UUID)
-  string user_id = 3;            // 사용자 ID
-  bool is_empty = 4;             // 빈 응답 여부
-  string engine = 5;             // "faster-whisper"
-  string trace_id = 6;           // 추적 ID
-  string timestamp = 7;          // ISO 8601 타임스탬프
+  string text = 1;              // 변환된 텍스트
+  string interview_id = 2;      // 인터뷰 ID (UUID)
+  string user_id = 3;           // 사용자 ID
+  bool is_empty = 4;            // 빈 응답 여부
+  string engine = 5;            // "faster-whisper"
+  string trace_id = 6;          // 추적 ID
+  string timestamp = 7;         // ISO 8601 타임스탬프
 }

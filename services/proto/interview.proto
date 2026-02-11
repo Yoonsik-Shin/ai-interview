@@ -16,6 +16,9 @@ service InterviewServiceGrpc {
   
   // 자기소개 재시도 제어
   rpc IncrementSelfIntroRetry (IncrementSelfIntroRetryRequest) returns (IncrementSelfIntroRetryResponse);
+
+  // 면접 목록 조회
+  rpc ListInterviews (ListInterviewsRequest) returns (ListInterviewsResponse);
 }
 
 // === Enum 정의 ===
@@ -113,4 +116,23 @@ message IncrementSelfIntroRetryRequest {
 
 message IncrementSelfIntroRetryResponse {
   int32 new_retry_count = 1;
+}
+
+// 면접 목록 조회
+message ListInterviewsRequest {
+  string user_id = 1; // UUID
+}
+
+message InterviewSessionSummary {
+  string interview_id = 1;
+  string started_at = 2; // ISO 8601
+  InterviewStatusProto status = 3;
+  string domain = 4;
+  InterviewTypeProto type = 5;
+  int32 target_duration_minutes = 6;
+  int32 interviewer_count = 7;
+}
+
+message ListInterviewsResponse {
+  repeated InterviewSessionSummary interviews = 1;
 }
