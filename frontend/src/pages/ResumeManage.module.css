@@ -2,29 +2,21 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(
-      ellipse 70% 40% at 50% 0%,
-      rgba(16, 185, 129, 0.08),
-      transparent
-    ),
-    linear-gradient(
-      135deg,
-      rgba(30, 45, 58, 0.97) 0%,
-      rgba(16, 185, 129, 0.03) 50%,
-      rgba(30, 45, 58, 0.95) 100%
-    );
+  background: #0f172a;
   color: #e2e8f0;
 }
 
 .header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
   padding: 1.25rem 2rem;
   background: rgba(30, 41, 59, 0.5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .backButton {

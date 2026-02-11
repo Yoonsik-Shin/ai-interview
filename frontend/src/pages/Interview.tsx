@@ -796,7 +796,14 @@ export function Interview() {
               suppressTtsUntilTransitionRef.current = false;
               playNextTts();
             };
-            audioRef.current.play().catch(console.error);
+            audioRef.current.play().catch((err) => {
+              console.error("Transition audio interrupted/failed:", err);
+              // 혹시 Intervention 등으로 중단(AbortError)된 경우에도 락을 해제해야 함
+              ttsPlayingRef.current = false;
+              setIsInterviewerSpeaking(false);
+              suppressTtsUntilTransitionRef.current = false;
+              playNextTts();
+            });
           }
         }
       } else if (e.currentStage === InterviewStage.INTERVIEWER_INTRO) {
@@ -930,13 +937,34 @@ export function Interview() {
         audioRef.current.onended = () => {
           setIsInterviewerSpeaking(false);
           setIntervention(null);
+          // 만약 Transition Audio가 억제된 상태에서 개입이 끝났다면 해제 및 다음 진행
+          if (suppressTtsUntilTransitionRef.current) {
+            suppressTtsUntilTransitionRef.current = false;
+            ttsPlayingRef.current = false;
+            playNextTts();
+          }
         };
         audioRef.current.onerror = () => {
           console.error("Intervene audio failed");
           setIsInterviewerSpeaking(false);
           setIntervention(null);
+          if (suppressTtsUntilTransitionRef.current) {
+            suppressTtsUntilTransitionRef.current = false;
+            ttsPlayingRef.current = false;
+            playNextTts();
+          }
         };
-        audioRef.current.play().catch(console.error);
+        audioRef.current.play().catch((err) => {
+          console.error("Intervene audio play failed:", err);
+          // 여기서도 cleanup
+          setIsInterviewerSpeaking(false);
+          setIntervention(null);
+          if (suppressTtsUntilTransitionRef.current) {
+            suppressTtsUntilTransitionRef.current = false;
+            ttsPlayingRef.current = false;
+            playNextTts();
+          }
+        });
       } else {
         // 오디오 없으면 5초 후 메시지 제거
         setTimeout(() => setIntervention(null), 5000);

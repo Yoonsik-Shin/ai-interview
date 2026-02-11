@@ -21,11 +21,31 @@ export type CreateInterviewReq = {
 
 export type CreateInterviewRes = { interviewId: string; status: string };
 
+export type InterviewSessionSummary = {
+  interviewId: string;
+  startedAt: string;
+  status: string;
+  domain: string;
+  type: InterviewType;
+  targetDurationMinutes: number;
+  interviewerCount: number;
+};
+
+export type ListInterviewsRes = {
+  interviews: InterviewSessionSummary[];
+};
+
 export async function createInterview(
   body: CreateInterviewReq,
 ): Promise<CreateInterviewRes> {
-  return api<CreateInterviewRes>("/v1/interview", {
+  return api<CreateInterviewRes>("/v1/interviews", {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+export async function listInterviews(): Promise<ListInterviewsRes> {
+  return api<ListInterviewsRes>("/v1/interviews", {
+    method: "GET",
   });
 }

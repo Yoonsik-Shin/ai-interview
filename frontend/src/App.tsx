@@ -4,9 +4,11 @@ import { PageFrame } from "./components/PageFrame";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Landing } from "./pages/Landing";
+import { Interviews } from "./pages/Interviews";
 import { InterviewSetup } from "./pages/InterviewSetup";
 import { Interview } from "./pages/Interview";
 import { ResumeManage } from "./pages/ResumeManage";
+import { Profile } from "./pages/Profile";
 import { useEffect } from "react";
 import { preloadModel } from "@/services/resume-validator";
 
@@ -53,11 +55,31 @@ export default function App() {
         }
       />
       <Route
+        path="/interviews"
+        element={
+          <AuthGuard>
+            <PageFrame>
+              <Interviews />
+            </PageFrame>
+          </AuthGuard>
+        }
+      />
+      <Route
         path="/resumes"
         element={
           <AuthGuard>
             <PageFrame>
               <ResumeManage />
+            </PageFrame>
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <AuthGuard>
+            <PageFrame>
+              <Profile />
             </PageFrame>
           </AuthGuard>
         }

@@ -125,6 +125,25 @@ export function useAudioRecorder(
     async (deviceId?: string) => {
       isMountedRef.current = true;
       setMicError(null);
+
+      // Cleanup existing resources before starting new one
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+        sourceRef.current = null;
+      }
+      if (processorRef.current) {
+        processorRef.current.disconnect();
+        processorRef.current = null;
+      }
+      if (ctxRef.current) {
+        ctxRef.current.close().catch(() => {});
+        ctxRef.current = null;
+      }
+
       chunkIdRef.current = 0;
       bufferRef.current = [];
       totalRef.current = 0;
@@ -148,9 +167,6 @@ export function useAudioRecorder(
           return;
         }
 
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((t) => t.stop());
-        }
         streamRef.current = stream;
 
         // 시스템 샘플 레이트 자동 감지 (기본값 사용)
@@ -159,9 +175,19 @@ export function useAudioRecorder(
         const src = ctx.createMediaStreamSource(stream);
         sourceRef.current = src;
 
+        const srcSamplesNeeded = Math.floor((ctx.sampleRate * CHUNK_MS) / 1000);
         console.log(
-          `[AudioRecorder] Started. Context SampleRate: ${ctx.sampleRate}`,
+          `[AudioRecorder] Started. Context SampleRate: ${ctx.sampleRate}, Target Chunk Samples: ${srcSamplesNeeded}`,
         );
+
+        // Audio Cleaning: Band-pass Filter (300Hz ~ 3400Hz)
+        const highPass = ctx.createBiquadFilter();
+        highPass.type = "highpass";
+        highPass.frequency.value = 300; // Remove low freq noise (rumble, pop)
+
+        const lowPass = ctx.createBiquadFilter();
+        lowPass.type = "lowpass";
+        lowPass.frequency.value = 3400; // Remove high freq noise (hiss)
 
         const processor = ctx.createScriptProcessor(4096, 1, 1);
         processorRef.current = processor;
@@ -184,7 +210,11 @@ export function useAudioRecorder(
         };
         const gain = ctx.createGain();
         gain.gain.value = 0;
-        src.connect(processor);
+
+        // Connect nodes: Source -> HighPass -> LowPass -> Processor -> Gain -> Dest
+        src.connect(highPass);
+        highPass.connect(lowPass);
+        lowPass.connect(processor);
         processor.connect(gain);
         gain.connect(ctx.destination);
         setRecording(true);
