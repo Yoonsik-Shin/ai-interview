@@ -6,21 +6,98 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import type { handleServerStreamingCall, UntypedServiceImplementation } from "@grpc/grpc-js";
+import type { handleServerStreamingCall, handleUnaryCall, UntypedServiceImplementation } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
 
 export const protobufPackage = "llm";
 
+export enum InterviewStageProto {
+  INTERVIEW_STAGE_UNSPECIFIED = 0,
+  WAITING = 1,
+  GREETING = 2,
+  CANDIDATE_GREETING = 3,
+  INTERVIEWER_INTRO = 4,
+  SELF_INTRO_PROMPT = 5,
+  SELF_INTRO = 6,
+  IN_PROGRESS_STAGE = 7,
+  LAST_QUESTION_PROMPT = 8,
+  LAST_ANSWER = 9,
+  COMPLETED_STAGE = 10,
+  UNRECOGNIZED = -1,
+}
+
+export enum InterviewRoleProto {
+  INTERVIEW_ROLE_UNSPECIFIED = 0,
+  TECH = 1,
+  HR = 2,
+  LEADER = 3,
+  UNRECOGNIZED = -1,
+}
+
+export enum InterviewPersonalityProto {
+  INTERVIEW_PERSONALITY_UNSPECIFIED = 0,
+  PRESSURE = 1,
+  COMFORTABLE = 2,
+  RANDOM = 3,
+  UNRECOGNIZED = -1,
+}
+
+export interface ClassifyResumeRequest {
+  text: string;
+}
+
+export interface ClassifyResumeResponse {
+  isResume: boolean;
+  /** 판별 이유 (optional) */
+  reason: string;
+  /** 매칭 점수 (0.0 ~ 1.0) */
+  score: number;
+}
+
+export interface GetEmbeddingRequest {
+  text: string;
+}
+
+export interface GetEmbeddingResponse {
+  embedding: number[];
+}
+
+export interface PersonaProfile {
+  id: string;
+  /** e.g. "Tech Interviewer" */
+  name: string;
+  /** e.g. "MAIN", "SUPPORT" */
+  role: string;
+  /** e.g. "Sharp", "Encouraging" */
+  tone: string;
+}
+
 export interface GenerateRequest {
   interviewId: string;
   userId: string;
   userText: string;
-  persona: string;
+  /** string persona = 4; // Deprecated */
   history: ConversationHistory[];
+  stage: InterviewStageProto;
+  interviewerCount?: number | undefined;
+  domain?:
+    | string
+    | undefined;
+  /** [Deprecated] Keep for backward compat if needed */
+  availablePersonas: PersonaProfile[];
+  remainingTimeSeconds: number;
+  totalDurationSeconds: number;
+  currentDifficultyLevel: number;
+  lastInterviewerId: string;
+  availableRoles: InterviewRoleProto[];
+  personality: InterviewPersonalityProto;
+  /** [NEW] "user" (default) or "system" */
+  inputRole: string;
 }
 
 export interface ConversationHistory {
+  /** "user", "assistant", or "system" [NEW: support system] */
   role: string;
   content: string;
 }
@@ -31,6 +108,14 @@ export interface TokenChunk {
   isSentenceEnd: boolean;
   /** LangGraph 노드 실행 정보 */
   thinking: string;
+  /** [NEW] 발화자 ID */
+  currentPersonaId: string;
+  /** [NEW] 조정된 다음 난이도 (Core가 저장) */
+  nextDifficultyLevel: number;
+  /** [NEW] 전체 시간 20% 단축 신호 */
+  reduceTotalTime: boolean;
+  /** [NEW] 면접 종료 신호 */
+  interviewEndSignal: boolean;
 }
 
 export interface TTSRequest {
@@ -47,8 +132,274 @@ export interface TTSChunk {
 
 export const LLM_PACKAGE_NAME = "llm";
 
+function createBaseClassifyResumeRequest(): ClassifyResumeRequest {
+  return { text: "" };
+}
+
+export const ClassifyResumeRequest: MessageFns<ClassifyResumeRequest> = {
+  encode(message: ClassifyResumeRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.text !== "") {
+      writer.uint32(10).string(message.text);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ClassifyResumeRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseClassifyResumeRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.text = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseClassifyResumeResponse(): ClassifyResumeResponse {
+  return { isResume: false, reason: "", score: 0 };
+}
+
+export const ClassifyResumeResponse: MessageFns<ClassifyResumeResponse> = {
+  encode(message: ClassifyResumeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.isResume !== false) {
+      writer.uint32(8).bool(message.isResume);
+    }
+    if (message.reason !== "") {
+      writer.uint32(18).string(message.reason);
+    }
+    if (message.score !== 0) {
+      writer.uint32(29).float(message.score);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ClassifyResumeResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseClassifyResumeResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.isResume = reader.bool();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.reason = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 29) {
+            break;
+          }
+
+          message.score = reader.float();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetEmbeddingRequest(): GetEmbeddingRequest {
+  return { text: "" };
+}
+
+export const GetEmbeddingRequest: MessageFns<GetEmbeddingRequest> = {
+  encode(message: GetEmbeddingRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.text !== "") {
+      writer.uint32(10).string(message.text);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetEmbeddingRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetEmbeddingRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.text = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetEmbeddingResponse(): GetEmbeddingResponse {
+  return { embedding: [] };
+}
+
+export const GetEmbeddingResponse: MessageFns<GetEmbeddingResponse> = {
+  encode(message: GetEmbeddingResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    writer.uint32(10).fork();
+    for (const v of message.embedding) {
+      writer.float(v);
+    }
+    writer.join();
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetEmbeddingResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetEmbeddingResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag === 13) {
+            message.embedding.push(reader.float());
+
+            continue;
+          }
+
+          if (tag === 10) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.embedding.push(reader.float());
+            }
+
+            continue;
+          }
+
+          break;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBasePersonaProfile(): PersonaProfile {
+  return { id: "", name: "", role: "", tone: "" };
+}
+
+export const PersonaProfile: MessageFns<PersonaProfile> = {
+  encode(message: PersonaProfile, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name);
+    }
+    if (message.role !== "") {
+      writer.uint32(26).string(message.role);
+    }
+    if (message.tone !== "") {
+      writer.uint32(34).string(message.tone);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): PersonaProfile {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePersonaProfile();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.role = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.tone = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 function createBaseGenerateRequest(): GenerateRequest {
-  return { interviewId: "", userId: "", userText: "", persona: "", history: [] };
+  return {
+    interviewId: "",
+    userId: "",
+    userText: "",
+    history: [],
+    stage: 0,
+    availablePersonas: [],
+    remainingTimeSeconds: 0,
+    totalDurationSeconds: 0,
+    currentDifficultyLevel: 0,
+    lastInterviewerId: "",
+    availableRoles: [],
+    personality: 0,
+    inputRole: "",
+  };
 }
 
 export const GenerateRequest: MessageFns<GenerateRequest> = {
@@ -62,11 +413,43 @@ export const GenerateRequest: MessageFns<GenerateRequest> = {
     if (message.userText !== "") {
       writer.uint32(26).string(message.userText);
     }
-    if (message.persona !== "") {
-      writer.uint32(34).string(message.persona);
-    }
     for (const v of message.history) {
       ConversationHistory.encode(v!, writer.uint32(42).fork()).join();
+    }
+    if (message.stage !== 0) {
+      writer.uint32(48).int32(message.stage);
+    }
+    if (message.interviewerCount !== undefined) {
+      writer.uint32(56).int32(message.interviewerCount);
+    }
+    if (message.domain !== undefined) {
+      writer.uint32(66).string(message.domain);
+    }
+    for (const v of message.availablePersonas) {
+      PersonaProfile.encode(v!, writer.uint32(74).fork()).join();
+    }
+    if (message.remainingTimeSeconds !== 0) {
+      writer.uint32(80).int64(message.remainingTimeSeconds);
+    }
+    if (message.totalDurationSeconds !== 0) {
+      writer.uint32(88).int64(message.totalDurationSeconds);
+    }
+    if (message.currentDifficultyLevel !== 0) {
+      writer.uint32(96).int32(message.currentDifficultyLevel);
+    }
+    if (message.lastInterviewerId !== "") {
+      writer.uint32(106).string(message.lastInterviewerId);
+    }
+    writer.uint32(114).fork();
+    for (const v of message.availableRoles) {
+      writer.int32(v);
+    }
+    writer.join();
+    if (message.personality !== 0) {
+      writer.uint32(120).int32(message.personality);
+    }
+    if (message.inputRole !== "") {
+      writer.uint32(130).string(message.inputRole);
     }
     return writer;
   },
@@ -102,20 +485,110 @@ export const GenerateRequest: MessageFns<GenerateRequest> = {
           message.userText = reader.string();
           continue;
         }
-        case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.persona = reader.string();
-          continue;
-        }
         case 5: {
           if (tag !== 42) {
             break;
           }
 
           message.history.push(ConversationHistory.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.stage = reader.int32() as any;
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.interviewerCount = reader.int32();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.domain = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.availablePersonas.push(PersonaProfile.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 10: {
+          if (tag !== 80) {
+            break;
+          }
+
+          message.remainingTimeSeconds = longToNumber(reader.int64());
+          continue;
+        }
+        case 11: {
+          if (tag !== 88) {
+            break;
+          }
+
+          message.totalDurationSeconds = longToNumber(reader.int64());
+          continue;
+        }
+        case 12: {
+          if (tag !== 96) {
+            break;
+          }
+
+          message.currentDifficultyLevel = reader.int32();
+          continue;
+        }
+        case 13: {
+          if (tag !== 106) {
+            break;
+          }
+
+          message.lastInterviewerId = reader.string();
+          continue;
+        }
+        case 14: {
+          if (tag === 112) {
+            message.availableRoles.push(reader.int32() as any);
+
+            continue;
+          }
+
+          if (tag === 114) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.availableRoles.push(reader.int32() as any);
+            }
+
+            continue;
+          }
+
+          break;
+        }
+        case 15: {
+          if (tag !== 120) {
+            break;
+          }
+
+          message.personality = reader.int32() as any;
+          continue;
+        }
+        case 16: {
+          if (tag !== 130) {
+            break;
+          }
+
+          message.inputRole = reader.string();
           continue;
         }
       }
@@ -177,7 +650,16 @@ export const ConversationHistory: MessageFns<ConversationHistory> = {
 };
 
 function createBaseTokenChunk(): TokenChunk {
-  return { token: "", isFinal: false, isSentenceEnd: false, thinking: "" };
+  return {
+    token: "",
+    isFinal: false,
+    isSentenceEnd: false,
+    thinking: "",
+    currentPersonaId: "",
+    nextDifficultyLevel: 0,
+    reduceTotalTime: false,
+    interviewEndSignal: false,
+  };
 }
 
 export const TokenChunk: MessageFns<TokenChunk> = {
@@ -193,6 +675,18 @@ export const TokenChunk: MessageFns<TokenChunk> = {
     }
     if (message.thinking !== "") {
       writer.uint32(34).string(message.thinking);
+    }
+    if (message.currentPersonaId !== "") {
+      writer.uint32(42).string(message.currentPersonaId);
+    }
+    if (message.nextDifficultyLevel !== 0) {
+      writer.uint32(48).int32(message.nextDifficultyLevel);
+    }
+    if (message.reduceTotalTime !== false) {
+      writer.uint32(56).bool(message.reduceTotalTime);
+    }
+    if (message.interviewEndSignal !== false) {
+      writer.uint32(64).bool(message.interviewEndSignal);
     }
     return writer;
   },
@@ -234,6 +728,38 @@ export const TokenChunk: MessageFns<TokenChunk> = {
           }
 
           message.thinking = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.currentPersonaId = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.nextDifficultyLevel = reader.int32();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.reduceTotalTime = reader.bool();
+          continue;
+        }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
+
+          message.interviewEndSignal = reader.bool();
           continue;
         }
       }
@@ -368,17 +894,29 @@ export interface LlmServiceClient {
   generateResponse(request: GenerateRequest): Observable<TokenChunk>;
 
   textToSpeech(request: TTSRequest): Observable<TTSChunk>;
+
+  classifyResume(request: ClassifyResumeRequest): Observable<ClassifyResumeResponse>;
+
+  getEmbedding(request: GetEmbeddingRequest): Observable<GetEmbeddingResponse>;
 }
 
 export interface LlmServiceController {
   generateResponse(request: GenerateRequest): Observable<TokenChunk>;
 
   textToSpeech(request: TTSRequest): Observable<TTSChunk>;
+
+  classifyResume(
+    request: ClassifyResumeRequest,
+  ): Promise<ClassifyResumeResponse> | Observable<ClassifyResumeResponse> | ClassifyResumeResponse;
+
+  getEmbedding(
+    request: GetEmbeddingRequest,
+  ): Promise<GetEmbeddingResponse> | Observable<GetEmbeddingResponse> | GetEmbeddingResponse;
 }
 
 export function LlmServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["generateResponse", "textToSpeech"];
+    const grpcMethods: string[] = ["generateResponse", "textToSpeech", "classifyResume", "getEmbedding"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("LlmService", method)(constructor.prototype[method], method, descriptor);
@@ -413,11 +951,45 @@ export const LlmServiceService = {
     responseSerialize: (value: TTSChunk): Buffer => Buffer.from(TTSChunk.encode(value).finish()),
     responseDeserialize: (value: Buffer): TTSChunk => TTSChunk.decode(value),
   },
+  classifyResume: {
+    path: "/llm.LlmService/ClassifyResume",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: ClassifyResumeRequest): Buffer =>
+      Buffer.from(ClassifyResumeRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ClassifyResumeRequest => ClassifyResumeRequest.decode(value),
+    responseSerialize: (value: ClassifyResumeResponse): Buffer =>
+      Buffer.from(ClassifyResumeResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ClassifyResumeResponse => ClassifyResumeResponse.decode(value),
+  },
+  getEmbedding: {
+    path: "/llm.LlmService/GetEmbedding",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: GetEmbeddingRequest): Buffer => Buffer.from(GetEmbeddingRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetEmbeddingRequest => GetEmbeddingRequest.decode(value),
+    responseSerialize: (value: GetEmbeddingResponse): Buffer =>
+      Buffer.from(GetEmbeddingResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetEmbeddingResponse => GetEmbeddingResponse.decode(value),
+  },
 } as const;
 
 export interface LlmServiceServer extends UntypedServiceImplementation {
   generateResponse: handleServerStreamingCall<GenerateRequest, TokenChunk>;
   textToSpeech: handleServerStreamingCall<TTSRequest, TTSChunk>;
+  classifyResume: handleUnaryCall<ClassifyResumeRequest, ClassifyResumeResponse>;
+  getEmbedding: handleUnaryCall<GetEmbeddingRequest, GetEmbeddingResponse>;
+}
+
+function longToNumber(int64: { toString(): string }): number {
+  const num = globalThis.Number(int64.toString());
+  if (num > globalThis.Number.MAX_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
+  }
+  if (num < globalThis.Number.MIN_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
+  }
+  return num;
 }
 
 export interface MessageFns<T> {

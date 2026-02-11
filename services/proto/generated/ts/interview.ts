@@ -15,13 +15,24 @@ export const protobufPackage = "interview";
 /** === Enum 정의 === */
 export enum InterviewTypeProto {
   INTERVIEW_TYPE_UNSPECIFIED = 0,
-  TEXT_CHAT = 1,
-  VIDEO_CALL = 2,
+  REAL = 1,
+  PRACTICE = 2,
   UNRECOGNIZED = -1,
 }
 
-export enum InterviewPersonaProto {
-  INTERVIEW_PERSONA_UNSPECIFIED = 0,
+export enum InterviewRoleProto {
+  INTERVIEW_ROLE_UNSPECIFIED = 0,
+  /** TECH - 기술 면접관 */
+  TECH = 1,
+  /** HR - 인사/컬처 면접관 */
+  HR = 2,
+  /** LEADER - 리드 면접관 */
+  LEADER = 3,
+  UNRECOGNIZED = -1,
+}
+
+export enum InterviewPersonalityProto {
+  INTERVIEW_PERSONALITY_UNSPECIFIED = 0,
   PRESSURE = 1,
   COMFORTABLE = 2,
   RANDOM = 3,
@@ -33,6 +44,33 @@ export enum InterviewStatusProto {
   READY = 1,
   IN_PROGRESS = 2,
   COMPLETED = 3,
+  CANCELLED = 4,
+  UNRECOGNIZED = -1,
+}
+
+export enum InterviewStageProto {
+  INTERVIEW_STAGE_UNSPECIFIED = 0,
+  WAITING = 1,
+  /** GREETING - 면접관 인사 (녹음 음성) */
+  GREETING = 2,
+  /** CANDIDATE_GREETING - 면접자 인사 (첫 발화 감지) */
+  CANDIDATE_GREETING = 3,
+  /** INTERVIEWER_INTRO - 면접관 자기소개 (LLM) */
+  INTERVIEWER_INTRO = 4,
+  /** SELF_INTRO_PROMPT - 1분 자기소개 요청 (녹음 음성) */
+  SELF_INTRO_PROMPT = 5,
+  /** SELF_INTRO - 면접자 1분 자기소개 */
+  SELF_INTRO = 6,
+  /** IN_PROGRESS_STAGE - 본 면접 진행 */
+  IN_PROGRESS_STAGE = 7,
+  /** LAST_QUESTION_PROMPT - 마지막 질문 안내 (사전 녹음) */
+  LAST_QUESTION_PROMPT = 8,
+  /** LAST_ANSWER - 지원자 마지막 답변 */
+  LAST_ANSWER = 9,
+  /** CLOSING_GREETING - 면접관 마무리 인사 */
+  CLOSING_GREETING = 11,
+  /** COMPLETED_STAGE - 면접 완료 */
+  COMPLETED_STAGE = 10,
   UNRECOGNIZED = -1,
 }
 
@@ -44,16 +82,75 @@ export interface CreateInterviewRequest {
   resumeId?: string | undefined;
   domain: string;
   type: InterviewTypeProto;
-  persona: InterviewPersonaProto;
-  interviewerCount: number;
+  /** 복수 선택 가능 (New) */
+  interviewerRoles: InterviewRoleProto[];
+  /** 면접 분위기 (New) */
+  personality: InterviewPersonalityProto;
   targetDurationMinutes: number;
   selfIntroduction: string;
+  interviewerCount: number;
 }
 
 export interface CreateInterviewResponse {
   /** UUID */
   interviewId: string;
   status: InterviewStatusProto;
+}
+
+/** Stage 조회 */
+export interface GetInterviewStageRequest {
+  interviewSessionId: string;
+}
+
+export interface GetInterviewStageResponse {
+  stage: InterviewStageProto;
+  selfIntroElapsedSeconds: number;
+  persona?: string | undefined;
+  interviewerCount?: number | undefined;
+  domain?: string | undefined;
+  selfIntroRetryCount: number;
+  interviewerRoles: InterviewRoleProto[];
+  personality: InterviewPersonalityProto;
+}
+
+/** Stage 전환 */
+export interface TransitionStageRequest {
+  interviewSessionId: string;
+  newStage: InterviewStageProto;
+}
+
+export interface TransitionStageResponse {
+  currentStage: InterviewStageProto;
+}
+
+/** 자기소개 재시도 증분 */
+export interface IncrementSelfIntroRetryRequest {
+  interviewSessionId: string;
+}
+
+export interface IncrementSelfIntroRetryResponse {
+  newRetryCount: number;
+}
+
+/** 면접 목록 조회 */
+export interface ListInterviewsRequest {
+  /** UUID */
+  userId: string;
+}
+
+export interface InterviewSessionSummary {
+  interviewId: string;
+  /** ISO 8601 */
+  startedAt: string;
+  status: InterviewStatusProto;
+  domain: string;
+  type: InterviewTypeProto;
+  targetDurationMinutes: number;
+  interviewerCount: number;
+}
+
+export interface ListInterviewsResponse {
+  interviews: InterviewSessionSummary[];
 }
 
 export const INTERVIEW_PACKAGE_NAME = "interview";
@@ -63,10 +160,11 @@ function createBaseCreateInterviewRequest(): CreateInterviewRequest {
     userId: "",
     domain: "",
     type: 0,
-    persona: 0,
-    interviewerCount: 0,
+    interviewerRoles: [],
+    personality: 0,
     targetDurationMinutes: 0,
     selfIntroduction: "",
+    interviewerCount: 0,
   };
 }
 
@@ -84,17 +182,22 @@ export const CreateInterviewRequest: MessageFns<CreateInterviewRequest> = {
     if (message.type !== 0) {
       writer.uint32(32).int32(message.type);
     }
-    if (message.persona !== 0) {
-      writer.uint32(40).int32(message.persona);
+    writer.uint32(74).fork();
+    for (const v of message.interviewerRoles) {
+      writer.int32(v);
     }
-    if (message.interviewerCount !== 0) {
-      writer.uint32(48).int32(message.interviewerCount);
+    writer.join();
+    if (message.personality !== 0) {
+      writer.uint32(80).int32(message.personality);
     }
     if (message.targetDurationMinutes !== 0) {
       writer.uint32(56).int32(message.targetDurationMinutes);
     }
     if (message.selfIntroduction !== "") {
       writer.uint32(66).string(message.selfIntroduction);
+    }
+    if (message.interviewerCount !== 0) {
+      writer.uint32(48).int32(message.interviewerCount);
     }
     return writer;
   },
@@ -138,20 +241,30 @@ export const CreateInterviewRequest: MessageFns<CreateInterviewRequest> = {
           message.type = reader.int32() as any;
           continue;
         }
-        case 5: {
-          if (tag !== 40) {
-            break;
+        case 9: {
+          if (tag === 72) {
+            message.interviewerRoles.push(reader.int32() as any);
+
+            continue;
           }
 
-          message.persona = reader.int32() as any;
-          continue;
+          if (tag === 74) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.interviewerRoles.push(reader.int32() as any);
+            }
+
+            continue;
+          }
+
+          break;
         }
-        case 6: {
-          if (tag !== 48) {
+        case 10: {
+          if (tag !== 80) {
             break;
           }
 
-          message.interviewerCount = reader.int32();
+          message.personality = reader.int32() as any;
           continue;
         }
         case 7: {
@@ -168,6 +281,14 @@ export const CreateInterviewRequest: MessageFns<CreateInterviewRequest> = {
           }
 
           message.selfIntroduction = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.interviewerCount = reader.int32();
           continue;
         }
       }
@@ -228,12 +349,533 @@ export const CreateInterviewResponse: MessageFns<CreateInterviewResponse> = {
   },
 };
 
+function createBaseGetInterviewStageRequest(): GetInterviewStageRequest {
+  return { interviewSessionId: "" };
+}
+
+export const GetInterviewStageRequest: MessageFns<GetInterviewStageRequest> = {
+  encode(message: GetInterviewStageRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.interviewSessionId !== "") {
+      writer.uint32(10).string(message.interviewSessionId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetInterviewStageRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetInterviewStageRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.interviewSessionId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetInterviewStageResponse(): GetInterviewStageResponse {
+  return { stage: 0, selfIntroElapsedSeconds: 0, selfIntroRetryCount: 0, interviewerRoles: [], personality: 0 };
+}
+
+export const GetInterviewStageResponse: MessageFns<GetInterviewStageResponse> = {
+  encode(message: GetInterviewStageResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.stage !== 0) {
+      writer.uint32(8).int32(message.stage);
+    }
+    if (message.selfIntroElapsedSeconds !== 0) {
+      writer.uint32(16).int64(message.selfIntroElapsedSeconds);
+    }
+    if (message.persona !== undefined) {
+      writer.uint32(26).string(message.persona);
+    }
+    if (message.interviewerCount !== undefined) {
+      writer.uint32(32).int32(message.interviewerCount);
+    }
+    if (message.domain !== undefined) {
+      writer.uint32(42).string(message.domain);
+    }
+    if (message.selfIntroRetryCount !== 0) {
+      writer.uint32(48).int32(message.selfIntroRetryCount);
+    }
+    writer.uint32(58).fork();
+    for (const v of message.interviewerRoles) {
+      writer.int32(v);
+    }
+    writer.join();
+    if (message.personality !== 0) {
+      writer.uint32(64).int32(message.personality);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetInterviewStageResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetInterviewStageResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.stage = reader.int32() as any;
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.selfIntroElapsedSeconds = longToNumber(reader.int64());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.persona = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.interviewerCount = reader.int32();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.domain = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.selfIntroRetryCount = reader.int32();
+          continue;
+        }
+        case 7: {
+          if (tag === 56) {
+            message.interviewerRoles.push(reader.int32() as any);
+
+            continue;
+          }
+
+          if (tag === 58) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.interviewerRoles.push(reader.int32() as any);
+            }
+
+            continue;
+          }
+
+          break;
+        }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
+
+          message.personality = reader.int32() as any;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseTransitionStageRequest(): TransitionStageRequest {
+  return { interviewSessionId: "", newStage: 0 };
+}
+
+export const TransitionStageRequest: MessageFns<TransitionStageRequest> = {
+  encode(message: TransitionStageRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.interviewSessionId !== "") {
+      writer.uint32(10).string(message.interviewSessionId);
+    }
+    if (message.newStage !== 0) {
+      writer.uint32(16).int32(message.newStage);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TransitionStageRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTransitionStageRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.interviewSessionId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.newStage = reader.int32() as any;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseTransitionStageResponse(): TransitionStageResponse {
+  return { currentStage: 0 };
+}
+
+export const TransitionStageResponse: MessageFns<TransitionStageResponse> = {
+  encode(message: TransitionStageResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.currentStage !== 0) {
+      writer.uint32(8).int32(message.currentStage);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TransitionStageResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTransitionStageResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.currentStage = reader.int32() as any;
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseIncrementSelfIntroRetryRequest(): IncrementSelfIntroRetryRequest {
+  return { interviewSessionId: "" };
+}
+
+export const IncrementSelfIntroRetryRequest: MessageFns<IncrementSelfIntroRetryRequest> = {
+  encode(message: IncrementSelfIntroRetryRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.interviewSessionId !== "") {
+      writer.uint32(10).string(message.interviewSessionId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): IncrementSelfIntroRetryRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseIncrementSelfIntroRetryRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.interviewSessionId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseIncrementSelfIntroRetryResponse(): IncrementSelfIntroRetryResponse {
+  return { newRetryCount: 0 };
+}
+
+export const IncrementSelfIntroRetryResponse: MessageFns<IncrementSelfIntroRetryResponse> = {
+  encode(message: IncrementSelfIntroRetryResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.newRetryCount !== 0) {
+      writer.uint32(8).int32(message.newRetryCount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): IncrementSelfIntroRetryResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseIncrementSelfIntroRetryResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.newRetryCount = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseListInterviewsRequest(): ListInterviewsRequest {
+  return { userId: "" };
+}
+
+export const ListInterviewsRequest: MessageFns<ListInterviewsRequest> = {
+  encode(message: ListInterviewsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListInterviewsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListInterviewsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseInterviewSessionSummary(): InterviewSessionSummary {
+  return {
+    interviewId: "",
+    startedAt: "",
+    status: 0,
+    domain: "",
+    type: 0,
+    targetDurationMinutes: 0,
+    interviewerCount: 0,
+  };
+}
+
+export const InterviewSessionSummary: MessageFns<InterviewSessionSummary> = {
+  encode(message: InterviewSessionSummary, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.interviewId !== "") {
+      writer.uint32(10).string(message.interviewId);
+    }
+    if (message.startedAt !== "") {
+      writer.uint32(18).string(message.startedAt);
+    }
+    if (message.status !== 0) {
+      writer.uint32(24).int32(message.status);
+    }
+    if (message.domain !== "") {
+      writer.uint32(34).string(message.domain);
+    }
+    if (message.type !== 0) {
+      writer.uint32(40).int32(message.type);
+    }
+    if (message.targetDurationMinutes !== 0) {
+      writer.uint32(48).int32(message.targetDurationMinutes);
+    }
+    if (message.interviewerCount !== 0) {
+      writer.uint32(56).int32(message.interviewerCount);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): InterviewSessionSummary {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseInterviewSessionSummary();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.interviewId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.startedAt = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.status = reader.int32() as any;
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.domain = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 40) {
+            break;
+          }
+
+          message.type = reader.int32() as any;
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.targetDurationMinutes = reader.int32();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.interviewerCount = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseListInterviewsResponse(): ListInterviewsResponse {
+  return { interviews: [] };
+}
+
+export const ListInterviewsResponse: MessageFns<ListInterviewsResponse> = {
+  encode(message: ListInterviewsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.interviews) {
+      InterviewSessionSummary.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListInterviewsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListInterviewsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.interviews.push(InterviewSessionSummary.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 /** === 서비스 정의 (인터페이스) === */
 
 export interface InterviewServiceGrpcClient {
   /** 면접 세션 생성 요청을 받아서 응답을 반환한다. */
 
   createInterview(request: CreateInterviewRequest): Observable<CreateInterviewResponse>;
+
+  /** Stage 관리 */
+
+  getInterviewStage(request: GetInterviewStageRequest): Observable<GetInterviewStageResponse>;
+
+  transitionStage(request: TransitionStageRequest): Observable<TransitionStageResponse>;
+
+  /** 자기소개 재시도 제어 */
+
+  incrementSelfIntroRetry(request: IncrementSelfIntroRetryRequest): Observable<IncrementSelfIntroRetryResponse>;
+
+  /** 면접 목록 조회 */
+
+  listInterviews(request: ListInterviewsRequest): Observable<ListInterviewsResponse>;
 }
 
 /** === 서비스 정의 (인터페이스) === */
@@ -244,11 +886,42 @@ export interface InterviewServiceGrpcController {
   createInterview(
     request: CreateInterviewRequest,
   ): Promise<CreateInterviewResponse> | Observable<CreateInterviewResponse> | CreateInterviewResponse;
+
+  /** Stage 관리 */
+
+  getInterviewStage(
+    request: GetInterviewStageRequest,
+  ): Promise<GetInterviewStageResponse> | Observable<GetInterviewStageResponse> | GetInterviewStageResponse;
+
+  transitionStage(
+    request: TransitionStageRequest,
+  ): Promise<TransitionStageResponse> | Observable<TransitionStageResponse> | TransitionStageResponse;
+
+  /** 자기소개 재시도 제어 */
+
+  incrementSelfIntroRetry(
+    request: IncrementSelfIntroRetryRequest,
+  ):
+    | Promise<IncrementSelfIntroRetryResponse>
+    | Observable<IncrementSelfIntroRetryResponse>
+    | IncrementSelfIntroRetryResponse;
+
+  /** 면접 목록 조회 */
+
+  listInterviews(
+    request: ListInterviewsRequest,
+  ): Promise<ListInterviewsResponse> | Observable<ListInterviewsResponse> | ListInterviewsResponse;
 }
 
 export function InterviewServiceGrpcControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["createInterview"];
+    const grpcMethods: string[] = [
+      "createInterview",
+      "getInterviewStage",
+      "transitionStage",
+      "incrementSelfIntroRetry",
+      "listInterviews",
+    ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("InterviewServiceGrpc", method)(constructor.prototype[method], method, descriptor);
@@ -278,11 +951,77 @@ export const InterviewServiceGrpcService = {
       Buffer.from(CreateInterviewResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): CreateInterviewResponse => CreateInterviewResponse.decode(value),
   },
+  /** Stage 관리 */
+  getInterviewStage: {
+    path: "/interview.InterviewServiceGrpc/GetInterviewStage",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: GetInterviewStageRequest): Buffer =>
+      Buffer.from(GetInterviewStageRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetInterviewStageRequest => GetInterviewStageRequest.decode(value),
+    responseSerialize: (value: GetInterviewStageResponse): Buffer =>
+      Buffer.from(GetInterviewStageResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetInterviewStageResponse => GetInterviewStageResponse.decode(value),
+  },
+  transitionStage: {
+    path: "/interview.InterviewServiceGrpc/TransitionStage",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: TransitionStageRequest): Buffer =>
+      Buffer.from(TransitionStageRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): TransitionStageRequest => TransitionStageRequest.decode(value),
+    responseSerialize: (value: TransitionStageResponse): Buffer =>
+      Buffer.from(TransitionStageResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): TransitionStageResponse => TransitionStageResponse.decode(value),
+  },
+  /** 자기소개 재시도 제어 */
+  incrementSelfIntroRetry: {
+    path: "/interview.InterviewServiceGrpc/IncrementSelfIntroRetry",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: IncrementSelfIntroRetryRequest): Buffer =>
+      Buffer.from(IncrementSelfIntroRetryRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): IncrementSelfIntroRetryRequest => IncrementSelfIntroRetryRequest.decode(value),
+    responseSerialize: (value: IncrementSelfIntroRetryResponse): Buffer =>
+      Buffer.from(IncrementSelfIntroRetryResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): IncrementSelfIntroRetryResponse =>
+      IncrementSelfIntroRetryResponse.decode(value),
+  },
+  /** 면접 목록 조회 */
+  listInterviews: {
+    path: "/interview.InterviewServiceGrpc/ListInterviews",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: ListInterviewsRequest): Buffer =>
+      Buffer.from(ListInterviewsRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListInterviewsRequest => ListInterviewsRequest.decode(value),
+    responseSerialize: (value: ListInterviewsResponse): Buffer =>
+      Buffer.from(ListInterviewsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListInterviewsResponse => ListInterviewsResponse.decode(value),
+  },
 } as const;
 
 export interface InterviewServiceGrpcServer extends UntypedServiceImplementation {
   /** 면접 세션 생성 요청을 받아서 응답을 반환한다. */
   createInterview: handleUnaryCall<CreateInterviewRequest, CreateInterviewResponse>;
+  /** Stage 관리 */
+  getInterviewStage: handleUnaryCall<GetInterviewStageRequest, GetInterviewStageResponse>;
+  transitionStage: handleUnaryCall<TransitionStageRequest, TransitionStageResponse>;
+  /** 자기소개 재시도 제어 */
+  incrementSelfIntroRetry: handleUnaryCall<IncrementSelfIntroRetryRequest, IncrementSelfIntroRetryResponse>;
+  /** 면접 목록 조회 */
+  listInterviews: handleUnaryCall<ListInterviewsRequest, ListInterviewsResponse>;
+}
+
+function longToNumber(int64: { toString(): string }): number {
+  const num = globalThis.Number(int64.toString());
+  if (num > globalThis.Number.MAX_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
+  }
+  if (num < globalThis.Number.MIN_SAFE_INTEGER) {
+    throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
+  }
+  return num;
 }
 
 export interface MessageFns<T> {

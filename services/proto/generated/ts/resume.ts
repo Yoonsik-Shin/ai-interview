@@ -12,6 +12,51 @@ import { Observable } from "rxjs";
 
 export const protobufPackage = "resume";
 
+export interface GetResumeEmbeddingsRequest {
+  userId: string;
+}
+
+export interface ResumeEmbedding {
+  resumeId: string;
+  vector: number[];
+}
+
+export interface GetResumeEmbeddingsResponse {
+  embeddings: ResumeEmbedding[];
+}
+
+export interface DeleteResumeRequest {
+  resumeId: string;
+  userId: string;
+}
+
+export interface DeleteResumeResponse {
+  success: boolean;
+}
+
+export interface GetUploadUrlRequest {
+  userId: string;
+  fileName: string;
+  title: string;
+}
+
+export interface GetUploadUrlResponse {
+  uploadUrl: string;
+  resumeId: string;
+}
+
+export interface CompleteUploadRequest {
+  resumeId: string;
+  /** 프론트엔드에서 전처리가 완료된 검증용 텍스트 */
+  validationText: string;
+  /** 프론트엔드에서 생성된 검증용 임베딩 벡터 */
+  embedding: number[];
+}
+
+export interface CompleteUploadResponse {
+  success: boolean;
+}
+
 export interface UploadResumeRequest {
   /** UUID */
   userId: string;
@@ -19,17 +64,530 @@ export interface UploadResumeRequest {
   fileData: Uint8Array;
   fileName: string;
   contentType: string;
+  /** 유사도 검증 스킵 (사용자가 "새로 등록" 선택 시) */
+  forceUpload: boolean;
+  /** 프론트엔드에서 전처리가 완료된 검증용 텍스트 */
+  validationText: string;
+  /** 프론트엔드에서 생성된 검증용 임베딩 벡터 */
+  embedding: number[];
 }
 
 export interface UploadResumeResponse {
+  /** UUID (성공 시) */
+  resumeId: string;
+  /** 유사 이력서 정보 (발견 시) */
+  similarResume: SimilarResumeInfo | undefined;
+}
+
+export interface SimilarResumeInfo {
+  /** 기존 이력서 ID */
+  existingResumeId: string;
+  /** 유사도 (0.0 ~ 1.0) */
+  similarity: number;
+  /** 기존 이력서 제목 */
+  title: string;
+  /** 업로드 날짜 */
+  uploadedAt: string;
+}
+
+export interface UpdateResumeRequest {
+  /** UUID */
+  userId: string;
+  /** 업데이트할 기존 이력서 ID */
+  existingResumeId: string;
+  title: string;
+  fileData: Uint8Array;
+  fileName: string;
+  contentType: string;
+  /** 프론트엔드에서 생성된 검증용 임베딩 벡터 */
+  embedding: number[];
+}
+
+export interface UpdateResumeResponse {
   /** UUID */
   resumeId: string;
 }
 
+export interface ListResumesRequest {
+  userId: string;
+}
+
+export interface ListResumesResponse {
+  resumes: ResumeItem[];
+}
+
+export interface ResumeItem {
+  id: string;
+  title: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface GetResumeRequest {
+  resumeId: string;
+  userId: string;
+}
+
+export interface GetResumeResponse {
+  resume: ResumeDetail | undefined;
+}
+
+export interface ResumeDetail {
+  id: string;
+  title: string;
+  content: string;
+  status: string;
+  createdAt: string;
+  fileUrl: string;
+}
+
 export const RESUME_PACKAGE_NAME = "resume";
 
+function createBaseGetResumeEmbeddingsRequest(): GetResumeEmbeddingsRequest {
+  return { userId: "" };
+}
+
+export const GetResumeEmbeddingsRequest: MessageFns<GetResumeEmbeddingsRequest> = {
+  encode(message: GetResumeEmbeddingsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetResumeEmbeddingsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetResumeEmbeddingsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseResumeEmbedding(): ResumeEmbedding {
+  return { resumeId: "", vector: [] };
+}
+
+export const ResumeEmbedding: MessageFns<ResumeEmbedding> = {
+  encode(message: ResumeEmbedding, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.resumeId !== "") {
+      writer.uint32(10).string(message.resumeId);
+    }
+    writer.uint32(18).fork();
+    for (const v of message.vector) {
+      writer.float(v);
+    }
+    writer.join();
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ResumeEmbedding {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseResumeEmbedding();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.resumeId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag === 21) {
+            message.vector.push(reader.float());
+
+            continue;
+          }
+
+          if (tag === 18) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.vector.push(reader.float());
+            }
+
+            continue;
+          }
+
+          break;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetResumeEmbeddingsResponse(): GetResumeEmbeddingsResponse {
+  return { embeddings: [] };
+}
+
+export const GetResumeEmbeddingsResponse: MessageFns<GetResumeEmbeddingsResponse> = {
+  encode(message: GetResumeEmbeddingsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.embeddings) {
+      ResumeEmbedding.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetResumeEmbeddingsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetResumeEmbeddingsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.embeddings.push(ResumeEmbedding.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseDeleteResumeRequest(): DeleteResumeRequest {
+  return { resumeId: "", userId: "" };
+}
+
+export const DeleteResumeRequest: MessageFns<DeleteResumeRequest> = {
+  encode(message: DeleteResumeRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.resumeId !== "") {
+      writer.uint32(10).string(message.resumeId);
+    }
+    if (message.userId !== "") {
+      writer.uint32(18).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteResumeRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeleteResumeRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.resumeId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseDeleteResumeResponse(): DeleteResumeResponse {
+  return { success: false };
+}
+
+export const DeleteResumeResponse: MessageFns<DeleteResumeResponse> = {
+  encode(message: DeleteResumeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.success !== false) {
+      writer.uint32(8).bool(message.success);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteResumeResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeleteResumeResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.success = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetUploadUrlRequest(): GetUploadUrlRequest {
+  return { userId: "", fileName: "", title: "" };
+}
+
+export const GetUploadUrlRequest: MessageFns<GetUploadUrlRequest> = {
+  encode(message: GetUploadUrlRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.fileName !== "") {
+      writer.uint32(18).string(message.fileName);
+    }
+    if (message.title !== "") {
+      writer.uint32(26).string(message.title);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUploadUrlRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetUploadUrlRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.fileName = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.title = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetUploadUrlResponse(): GetUploadUrlResponse {
+  return { uploadUrl: "", resumeId: "" };
+}
+
+export const GetUploadUrlResponse: MessageFns<GetUploadUrlResponse> = {
+  encode(message: GetUploadUrlResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.uploadUrl !== "") {
+      writer.uint32(10).string(message.uploadUrl);
+    }
+    if (message.resumeId !== "") {
+      writer.uint32(18).string(message.resumeId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUploadUrlResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetUploadUrlResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.uploadUrl = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.resumeId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCompleteUploadRequest(): CompleteUploadRequest {
+  return { resumeId: "", validationText: "", embedding: [] };
+}
+
+export const CompleteUploadRequest: MessageFns<CompleteUploadRequest> = {
+  encode(message: CompleteUploadRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.resumeId !== "") {
+      writer.uint32(10).string(message.resumeId);
+    }
+    if (message.validationText !== "") {
+      writer.uint32(18).string(message.validationText);
+    }
+    writer.uint32(26).fork();
+    for (const v of message.embedding) {
+      writer.float(v);
+    }
+    writer.join();
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CompleteUploadRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCompleteUploadRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.resumeId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.validationText = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag === 29) {
+            message.embedding.push(reader.float());
+
+            continue;
+          }
+
+          if (tag === 26) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.embedding.push(reader.float());
+            }
+
+            continue;
+          }
+
+          break;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseCompleteUploadResponse(): CompleteUploadResponse {
+  return { success: false };
+}
+
+export const CompleteUploadResponse: MessageFns<CompleteUploadResponse> = {
+  encode(message: CompleteUploadResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.success !== false) {
+      writer.uint32(8).bool(message.success);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CompleteUploadResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCompleteUploadResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.success = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 function createBaseUploadResumeRequest(): UploadResumeRequest {
-  return { userId: "", title: "", fileData: new Uint8Array(0), fileName: "", contentType: "" };
+  return {
+    userId: "",
+    title: "",
+    fileData: new Uint8Array(0),
+    fileName: "",
+    contentType: "",
+    forceUpload: false,
+    validationText: "",
+    embedding: [],
+  };
 }
 
 export const UploadResumeRequest: MessageFns<UploadResumeRequest> = {
@@ -49,6 +607,17 @@ export const UploadResumeRequest: MessageFns<UploadResumeRequest> = {
     if (message.contentType !== "") {
       writer.uint32(42).string(message.contentType);
     }
+    if (message.forceUpload !== false) {
+      writer.uint32(48).bool(message.forceUpload);
+    }
+    if (message.validationText !== "") {
+      writer.uint32(58).string(message.validationText);
+    }
+    writer.uint32(66).fork();
+    for (const v of message.embedding) {
+      writer.float(v);
+    }
+    writer.join();
     return writer;
   },
 
@@ -99,6 +668,40 @@ export const UploadResumeRequest: MessageFns<UploadResumeRequest> = {
           message.contentType = reader.string();
           continue;
         }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.forceUpload = reader.bool();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.validationText = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag === 69) {
+            message.embedding.push(reader.float());
+
+            continue;
+          }
+
+          if (tag === 66) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.embedding.push(reader.float());
+            }
+
+            continue;
+          }
+
+          break;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -110,13 +713,16 @@ export const UploadResumeRequest: MessageFns<UploadResumeRequest> = {
 };
 
 function createBaseUploadResumeResponse(): UploadResumeResponse {
-  return { resumeId: "" };
+  return { resumeId: "", similarResume: undefined };
 }
 
 export const UploadResumeResponse: MessageFns<UploadResumeResponse> = {
   encode(message: UploadResumeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.resumeId !== "") {
       writer.uint32(10).string(message.resumeId);
+    }
+    if (message.similarResume !== undefined) {
+      SimilarResumeInfo.encode(message.similarResume, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -125,6 +731,244 @@ export const UploadResumeResponse: MessageFns<UploadResumeResponse> = {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
     const message = createBaseUploadResumeResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.resumeId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.similarResume = SimilarResumeInfo.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseSimilarResumeInfo(): SimilarResumeInfo {
+  return { existingResumeId: "", similarity: 0, title: "", uploadedAt: "" };
+}
+
+export const SimilarResumeInfo: MessageFns<SimilarResumeInfo> = {
+  encode(message: SimilarResumeInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.existingResumeId !== "") {
+      writer.uint32(10).string(message.existingResumeId);
+    }
+    if (message.similarity !== 0) {
+      writer.uint32(17).double(message.similarity);
+    }
+    if (message.title !== "") {
+      writer.uint32(26).string(message.title);
+    }
+    if (message.uploadedAt !== "") {
+      writer.uint32(34).string(message.uploadedAt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SimilarResumeInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSimilarResumeInfo();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.existingResumeId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 17) {
+            break;
+          }
+
+          message.similarity = reader.double();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.title = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.uploadedAt = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUpdateResumeRequest(): UpdateResumeRequest {
+  return {
+    userId: "",
+    existingResumeId: "",
+    title: "",
+    fileData: new Uint8Array(0),
+    fileName: "",
+    contentType: "",
+    embedding: [],
+  };
+}
+
+export const UpdateResumeRequest: MessageFns<UpdateResumeRequest> = {
+  encode(message: UpdateResumeRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.existingResumeId !== "") {
+      writer.uint32(18).string(message.existingResumeId);
+    }
+    if (message.title !== "") {
+      writer.uint32(26).string(message.title);
+    }
+    if (message.fileData.length !== 0) {
+      writer.uint32(34).bytes(message.fileData);
+    }
+    if (message.fileName !== "") {
+      writer.uint32(42).string(message.fileName);
+    }
+    if (message.contentType !== "") {
+      writer.uint32(50).string(message.contentType);
+    }
+    writer.uint32(58).fork();
+    for (const v of message.embedding) {
+      writer.float(v);
+    }
+    writer.join();
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateResumeRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateResumeRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.existingResumeId = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.title = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.fileData = reader.bytes();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.fileName = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.contentType = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag === 61) {
+            message.embedding.push(reader.float());
+
+            continue;
+          }
+
+          if (tag === 58) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.embedding.push(reader.float());
+            }
+
+            continue;
+          }
+
+          break;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseUpdateResumeResponse(): UpdateResumeResponse {
+  return { resumeId: "" };
+}
+
+export const UpdateResumeResponse: MessageFns<UpdateResumeResponse> = {
+  encode(message: UpdateResumeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.resumeId !== "") {
+      writer.uint32(10).string(message.resumeId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateResumeResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateResumeResponse();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -146,23 +990,421 @@ export const UploadResumeResponse: MessageFns<UploadResumeResponse> = {
   },
 };
 
+function createBaseListResumesRequest(): ListResumesRequest {
+  return { userId: "" };
+}
+
+export const ListResumesRequest: MessageFns<ListResumesRequest> = {
+  encode(message: ListResumesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListResumesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListResumesRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseListResumesResponse(): ListResumesResponse {
+  return { resumes: [] };
+}
+
+export const ListResumesResponse: MessageFns<ListResumesResponse> = {
+  encode(message: ListResumesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.resumes) {
+      ResumeItem.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListResumesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListResumesResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.resumes.push(ResumeItem.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseResumeItem(): ResumeItem {
+  return { id: "", title: "", status: "", createdAt: "" };
+}
+
+export const ResumeItem: MessageFns<ResumeItem> = {
+  encode(message: ResumeItem, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.title !== "") {
+      writer.uint32(18).string(message.title);
+    }
+    if (message.status !== "") {
+      writer.uint32(26).string(message.status);
+    }
+    if (message.createdAt !== "") {
+      writer.uint32(34).string(message.createdAt);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ResumeItem {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseResumeItem();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.title = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.status = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.createdAt = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetResumeRequest(): GetResumeRequest {
+  return { resumeId: "", userId: "" };
+}
+
+export const GetResumeRequest: MessageFns<GetResumeRequest> = {
+  encode(message: GetResumeRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.resumeId !== "") {
+      writer.uint32(10).string(message.resumeId);
+    }
+    if (message.userId !== "") {
+      writer.uint32(18).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetResumeRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetResumeRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.resumeId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGetResumeResponse(): GetResumeResponse {
+  return { resume: undefined };
+}
+
+export const GetResumeResponse: MessageFns<GetResumeResponse> = {
+  encode(message: GetResumeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.resume !== undefined) {
+      ResumeDetail.encode(message.resume, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetResumeResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetResumeResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.resume = ResumeDetail.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseResumeDetail(): ResumeDetail {
+  return { id: "", title: "", content: "", status: "", createdAt: "", fileUrl: "" };
+}
+
+export const ResumeDetail: MessageFns<ResumeDetail> = {
+  encode(message: ResumeDetail, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.title !== "") {
+      writer.uint32(18).string(message.title);
+    }
+    if (message.content !== "") {
+      writer.uint32(26).string(message.content);
+    }
+    if (message.status !== "") {
+      writer.uint32(34).string(message.status);
+    }
+    if (message.createdAt !== "") {
+      writer.uint32(42).string(message.createdAt);
+    }
+    if (message.fileUrl !== "") {
+      writer.uint32(50).string(message.fileUrl);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ResumeDetail {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseResumeDetail();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.title = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.content = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.status = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.createdAt = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.fileUrl = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 export interface ResumeServiceClient {
-  /** 이력서 업로드 */
+  /** 이력서 업로드 URL 발급 */
+
+  getUploadUrl(request: GetUploadUrlRequest): Observable<GetUploadUrlResponse>;
+
+  /** 이력서 업로드 완료 알림 */
+
+  completeUpload(request: CompleteUploadRequest): Observable<CompleteUploadResponse>;
+
+  /** 이력서 업로드 (Legacy: 직접 파일 전송) */
 
   uploadResume(request: UploadResumeRequest): Observable<UploadResumeResponse>;
+
+  /** 이력서 업데이트 (기존 이력서 대체) */
+
+  updateResume(request: UpdateResumeRequest): Observable<UpdateResumeResponse>;
+
+  /** 사용자 이력서 목록 조회 */
+
+  listResumes(request: ListResumesRequest): Observable<ListResumesResponse>;
+
+  /** 이력서 상세 조회 */
+
+  getResume(request: GetResumeRequest): Observable<GetResumeResponse>;
+
+  /** 이력서 삭제 */
+
+  deleteResume(request: DeleteResumeRequest): Observable<DeleteResumeResponse>;
+
+  /** 이력서 임베딩 목록 조회 (병렬 호출용) */
+
+  getResumeEmbeddings(request: GetResumeEmbeddingsRequest): Observable<GetResumeEmbeddingsResponse>;
 }
 
 export interface ResumeServiceController {
-  /** 이력서 업로드 */
+  /** 이력서 업로드 URL 발급 */
+
+  getUploadUrl(
+    request: GetUploadUrlRequest,
+  ): Promise<GetUploadUrlResponse> | Observable<GetUploadUrlResponse> | GetUploadUrlResponse;
+
+  /** 이력서 업로드 완료 알림 */
+
+  completeUpload(
+    request: CompleteUploadRequest,
+  ): Promise<CompleteUploadResponse> | Observable<CompleteUploadResponse> | CompleteUploadResponse;
+
+  /** 이력서 업로드 (Legacy: 직접 파일 전송) */
 
   uploadResume(
     request: UploadResumeRequest,
   ): Promise<UploadResumeResponse> | Observable<UploadResumeResponse> | UploadResumeResponse;
+
+  /** 이력서 업데이트 (기존 이력서 대체) */
+
+  updateResume(
+    request: UpdateResumeRequest,
+  ): Promise<UpdateResumeResponse> | Observable<UpdateResumeResponse> | UpdateResumeResponse;
+
+  /** 사용자 이력서 목록 조회 */
+
+  listResumes(
+    request: ListResumesRequest,
+  ): Promise<ListResumesResponse> | Observable<ListResumesResponse> | ListResumesResponse;
+
+  /** 이력서 상세 조회 */
+
+  getResume(request: GetResumeRequest): Promise<GetResumeResponse> | Observable<GetResumeResponse> | GetResumeResponse;
+
+  /** 이력서 삭제 */
+
+  deleteResume(
+    request: DeleteResumeRequest,
+  ): Promise<DeleteResumeResponse> | Observable<DeleteResumeResponse> | DeleteResumeResponse;
+
+  /** 이력서 임베딩 목록 조회 (병렬 호출용) */
+
+  getResumeEmbeddings(
+    request: GetResumeEmbeddingsRequest,
+  ): Promise<GetResumeEmbeddingsResponse> | Observable<GetResumeEmbeddingsResponse> | GetResumeEmbeddingsResponse;
 }
 
 export function ResumeServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["uploadResume"];
+    const grpcMethods: string[] = [
+      "getUploadUrl",
+      "completeUpload",
+      "uploadResume",
+      "updateResume",
+      "listResumes",
+      "getResume",
+      "deleteResume",
+      "getResumeEmbeddings",
+    ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("ResumeService", method)(constructor.prototype[method], method, descriptor);
@@ -179,7 +1421,30 @@ export const RESUME_SERVICE_NAME = "ResumeService";
 
 export type ResumeServiceService = typeof ResumeServiceService;
 export const ResumeServiceService = {
-  /** 이력서 업로드 */
+  /** 이력서 업로드 URL 발급 */
+  getUploadUrl: {
+    path: "/resume.ResumeService/GetUploadUrl",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: GetUploadUrlRequest): Buffer => Buffer.from(GetUploadUrlRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetUploadUrlRequest => GetUploadUrlRequest.decode(value),
+    responseSerialize: (value: GetUploadUrlResponse): Buffer =>
+      Buffer.from(GetUploadUrlResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetUploadUrlResponse => GetUploadUrlResponse.decode(value),
+  },
+  /** 이력서 업로드 완료 알림 */
+  completeUpload: {
+    path: "/resume.ResumeService/CompleteUpload",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: CompleteUploadRequest): Buffer =>
+      Buffer.from(CompleteUploadRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CompleteUploadRequest => CompleteUploadRequest.decode(value),
+    responseSerialize: (value: CompleteUploadResponse): Buffer =>
+      Buffer.from(CompleteUploadResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CompleteUploadResponse => CompleteUploadResponse.decode(value),
+  },
+  /** 이력서 업로드 (Legacy: 직접 파일 전송) */
   uploadResume: {
     path: "/resume.ResumeService/UploadResume",
     requestStream: false,
@@ -190,11 +1455,79 @@ export const ResumeServiceService = {
       Buffer.from(UploadResumeResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): UploadResumeResponse => UploadResumeResponse.decode(value),
   },
+  /** 이력서 업데이트 (기존 이력서 대체) */
+  updateResume: {
+    path: "/resume.ResumeService/UpdateResume",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: UpdateResumeRequest): Buffer => Buffer.from(UpdateResumeRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateResumeRequest => UpdateResumeRequest.decode(value),
+    responseSerialize: (value: UpdateResumeResponse): Buffer =>
+      Buffer.from(UpdateResumeResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UpdateResumeResponse => UpdateResumeResponse.decode(value),
+  },
+  /** 사용자 이력서 목록 조회 */
+  listResumes: {
+    path: "/resume.ResumeService/ListResumes",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: ListResumesRequest): Buffer => Buffer.from(ListResumesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListResumesRequest => ListResumesRequest.decode(value),
+    responseSerialize: (value: ListResumesResponse): Buffer => Buffer.from(ListResumesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListResumesResponse => ListResumesResponse.decode(value),
+  },
+  /** 이력서 상세 조회 */
+  getResume: {
+    path: "/resume.ResumeService/GetResume",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: GetResumeRequest): Buffer => Buffer.from(GetResumeRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetResumeRequest => GetResumeRequest.decode(value),
+    responseSerialize: (value: GetResumeResponse): Buffer => Buffer.from(GetResumeResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetResumeResponse => GetResumeResponse.decode(value),
+  },
+  /** 이력서 삭제 */
+  deleteResume: {
+    path: "/resume.ResumeService/DeleteResume",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: DeleteResumeRequest): Buffer => Buffer.from(DeleteResumeRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteResumeRequest => DeleteResumeRequest.decode(value),
+    responseSerialize: (value: DeleteResumeResponse): Buffer =>
+      Buffer.from(DeleteResumeResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DeleteResumeResponse => DeleteResumeResponse.decode(value),
+  },
+  /** 이력서 임베딩 목록 조회 (병렬 호출용) */
+  getResumeEmbeddings: {
+    path: "/resume.ResumeService/GetResumeEmbeddings",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: GetResumeEmbeddingsRequest): Buffer =>
+      Buffer.from(GetResumeEmbeddingsRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetResumeEmbeddingsRequest => GetResumeEmbeddingsRequest.decode(value),
+    responseSerialize: (value: GetResumeEmbeddingsResponse): Buffer =>
+      Buffer.from(GetResumeEmbeddingsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetResumeEmbeddingsResponse => GetResumeEmbeddingsResponse.decode(value),
+  },
 } as const;
 
 export interface ResumeServiceServer extends UntypedServiceImplementation {
-  /** 이력서 업로드 */
+  /** 이력서 업로드 URL 발급 */
+  getUploadUrl: handleUnaryCall<GetUploadUrlRequest, GetUploadUrlResponse>;
+  /** 이력서 업로드 완료 알림 */
+  completeUpload: handleUnaryCall<CompleteUploadRequest, CompleteUploadResponse>;
+  /** 이력서 업로드 (Legacy: 직접 파일 전송) */
   uploadResume: handleUnaryCall<UploadResumeRequest, UploadResumeResponse>;
+  /** 이력서 업데이트 (기존 이력서 대체) */
+  updateResume: handleUnaryCall<UpdateResumeRequest, UpdateResumeResponse>;
+  /** 사용자 이력서 목록 조회 */
+  listResumes: handleUnaryCall<ListResumesRequest, ListResumesResponse>;
+  /** 이력서 상세 조회 */
+  getResume: handleUnaryCall<GetResumeRequest, GetResumeResponse>;
+  /** 이력서 삭제 */
+  deleteResume: handleUnaryCall<DeleteResumeRequest, DeleteResumeResponse>;
+  /** 이력서 임베딩 목록 조회 (병렬 호출용) */
+  getResumeEmbeddings: handleUnaryCall<GetResumeEmbeddingsRequest, GetResumeEmbeddingsResponse>;
 }
 
 export interface MessageFns<T> {

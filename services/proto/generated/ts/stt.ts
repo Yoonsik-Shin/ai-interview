@@ -12,13 +12,34 @@ import { Observable } from "rxjs";
 
 export const protobufPackage = "stt";
 
-export interface AudioChunk {
-  /** Base64 오디오 데이터 */
-  audioData: Uint8Array;
-  /** 인터뷰 ID */
-  interviewId: number;
-  /** 사용자 ID */
+/** 면접 컨텍스트 */
+export interface InterviewContext {
+  interviewId: string;
   userId: string;
+  /** "SELF_INTRO", "IN_PROGRESS", "LAST_ANSWER", etc. */
+  stage: string;
+}
+
+/** 일반 STT 컨텍스트 (향후 확장용) */
+export interface GeneralContext {
+  sessionId: string;
+  appName: string;
+}
+
+/** 오디오 컨텍스트 (비즈니스 메타데이터) */
+export interface AudioContext {
+  /** 추적 ID */
+  traceId: string;
+  /** "practice" (로컬 Whisper) or "real" (OpenAI API) */
+  mode: string;
+  interview?: InterviewContext | undefined;
+  general?: GeneralContext | undefined;
+}
+
+/** 오디오 청크 (순수 오디오 데이터 + 컨텍스트) */
+export interface AudioChunk {
+  /** 오디오 데이터 */
+  audioData: Uint8Array;
   /** 마지막 청크 여부 */
   isFinal: boolean;
   /** "pcm16" or "webm" */
@@ -31,17 +52,15 @@ export interface AudioChunk {
   threshold: number;
   /** ISO 8601 타임스탬프 */
   timestamp: string;
-  /** 추적 ID */
-  traceId: string;
-  /** "practice" (로컬 Whisper) or "real" (OpenAI API) */
-  mode: string;
+  /** 비즈니스 컨텍스트 */
+  context: AudioContext | undefined;
 }
 
 export interface STTResponse {
   /** 변환된 텍스트 */
   text: string;
-  /** 인터뷰 ID */
-  interviewId: number;
+  /** 인터뷰 ID (UUID) */
+  interviewId: string;
   /** 사용자 ID */
   userId: string;
   /** 빈 응답 여부 */
@@ -56,19 +75,193 @@ export interface STTResponse {
 
 export const STT_PACKAGE_NAME = "stt";
 
+function createBaseInterviewContext(): InterviewContext {
+  return { interviewId: "", userId: "", stage: "" };
+}
+
+export const InterviewContext: MessageFns<InterviewContext> = {
+  encode(message: InterviewContext, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.interviewId !== "") {
+      writer.uint32(10).string(message.interviewId);
+    }
+    if (message.userId !== "") {
+      writer.uint32(18).string(message.userId);
+    }
+    if (message.stage !== "") {
+      writer.uint32(26).string(message.stage);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): InterviewContext {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseInterviewContext();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.interviewId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.stage = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseGeneralContext(): GeneralContext {
+  return { sessionId: "", appName: "" };
+}
+
+export const GeneralContext: MessageFns<GeneralContext> = {
+  encode(message: GeneralContext, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.sessionId !== "") {
+      writer.uint32(10).string(message.sessionId);
+    }
+    if (message.appName !== "") {
+      writer.uint32(18).string(message.appName);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GeneralContext {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGeneralContext();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.sessionId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.appName = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
+function createBaseAudioContext(): AudioContext {
+  return { traceId: "", mode: "" };
+}
+
+export const AudioContext: MessageFns<AudioContext> = {
+  encode(message: AudioContext, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.traceId !== "") {
+      writer.uint32(10).string(message.traceId);
+    }
+    if (message.mode !== "") {
+      writer.uint32(18).string(message.mode);
+    }
+    if (message.interview !== undefined) {
+      InterviewContext.encode(message.interview, writer.uint32(82).fork()).join();
+    }
+    if (message.general !== undefined) {
+      GeneralContext.encode(message.general, writer.uint32(90).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AudioContext {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAudioContext();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.traceId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.mode = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          message.interview = InterviewContext.decode(reader, reader.uint32());
+          continue;
+        }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.general = GeneralContext.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+};
+
 function createBaseAudioChunk(): AudioChunk {
   return {
     audioData: new Uint8Array(0),
-    interviewId: 0,
-    userId: "",
     isFinal: false,
     audioFormat: "",
     sampleRate: 0,
     inputGain: 0,
     threshold: 0,
     timestamp: "",
-    traceId: "",
-    mode: "",
+    context: undefined,
   };
 }
 
@@ -77,35 +270,26 @@ export const AudioChunk: MessageFns<AudioChunk> = {
     if (message.audioData.length !== 0) {
       writer.uint32(10).bytes(message.audioData);
     }
-    if (message.interviewId !== 0) {
-      writer.uint32(16).int32(message.interviewId);
-    }
-    if (message.userId !== "") {
-      writer.uint32(26).string(message.userId);
-    }
     if (message.isFinal !== false) {
-      writer.uint32(32).bool(message.isFinal);
+      writer.uint32(16).bool(message.isFinal);
     }
     if (message.audioFormat !== "") {
-      writer.uint32(42).string(message.audioFormat);
+      writer.uint32(26).string(message.audioFormat);
     }
     if (message.sampleRate !== 0) {
-      writer.uint32(48).int32(message.sampleRate);
+      writer.uint32(32).int32(message.sampleRate);
     }
     if (message.inputGain !== 0) {
-      writer.uint32(57).double(message.inputGain);
+      writer.uint32(41).double(message.inputGain);
     }
     if (message.threshold !== 0) {
-      writer.uint32(65).double(message.threshold);
+      writer.uint32(49).double(message.threshold);
     }
     if (message.timestamp !== "") {
-      writer.uint32(74).string(message.timestamp);
+      writer.uint32(58).string(message.timestamp);
     }
-    if (message.traceId !== "") {
-      writer.uint32(82).string(message.traceId);
-    }
-    if (message.mode !== "") {
-      writer.uint32(90).string(message.mode);
+    if (message.context !== undefined) {
+      AudioContext.encode(message.context, writer.uint32(66).fork()).join();
     }
     return writer;
   },
@@ -130,7 +314,7 @@ export const AudioChunk: MessageFns<AudioChunk> = {
             break;
           }
 
-          message.interviewId = reader.int32();
+          message.isFinal = reader.bool();
           continue;
         }
         case 3: {
@@ -138,7 +322,7 @@ export const AudioChunk: MessageFns<AudioChunk> = {
             break;
           }
 
-          message.userId = reader.string();
+          message.audioFormat = reader.string();
           continue;
         }
         case 4: {
@@ -146,63 +330,39 @@ export const AudioChunk: MessageFns<AudioChunk> = {
             break;
           }
 
-          message.isFinal = reader.bool();
-          continue;
-        }
-        case 5: {
-          if (tag !== 42) {
-            break;
-          }
-
-          message.audioFormat = reader.string();
-          continue;
-        }
-        case 6: {
-          if (tag !== 48) {
-            break;
-          }
-
           message.sampleRate = reader.int32();
           continue;
         }
-        case 7: {
-          if (tag !== 57) {
+        case 5: {
+          if (tag !== 41) {
             break;
           }
 
           message.inputGain = reader.double();
           continue;
         }
-        case 8: {
-          if (tag !== 65) {
+        case 6: {
+          if (tag !== 49) {
             break;
           }
 
           message.threshold = reader.double();
           continue;
         }
-        case 9: {
-          if (tag !== 74) {
+        case 7: {
+          if (tag !== 58) {
             break;
           }
 
           message.timestamp = reader.string();
           continue;
         }
-        case 10: {
-          if (tag !== 82) {
+        case 8: {
+          if (tag !== 66) {
             break;
           }
 
-          message.traceId = reader.string();
-          continue;
-        }
-        case 11: {
-          if (tag !== 90) {
-            break;
-          }
-
-          message.mode = reader.string();
+          message.context = AudioContext.decode(reader, reader.uint32());
           continue;
         }
       }
@@ -216,7 +376,7 @@ export const AudioChunk: MessageFns<AudioChunk> = {
 };
 
 function createBaseSTTResponse(): STTResponse {
-  return { text: "", interviewId: 0, userId: "", isEmpty: false, engine: "", traceId: "", timestamp: "" };
+  return { text: "", interviewId: "", userId: "", isEmpty: false, engine: "", traceId: "", timestamp: "" };
 }
 
 export const STTResponse: MessageFns<STTResponse> = {
@@ -224,8 +384,8 @@ export const STTResponse: MessageFns<STTResponse> = {
     if (message.text !== "") {
       writer.uint32(10).string(message.text);
     }
-    if (message.interviewId !== 0) {
-      writer.uint32(16).int32(message.interviewId);
+    if (message.interviewId !== "") {
+      writer.uint32(18).string(message.interviewId);
     }
     if (message.userId !== "") {
       writer.uint32(26).string(message.userId);
@@ -261,11 +421,11 @@ export const STTResponse: MessageFns<STTResponse> = {
           continue;
         }
         case 2: {
-          if (tag !== 16) {
+          if (tag !== 18) {
             break;
           }
 
-          message.interviewId = reader.int32();
+          message.interviewId = reader.string();
           continue;
         }
         case 3: {
