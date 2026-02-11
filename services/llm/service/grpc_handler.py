@@ -6,8 +6,9 @@ from concurrent import futures
 from grpc_health.v1 import health
 from grpc_health.v1 import health_pb2
 from grpc_health.v1 import health_pb2_grpc
-from generated import llm_pb2
-from generated import llm_pb2_grpc
+from generated.llm.v1 import llm_pb2
+from generated.llm.v1 import llm_pb2_grpc
+from generated.common.v1 import enums_pb2
 from engine.openai_engine import OpenAIEngine
 from config import GRPC_PORT
 from utils.log_format import log_json
@@ -52,14 +53,14 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             # Map Proto Roles (Enum) to Strings
             roles = []
             for r in request.available_roles:
-                role_name = llm_pb2.InterviewRoleProto.Name(r)
+                role_name = enums_pb2.InterviewRoleProto.Name(r)
                 if role_name != "INTERVIEW_ROLE_UNSPECIFIED":
                     roles.append(role_name)
 
             # Map Personality (Enum) to String
             personality = "COMFORTABLE" # Default
             if request.personality:
-                p_name = llm_pb2.InterviewPersonalityProto.Name(request.personality)
+                p_name = enums_pb2.InterviewPersonalityProto.Name(request.personality)
                 if p_name != "INTERVIEW_PERSONALITY_UNSPECIFIED":
                     personality = p_name
 
@@ -73,7 +74,7 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                 "remaining_time": request.remaining_time_seconds,
                 "total_duration": request.total_duration_seconds,
                 "last_interviewer_id": request.last_interviewer_id,
-                "stage": llm_pb2.InterviewStageProto.Name(request.stage),
+                "stage": enums_pb2.InterviewStageProto.Name(request.stage),
                 # Initial internal state
                 "is_ending": False,
                 "reduce_total_time": False,
