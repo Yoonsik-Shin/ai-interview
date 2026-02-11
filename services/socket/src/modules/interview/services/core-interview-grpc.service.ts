@@ -75,7 +75,7 @@ export class CoreInterviewGrpcService implements OnModuleInit {
 
     onModuleInit() {
         // gRPC 서비스 초기화 (반드시 OnModuleInit에서 수행)
-        this.grpcService = this.client.getService("InterviewServiceGrpc");
+        this.grpcService = this.client.getService("InterviewService");
     }
 
     /**

@@ -16,8 +16,8 @@ import { join } from "path";
                     return {
                         transport: Transport.GRPC,
                         options: {
-                            package: "stt",
-                            protoPath: join(process.cwd(), "../proto/stt.proto"),
+                            package: "stt.v1",
+                            protoPath: join(process.cwd(), "../proto/stt/v1/stt.proto"),
                             url: `${host}:${port}`,
                         },
                     };
@@ -33,8 +33,8 @@ import { join } from "path";
                     return {
                         transport: Transport.GRPC,
                         options: {
-                            package: "interview",
-                            protoPath: join(process.cwd(), "../proto/interview.proto"),
+                            package: "interview.v1",
+                            protoPath: join(process.cwd(), "../proto/interview/v1/interview.proto"),
                             url: `${host}:${port}`,
                         },
                     };

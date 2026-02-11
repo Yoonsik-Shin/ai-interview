@@ -3,7 +3,7 @@ import type { ClientGrpc } from "@nestjs/microservices";
 import { Subject, Subscription, Observable } from "rxjs";
 import { SocketLoggingService } from "../../../core/logging/socket-logging.service";
 
-import { AudioChunk, STTResponse } from "@grpc-types/stt";
+import { AudioChunk, STTResponse } from "@grpc-types/stt/v1/stt";
 import { Socket } from "socket.io";
 
 interface SttServiceGrpc {
