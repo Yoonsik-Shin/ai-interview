@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package common.v1;
+
+option java_multiple_files = true;
+option java_package = "me.unbrdn.core.grpc.common.v1";
+option java_outer_classname = "CommonEnumsProto";
+
+// 인터뷰 단계
+enum InterviewStageProto {
+  INTERVIEW_STAGE_UNSPECIFIED = 0;
+  WAITING = 1;                  // 대기 (초기 상태)
+  GREETING = 2;                 // 면접관 인사 (사전 녹음)
+  CANDIDATE_GREETING = 3;       // 지원자 첫 인사 감지
+  INTERVIEWER_INTRO = 4;        // 면접관 자기소개 (LLM)
+  SELF_INTRO_PROMPT = 5;        // 1분 자기소개 요청 (사전 녹음)
+  SELF_INTRO = 6;               // 지원자 1분 자기소개
+  IN_PROGRESS_STAGE = 7;        // 본 면접 진행
+  LAST_QUESTION_PROMPT = 8;     // 마지막 질문 안내 (사전 녹음)
+  LAST_ANSWER = 9;              // 지원자 마지막 답변
+  CLOSING_GREETING = 11;        // 면접관 마무리 인사
+  COMPLETED_STAGE = 10;         // 면접 완료
+}
+
+// 면접관 역할
+enum InterviewRoleProto {
+  INTERVIEW_ROLE_UNSPECIFIED = 0;
+  TECH = 1;                     // 기술 면접관
+  HR = 2;                       // 인사/컬처 면접관
+  LEADER = 3;                   // 리드 면접관
+}
+
+// 면접 분위기/성향
+enum InterviewPersonalityProto {
+  INTERVIEW_PERSONALITY_UNSPECIFIED = 0;
+  PRESSURE = 1;                 // 압박 면접
+  COMFORTABLE = 2;              // 편안한 분위기
+  RANDOM = 3;                   // 랜덤
+}
+
+// 면접 세션 상태
+enum InterviewStatusProto {
+  INTERVIEW_STATUS_UNSPECIFIED = 0;
+  READY = 1;                    // 준비됨
+  IN_PROGRESS = 2;              // 진행 중
+  COMPLETED = 3;                // 완료됨
+  CANCELLED = 4;                // 취소됨
+}
+
+// 면접 유형
+enum InterviewTypeProto {
+  INTERVIEW_TYPE_UNSPECIFIED = 0;
+  REAL = 1;                     // 실전
+  PRACTICE = 2;                 // 연습
+}

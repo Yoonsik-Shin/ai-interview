@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package user.v1;
+
+option java_multiple_files = true;
+option java_package = "me.unbrdn.core.grpc.user.v1";
+option java_outer_classname = "UserProto";
+
+service UserService {
+  rpc FindUserById (FindUserByIdRequest) returns (FindUserByIdResponse);
+  rpc FindUserByEmail (FindUserByEmailRequest) returns (FindUserByEmailResponse);
+  rpc RegisterCandidate (RegisterCandidateRequest) returns (RegisterUserResponse);
+  rpc RegisterRecruiter (RegisterRecruiterRequest) returns (RegisterUserResponse);
+}
+
+message FindUserByIdRequest {
+  string user_id = 1;
+}
+
+message FindUserByIdResponse {
+  oneof user {
+    Candidate candidate = 1;
+    Recruiter recruiter = 2;
+  }
+}
+
+message FindUserByEmailRequest {
+  string email = 1;
+}
+
+message FindUserByEmailResponse {
+  oneof user {
+    Candidate candidate = 1;
+    Recruiter recruiter = 2;
+  }
+}
+
+message Candidate {
+  string id = 1;
+  string email = 2;
+  string nickname = 3;
+  string role = 4;
+  string phone_number = 5;
+  string verified_email = 6;
+  string password_hash = 7;
+}
+
+message Recruiter {
+  string id = 1;
+  string email = 2;
+  string nickname = 3;
+  string role = 4;
+  string phone_number = 5;
+  string verified_email = 6;
+  string company_code = 7;
+  string password_hash = 8;
+}
+
+message RegisterCandidateRequest {
+  string email = 1;
+  string password = 2;
+  string nickname = 3;
+  string phone_number = 4;
+}
+
+message RegisterRecruiterRequest {
+  string email = 1;
+  string password = 2;
+  string nickname = 3;
+  string phone_number = 4;
+  string company_code = 5;
+}
+
+message RegisterUserResponse {
+  string user_id = 1;
+}

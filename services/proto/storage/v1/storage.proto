@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package storage.v1;
+
+option java_multiple_files = true;
+option java_package = "me.unbrdn.core.grpc.storage.v1";
+option java_outer_classname = "StorageProto";
+
+service StorageService {
+  // Get presigned URL for upload/download
+  rpc GetPresignedUrl (GetPresignedUrlRequest) returns (GetPresignedUrlResponse);
+
+  // Delete object from storage
+  rpc DeleteObject (DeleteObjectRequest) returns (DeleteObjectResponse);
+}
+
+message GetPresignedUrlRequest {
+  string object_key = 1;
+  string method = 2; // "put_object" or "get_object"
+  int32 expiration_sec = 3;
+}
+
+message GetPresignedUrlResponse {
+  string url = 1;
+}
+
+message DeleteObjectRequest {
+  string object_key = 1;
+}
+
+message DeleteObjectResponse {
+  bool success = 1;
+  string message = 2;
+}

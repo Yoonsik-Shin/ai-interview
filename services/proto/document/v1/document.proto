@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package document.v1;
+
+option java_multiple_files = true;
+option java_package = "me.unbrdn.core.grpc.document.v1";
+option java_outer_classname = "DocumentProto";
+
+// Document 서비스
+service DocumentService {
+  // 텍스트를 임베딩 벡터로 변환
+  rpc GenerateEmbedding(GenerateEmbeddingRequest) returns (GenerateEmbeddingResponse);
+}
+
+// 임베딩 생성 요청
+message GenerateEmbeddingRequest {
+  string text = 1;  // 임베딩할 텍스트
+}
+
+// 임베딩 생성 응답
+message GenerateEmbeddingResponse {
+  repeated float embedding = 1;  // 임베딩 벡터 (384차원)
+  int32 dimension = 2;           // 벡터 차원 수
+}
