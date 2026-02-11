@@ -7,10 +7,10 @@ import { ResumeGrpcService } from "./services/resume-grpc.service";
 import { GrpcConfigService } from "./services/grpc-config.service";
 
 const GRPC_PACKAGES = [
-    { name: "AUTH_PACKAGE", package: "auth" },
-    { name: "INTERVIEW_PACKAGE", package: "interview" },
-    { name: "USER_PACKAGE", package: "user" },
-    { name: "RESUME_PACKAGE", package: "resume" },
+    { name: "AUTH_PACKAGE", package: "auth.v1" },
+    { name: "INTERVIEW_PACKAGE", package: "interview.v1" },
+    { name: "USER_PACKAGE", package: "user.v1" },
+    { name: "RESUME_PACKAGE", package: "resume.v1" },
 ];
 
 @Module({

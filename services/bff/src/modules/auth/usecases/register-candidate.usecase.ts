@@ -23,9 +23,8 @@ export class RegisterCandidateUseCase {
         const response = await this.authGrpcService.registerCandidate({
             email: command.email,
             password: command.password,
-            role: command.role,
             nickname: command.nickname,
-            phoneNumber: command.phoneNumber,
+            phoneNumber: command.phoneNumber ?? "",
         });
 
         return new RegisterCandidateResult(response.userId);

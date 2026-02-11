@@ -10,12 +10,17 @@ export class GrpcConfigService {
     constructor(private readonly configService: ConfigService) {}
 
     getGrpcOptions(packageName: string): ClientOptions {
+        const [domain, version] = packageName.split(".");
+        const protoPath = version
+            ? join(process.cwd(), `proto/${domain}/${version}/${domain}.proto`)
+            : join(process.cwd(), `proto/${domain}.proto`);
+
         return {
             transport: Transport.GRPC,
             options: {
                 package: packageName,
-                protoPath: join(process.cwd(), `proto/${packageName}.proto`),
-                url: this.getGrpcUrl(packageName),
+                protoPath,
+                url: this.getGrpcUrl(domain),
                 loader: {
                     keepCase: false,
                     longs: String,
@@ -28,7 +33,8 @@ export class GrpcConfigService {
     }
 
     private getGrpcUrl(packageName: string): string {
-        const prefix = packageName.toUpperCase();
+        const domain = packageName.split(".")[0];
+        const prefix = domain.toUpperCase();
 
         try {
             const host = this.configService.getOrThrow<string>(`${prefix}_GRPC_HOST`);

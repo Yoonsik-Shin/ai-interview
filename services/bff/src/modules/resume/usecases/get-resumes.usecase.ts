@@ -24,27 +24,10 @@ export class GetResumesUseCase {
     constructor(private readonly resumeGrpcService: ResumeGrpcService) {}
 
     async execute(command: GetResumesCommand): Promise<GetResumesResult> {
-        const [resumeList, embeddingList] = await Promise.all([
-            this.resumeGrpcService.listResumes({ userId: command.userId }),
-            this.resumeGrpcService.getResumeEmbeddings({ userId: command.userId }),
-        ]);
-
-        const embeddingMap = new Map<string, number[]>();
-        if (embeddingList.embeddings) {
-            embeddingList.embeddings.forEach((item) => {
-                embeddingMap.set(item.resumeId, item.vector);
-            });
-        }
+        const resumeList = await this.resumeGrpcService.listResumes({ userId: command.userId });
 
         const resumes = resumeList.resumes.map(
-            (resume) =>
-                new ResumeSummary(
-                    resume.id,
-                    resume.title,
-                    resume.status,
-                    resume.createdAt,
-                    embeddingMap.get(resume.id),
-                ),
+            (resume) => new ResumeSummary(resume.id, resume.title, resume.status, resume.createdAt),
         );
 
         return new GetResumesResult(resumes);

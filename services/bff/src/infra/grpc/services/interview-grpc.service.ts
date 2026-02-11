@@ -2,16 +2,18 @@ import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import type { ClientGrpc } from "@nestjs/microservices";
 import { firstValueFrom } from "rxjs";
 import {
-    InterviewServiceGrpcClient,
+    InterviewServiceClient,
     CreateInterviewRequest,
     CreateInterviewResponse,
     ListInterviewsRequest,
     ListInterviewsResponse,
+} from "@grpc-types/interview/v1/interview";
+import {
     InterviewTypeProto,
     InterviewRoleProto,
     InterviewPersonalityProto,
     InterviewStatusProto,
-} from "@grpc-types/interview";
+} from "@grpc-types/common/v1/enums";
 import {
     InterviewType,
     InterviewRole,
@@ -20,7 +22,7 @@ import {
 
 @Injectable()
 export class InterviewGrpcService implements OnModuleInit {
-    private interviewService: InterviewServiceGrpcClient;
+    private interviewService: InterviewServiceClient;
 
     constructor(
         @Inject("INTERVIEW_PACKAGE")
@@ -29,7 +31,7 @@ export class InterviewGrpcService implements OnModuleInit {
 
     onModuleInit() {
         this.interviewService =
-            this.client.getService<InterviewServiceGrpcClient>("InterviewServiceGrpc");
+            this.client.getService<InterviewServiceClient>("InterviewService");
     }
 
     async createInterview(request: CreateInterviewRequest): Promise<CreateInterviewResponse> {

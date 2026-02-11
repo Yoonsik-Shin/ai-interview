@@ -24,10 +24,9 @@ export class RegisterRecruiterUseCase {
         const response = await this.authGrpcService.registerRecruiter({
             email: command.email,
             password: command.password,
-            role: command.role,
             nickname: command.nickname,
-            companyCode: command.companyCode,
-            phoneNumber: command.phoneNumber,
+            companyCode: command.companyCode ?? "",
+            phoneNumber: command.phoneNumber ?? "",
         });
 
         return new RegisterRecruiterResult(response.userId);

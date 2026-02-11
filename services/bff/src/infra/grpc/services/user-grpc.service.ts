@@ -1,7 +1,11 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import type { ClientGrpc } from "@nestjs/microservices";
 import { firstValueFrom } from "rxjs";
-import { FindUserByIdRequest, FindUserByIdResponse, UserServiceClient } from "@grpc-types/user";
+import {
+    FindUserByIdRequest,
+    FindUserByIdResponse,
+    UserServiceClient,
+} from "@grpc-types/user/v1/user";
 
 @Injectable()
 export class UserGrpcService implements OnModuleInit {

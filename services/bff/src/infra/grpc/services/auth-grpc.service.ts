@@ -7,7 +7,7 @@ import {
     RegisterResponse,
     RefreshTokenRequest,
     RefreshTokenResponse,
-} from "@grpc-types/auth";
+} from "@grpc-types/auth/v1/auth";
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import type { ClientGrpc } from "@nestjs/microservices";
 import { firstValueFrom } from "rxjs";

@@ -13,10 +13,8 @@ import {
     GetResumeResponse,
     DeleteResumeRequest,
     DeleteResumeResponse,
-    GetResumeEmbeddingsRequest,
-    GetResumeEmbeddingsResponse,
     ValidateResumeResponse,
-} from "@grpc-types/resume";
+} from "@grpc-types/resume/v1/resume";
 
 @Injectable()
 export class ResumeGrpcService implements OnModuleInit {
@@ -48,13 +46,7 @@ export class ResumeGrpcService implements OnModuleInit {
         return await firstValueFrom(this.resumeService.deleteResume(request));
     }
 
-    async getResumeEmbeddings(
-        request: GetResumeEmbeddingsRequest,
-    ): Promise<GetResumeEmbeddingsResponse> {
-        return await firstValueFrom(this.resumeService.getResumeEmbeddings(request));
-    }
-
-    async classifyResume(text: string): Promise<ValidateResumeResponse> {
-        return await firstValueFrom(this.resumeService.validateResume({ text }));
+    async classifyResume(content: string): Promise<ValidateResumeResponse> {
+        return await firstValueFrom(this.resumeService.validateResume({ text: content }));
     }
 }
