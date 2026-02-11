@@ -8,15 +8,8 @@ lint:
   use:
     - STANDARD
   except:
-    # 디렉토리 구조 관련 (단일 proto 폴더에 여러 패키지 사용)
-    - PACKAGE_DIRECTORY_MATCH
-    - PACKAGE_SAME_DIRECTORY
-    - DIRECTORY_SAME_PACKAGE
-    - PACKAGE_VERSION_SUFFIX
-    # 기존 네이밍 호환성 유지
+    # 기존 필드 네이밍 호환성 유지 (필요 시)
     - FIELD_LOWER_SNAKE_CASE
-    - RPC_REQUEST_STANDARD_NAME
-    - RPC_RESPONSE_STANDARD_NAME
     - SERVICE_SUFFIX
     - ENUM_VALUE_PREFIX
 breaking:
