@@ -2,9 +2,9 @@ package me.unbrdn.core.resume.adapter.out.llm;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import me.unbrdn.core.grpc.llm.LlmProto.ClassifyResumeRequest;
-import me.unbrdn.core.grpc.llm.LlmProto.ClassifyResumeResponse;
-import me.unbrdn.core.grpc.llm.LlmServiceGrpc;
+import me.unbrdn.core.grpc.llm.v1.ClassifyResumeRequest;
+import me.unbrdn.core.grpc.llm.v1.ClassifyResumeResponse;
+import me.unbrdn.core.grpc.llm.v1.LlmServiceGrpc;
 import me.unbrdn.core.resume.application.dto.ValidateResumeResult;
 import me.unbrdn.core.resume.application.port.out.ValidateResumePort;
 import net.devh.boot.grpc.client.inject.GrpcClient;

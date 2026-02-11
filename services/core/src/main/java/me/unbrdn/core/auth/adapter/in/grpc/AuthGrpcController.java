@@ -14,15 +14,15 @@ import me.unbrdn.core.auth.application.port.in.AuthenticateUserUseCase;
 import me.unbrdn.core.auth.application.port.in.RefreshTokenUseCase;
 import me.unbrdn.core.auth.application.port.in.RegisterCandidateUseCase;
 import me.unbrdn.core.auth.application.port.in.RegisterRecruiterUseCase;
-import me.unbrdn.core.grpc.AuthProto.AuthenticateUserRequest;
-import me.unbrdn.core.grpc.AuthProto.AuthenticateUserResponse;
-import me.unbrdn.core.grpc.AuthProto.RefreshTokenRequest;
-import me.unbrdn.core.grpc.AuthProto.RefreshTokenResponse;
-import me.unbrdn.core.grpc.AuthProto.RegisterCandidateRequest;
-import me.unbrdn.core.grpc.AuthProto.RegisterRecruiterRequest;
-import me.unbrdn.core.grpc.AuthProto.RegisterResponse;
-import me.unbrdn.core.grpc.AuthProto.User;
-import me.unbrdn.core.grpc.AuthServiceGrpc;
+import me.unbrdn.core.grpc.auth.v1.AuthenticateUserRequest;
+import me.unbrdn.core.grpc.auth.v1.AuthenticateUserResponse;
+import me.unbrdn.core.grpc.auth.v1.RefreshTokenRequest;
+import me.unbrdn.core.grpc.auth.v1.RefreshTokenResponse;
+import me.unbrdn.core.grpc.auth.v1.RegisterCandidateRequest;
+import me.unbrdn.core.grpc.auth.v1.RegisterRecruiterRequest;
+import me.unbrdn.core.grpc.auth.v1.RegisterResponse;
+import me.unbrdn.core.grpc.auth.v1.User;
+import me.unbrdn.core.grpc.auth.v1.AuthServiceGrpc;
 import net.devh.boot.grpc.server.service.GrpcService;
 
 @Slf4j
@@ -36,89 +36,58 @@ public class AuthGrpcController extends AuthServiceGrpc.AuthServiceImplBase {
     private final RefreshTokenUseCase refreshTokenUseCase;
 
     @Override
-    public void authenticateUser(
-            AuthenticateUserRequest request,
+    public void authenticateUser(AuthenticateUserRequest request,
             StreamObserver<AuthenticateUserResponse> responseObserver) {
-        AuthenticateUserCommand command =
-                AuthenticateUserCommand.builder()
-                        .email(request.getEmail())
-                        .password(request.getPassword())
-                        .build();
+        AuthenticateUserCommand command = AuthenticateUserCommand.builder().email(request.getEmail())
+                .password(request.getPassword()).build();
 
         AuthenticateUserResult result = authenticateUserUseCase.execute(command);
 
-        User user =
-                User.newBuilder()
-                        .setId(result.getUser().getId().toString())
-                        .setEmail(result.getUser().getEmail())
-                        .setNickname(
-                                result.getUser().getNickname() != null
-                                        ? result.getUser().getNickname()
-                                        : "")
-                        .setRole(result.getUser().getRole())
-                        .build();
+        me.unbrdn.core.grpc.auth.v1.User user = me.unbrdn.core.grpc.auth.v1.User.newBuilder()
+                .setId(result.getUser().getId().toString()).setEmail(result.getUser().getEmail())
+                .setNickname(result.getUser().getNickname() != null ? result.getUser().getNickname() : "")
+                .setRole(result.getUser().getRole()).build();
 
-        AuthenticateUserResponse response =
-                AuthenticateUserResponse.newBuilder()
-                        .setAccessToken(result.getAccessToken())
-                        .setRefreshToken(result.getRefreshToken())
-                        .setUser(user)
-                        .build();
+        AuthenticateUserResponse response = AuthenticateUserResponse.newBuilder()
+                .setAccessToken(result.getAccessToken()).setRefreshToken(result.getRefreshToken()).setUser(user)
+                .build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
 
     @Override
-    public void registerCandidate(
-            RegisterCandidateRequest request, StreamObserver<RegisterResponse> responseObserver) {
-        RegisterCandidateCommand command =
-                RegisterCandidateCommand.builder()
-                        .email(request.getEmail())
-                        .password(request.getPassword())
-                        .nickname(request.getNickname())
-                        .phoneNumber(request.getPhoneNumber())
-                        .build();
+    public void registerCandidate(RegisterCandidateRequest request, StreamObserver<RegisterResponse> responseObserver) {
+        RegisterCandidateCommand command = RegisterCandidateCommand.builder().email(request.getEmail())
+                .password(request.getPassword()).nickname(request.getNickname()).phoneNumber(request.getPhoneNumber())
+                .build();
 
         UUID userId = registerCandidateUseCase.execute(command);
 
-        RegisterResponse response =
-                RegisterResponse.newBuilder().setUserId(userId.toString()).build();
+        RegisterResponse response = RegisterResponse.newBuilder().setUserId(userId.toString()).build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
 
     @Override
-    public void registerRecruiter(
-            RegisterRecruiterRequest request, StreamObserver<RegisterResponse> responseObserver) {
-        RegisterRecruiterCommand command =
-                RegisterRecruiterCommand.builder()
-                        .email(request.getEmail())
-                        .password(request.getPassword())
-                        .nickname(request.getNickname())
-                        .companyCode(request.getCompanyCode())
-                        .phoneNumber(request.getPhoneNumber())
-                        .build();
+    public void registerRecruiter(RegisterRecruiterRequest request, StreamObserver<RegisterResponse> responseObserver) {
+        RegisterRecruiterCommand command = RegisterRecruiterCommand.builder().email(request.getEmail())
+                .password(request.getPassword()).nickname(request.getNickname()).companyCode(request.getCompanyCode())
+                .phoneNumber(request.getPhoneNumber()).build();
 
         UUID userId = registerRecruiterUseCase.execute(command);
 
-        RegisterResponse response =
-                RegisterResponse.newBuilder().setUserId(userId.toString()).build();
+        RegisterResponse response = RegisterResponse.newBuilder().setUserId(userId.toString()).build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
 
     @Override
-    public void refreshToken(
-            RefreshTokenRequest request, StreamObserver<RefreshTokenResponse> responseObserver) {
-        RefreshTokenCommand command =
-                RefreshTokenCommand.builder().refreshToken(request.getRefreshToken()).build();
+    public void refreshToken(RefreshTokenRequest request, StreamObserver<RefreshTokenResponse> responseObserver) {
+        RefreshTokenCommand command = RefreshTokenCommand.builder().refreshToken(request.getRefreshToken()).build();
         RefreshTokenResult result = refreshTokenUseCase.execute(command);
 
-        RefreshTokenResponse response =
-                RefreshTokenResponse.newBuilder()
-                        .setAccessToken(result.getAccessToken())
-                        .setRefreshToken(result.getRefreshToken())
-                        .build();
+        RefreshTokenResponse response = RefreshTokenResponse.newBuilder().setAccessToken(result.getAccessToken())
+                .setRefreshToken(result.getRefreshToken()).build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }

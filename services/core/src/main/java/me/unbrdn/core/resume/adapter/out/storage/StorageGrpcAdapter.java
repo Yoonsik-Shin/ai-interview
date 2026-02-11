@@ -2,11 +2,11 @@ package me.unbrdn.core.resume.adapter.out.storage;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import me.unbrdn.core.grpc.storage.StorageProto.DeleteObjectRequest;
-import me.unbrdn.core.grpc.storage.StorageProto.DeleteObjectResponse;
-import me.unbrdn.core.grpc.storage.StorageProto.GetPresignedUrlRequest;
-import me.unbrdn.core.grpc.storage.StorageProto.GetPresignedUrlResponse;
-import me.unbrdn.core.grpc.storage.StorageServiceGrpc;
+import me.unbrdn.core.grpc.storage.v1.DeleteObjectRequest;
+import me.unbrdn.core.grpc.storage.v1.DeleteObjectResponse;
+import me.unbrdn.core.grpc.storage.v1.GetPresignedUrlRequest;
+import me.unbrdn.core.grpc.storage.v1.GetPresignedUrlResponse;
+import me.unbrdn.core.grpc.storage.v1.StorageServiceGrpc;
 import me.unbrdn.core.resume.application.port.out.DeleteFilePort;
 import me.unbrdn.core.resume.application.port.out.GeneratePresignedUrlPort;
 import net.devh.boot.grpc.client.inject.GrpcClient;

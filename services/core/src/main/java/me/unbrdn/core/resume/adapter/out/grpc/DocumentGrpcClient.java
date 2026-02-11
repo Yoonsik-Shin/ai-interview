@@ -3,9 +3,9 @@ package me.unbrdn.core.resume.adapter.out.grpc;
 import io.grpc.StatusRuntimeException;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import me.unbrdn.proto.document.DocumentServiceGrpc;
-import me.unbrdn.proto.document.GenerateEmbeddingRequest;
-import me.unbrdn.proto.document.GenerateEmbeddingResponse;
+import me.unbrdn.core.grpc.document.v1.DocumentServiceGrpc;
+import me.unbrdn.core.grpc.document.v1.GenerateEmbeddingRequest;
+import me.unbrdn.core.grpc.document.v1.GenerateEmbeddingResponse;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
 
