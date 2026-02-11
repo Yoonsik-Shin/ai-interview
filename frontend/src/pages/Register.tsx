@@ -1,38 +1,45 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { register, type RegisterReq } from '@/auth/authApi'
-import { Toast } from '@/components/Toast'
-import styles from './Auth.module.css'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { register, type RegisterReq } from "@/auth/authApi";
+import { Toast } from "@/components/Toast";
+import logo from "@/assets/logo.png";
+import styles from "./Auth.module.css";
 
 export function Register() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const [form, setForm] = useState<RegisterReq>({
-    email: '',
-    password: '',
-    role: 'CANDIDATE',
-    nickname: '',
-    phoneNumber: '',
-    companyCode: '',
-  })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+    email: "",
+    password: "",
+    role: "CANDIDATE",
+    nickname: "",
+    phoneNumber: "",
+    companyCode: "",
+  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setLoading(true);
     try {
-      await register(form)
-      navigate('/login', { replace: true })
+      await register(form);
+      navigate("/login", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : '가입 실패')
+      setError(err instanceof Error ? err.message : "가입 실패");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   return (
     <div className={styles.wrap}>
+      <div className={styles.backgroundGlow}></div>
+
+      <div className={styles.logoContainer}>
+        <img src={logo} alt="Unbrdn" className={styles.logo} />
+      </div>
+
       <div className={styles.card}>
         <h1 className={styles.title}>회원가입</h1>
         <form onSubmit={handleSubmit} className={styles.form}>
@@ -49,7 +56,9 @@ export function Register() {
             type="password"
             placeholder="비밀번호"
             value={form.password}
-            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, password: e.target.value }))
+            }
             required
             autoComplete="new-password"
             className={styles.input}
@@ -58,39 +67,48 @@ export function Register() {
             type="text"
             placeholder="닉네임"
             value={form.nickname}
-            onChange={(e) => setForm((f) => ({ ...f, nickname: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, nickname: e.target.value }))
+            }
             required
             className={styles.input}
           />
           <input
             type="tel"
             placeholder="전화번호"
-            value={form.phoneNumber ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, phoneNumber: e.target.value }))}
+            value={form.phoneNumber ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, phoneNumber: e.target.value }))
+            }
             required
             className={styles.input}
           />
-          {form.role === 'RECRUITER' && (
-            <input
-              type="text"
-              placeholder="회사 코드"
-              value={form.companyCode ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, companyCode: e.target.value }))}
-              className={styles.input}
-            />
-          )}
           <select
             value={form.role}
             onChange={(e) =>
-              setForm((f) => ({ ...f, role: e.target.value as 'CANDIDATE' | 'RECRUITER' }))
+              setForm((f) => ({
+                ...f,
+                role: e.target.value as "CANDIDATE" | "RECRUITER",
+              }))
             }
             className={styles.input}
           >
             <option value="CANDIDATE">지원자</option>
             <option value="RECRUITER">채용담당자</option>
           </select>
+          {form.role === "RECRUITER" && (
+            <input
+              type="text"
+              placeholder="회사 코드"
+              value={form.companyCode ?? ""}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, companyCode: e.target.value }))
+              }
+              className={styles.input}
+            />
+          )}
           <button type="submit" disabled={loading} className={styles.btn}>
-            {loading ? '가입 중…' : '가입'}
+            {loading ? "가입 중…" : "가입"}
           </button>
         </form>
         <p className={styles.footer}>
@@ -98,8 +116,12 @@ export function Register() {
         </p>
       </div>
       {error && (
-        <Toast message={error} onClose={() => setError('')} autoDismissMs={5000} />
+        <Toast
+          message={error}
+          onClose={() => setError("")}
+          autoDismissMs={5000}
+        />
       )}
     </div>
-  )
+  );
 }

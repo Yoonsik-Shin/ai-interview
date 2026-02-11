@@ -1,33 +1,40 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { login } from '@/auth/authApi'
-import { Toast } from '@/components/Toast'
-import styles from './Auth.module.css'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { login } from "@/auth/authApi";
+import { Toast } from "@/components/Toast";
+import logo from "@/assets/logo.png";
+import styles from "./Auth.module.css";
 
 export function Login() {
-  const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setLoading(true);
     try {
-      const { accessToken } = await login({ email, password })
-      localStorage.setItem('accessToken', accessToken)
-      navigate('/', { replace: true })
+      const { accessToken } = await login({ email, password });
+      localStorage.setItem("accessToken", accessToken);
+      navigate("/", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : '로그인 실패')
+      setError(err instanceof Error ? err.message : "로그인 실패");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   return (
     <div className={styles.wrap}>
+      <div className={styles.backgroundGlow}></div>
+
+      <div className={styles.logoContainer}>
+        <img src={logo} alt="Unbrdn" className={styles.logo} />
+      </div>
+
       <div className={styles.card}>
         <h1 className={styles.title}>로그인</h1>
         <form onSubmit={handleSubmit} className={styles.form}>
@@ -50,7 +57,7 @@ export function Login() {
             className={styles.input}
           />
           <button type="submit" disabled={loading} className={styles.btn}>
-            {loading ? '로그인 중…' : '로그인'}
+            {loading ? "로그인 중…" : "로그인"}
           </button>
         </form>
         <p className={styles.footer}>
@@ -58,8 +65,12 @@ export function Login() {
         </p>
       </div>
       {error && (
-        <Toast message={error} onClose={() => setError('')} autoDismissMs={5000} />
+        <Toast
+          message={error}
+          onClose={() => setError("")}
+          autoDismissMs={5000}
+        />
       )}
     </div>
-  )
+  );
 }
