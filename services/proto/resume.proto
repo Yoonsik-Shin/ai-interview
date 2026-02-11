@@ -12,11 +12,8 @@ service ResumeService {
   // 이력서 업로드 완료 알림
   rpc CompleteUpload (CompleteUploadRequest) returns (CompleteUploadResponse);
 
-  // 이력서 업로드 (Legacy: 직접 파일 전송)
-  rpc UploadResume (UploadResumeRequest) returns (UploadResumeResponse);
 
-  // 이력서 업데이트 (기존 이력서 대체)
-  rpc UpdateResume (UpdateResumeRequest) returns (UpdateResumeResponse);
+
 
   // 사용자 이력서 목록 조회
   rpc ListResumes (ListResumesRequest) returns (ListResumesResponse);
@@ -29,6 +26,19 @@ service ResumeService {
 
   // 이력서 임베딩 목록 조회 (병렬 호출용)
   rpc GetResumeEmbeddings (GetResumeEmbeddingsRequest) returns (GetResumeEmbeddingsResponse);
+
+  // 이력서 내용 유효성 검사 (LLM 연동)
+  rpc ValidateResume (ValidateResumeRequest) returns (ValidateResumeResponse);
+}
+
+message ValidateResumeRequest {
+  string text = 1;
+}
+
+message ValidateResumeResponse {
+  bool is_resume = 1;
+  string reason = 2; // 판별 이유
+  float score = 3;  // 매칭 점수
 }
 
 message GetResumeEmbeddingsRequest {
@@ -68,48 +78,15 @@ message CompleteUploadRequest {
   string resumeId = 1;
   string validationText = 2; // 프론트엔드에서 전처리가 완료된 검증용 텍스트
   repeated float embedding = 3; // 프론트엔드에서 생성된 검증용 임베딩 벡터
+  optional string existingResumeId = 4; // 업데이트 시 대체할 기존 이력서 ID
 }
 
 message CompleteUploadResponse {
   bool success = 1;
 }
 
-message UploadResumeRequest {
-  string userId = 1; // UUID
-  string title = 2;
-  bytes fileData = 3;
-  string fileName = 4;
-  string contentType = 5;
-  bool forceUpload = 6; // 유사도 검증 스킵 (사용자가 "새로 등록" 선택 시)
-  string validationText = 7; // 프론트엔드에서 전처리가 완료된 검증용 텍스트
-  repeated float embedding = 8; // 프론트엔드에서 생성된 검증용 임베딩 벡터
-}
 
-message UploadResumeResponse {
-  string resumeId = 1; // UUID (성공 시)
-  SimilarResumeInfo similarResume = 2; // 유사 이력서 정보 (발견 시)
-}
 
-message SimilarResumeInfo {
-  string existingResumeId = 1; // 기존 이력서 ID
-  double similarity = 2;        // 유사도 (0.0 ~ 1.0)
-  string title = 3;             // 기존 이력서 제목
-  string uploadedAt = 4;        // 업로드 날짜
-}
-
-message UpdateResumeRequest {
-  string userId = 1;            // UUID
-  string existingResumeId = 2;  // 업데이트할 기존 이력서 ID
-  string title = 3;
-  bytes fileData = 4;
-  string fileName = 5;
-  string contentType = 6;
-  repeated float embedding = 7; // 프론트엔드에서 생성된 검증용 임베딩 벡터
-}
-
-message UpdateResumeResponse {
-  string resumeId = 1; // UUID
-}
 
 message ListResumesRequest {
   string userId = 1;
