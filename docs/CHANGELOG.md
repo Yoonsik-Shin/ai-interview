@@ -1,5 +1,18 @@
 # Changelog
 
+## [2026-02-12]
+
+### 2026-02-12 (Phase 1)
+
+- **gRPC 도메인 기반 구조 재편 및 Core 서비스 리팩토링**:
+  - **Proto**: 모든 Proto 파일을 도메인 단위(`auth`, `interview`, `llm`, `resume`, `storage`, `stt`, `user`, `common`)로 분리하고 `v1` 버전을 적용하여 구조화함.
+  - **Proto**: 공통 Enum을 `common/v1/enums.proto`로 중앙 집중화하여 중복 정의 제거.
+  - **Core (Java)**: `java_multiple_files = true` 옵션을 적용하여 생성된 Java 클래스의 가독성과 모듈성 향상.
+  - **Core (Java)**: 도메인 엔티티와 gRPC 메시지 클래스 간의 이름 충돌을 해결하기 위해 컨트롤러 및 어댑터에 **FQCN(Fully Qualified Name)** 대대적 적용.
+  - **Core (Java)**: `UserGrpcController`, `AuthGrpcController`, `ResumeGrpcController`, `LlmGrpcAdapter`, `StorageGrpcAdapter` 등 모든 gRPC 계층의 임포트 경로 및 코드 정합성 수정.
+  - **Proto Fix**: 리팩토링 과정에서 누락되었던 필수 RPC 및 메시지(`RegisterCandidate`, `ClassifyResume`, `GetPresignedUrl` 등)를 식별하여 복구 및 정규화.
+  - **Build**: `./scripts/compile-proto.sh` 고도화를 통해 Java, TypeScript, Python 등 멀티 서비스 환경의 Proto 컴파일 자동화. Core 서비스의 `clean compileJava` 빌드 성공 확인.
+
 ## [2026-02-11]
 
 ### 2026-02-11 (Phase 1)
@@ -5373,7 +5386,9 @@ kubectl create secret generic inference-secrets \
 - [Frontend] Updated socket connection to use dynamic auth token for seamless reconnection
 - [Socket] Fixed JWT payload parsing issues by mapping 'sub' claim to 'userId'
 - 2026-02-02: 1분 자기소개 30초 제한 기능 구현 (Socket Abort + Frontend Retry Logic)
+
 ## 2026-02-12
+
 - Refactored Resume module architecture to follow the pattern used in the interview module.
 - Standardized Resume classification flow: BFF -> Core -> LLM.
 - Removed LLM direct dependency from BFF ResumeGrpcService.

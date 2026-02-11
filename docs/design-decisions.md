@@ -264,3 +264,35 @@ Core 서비스에서 불필요하게 많은 `DEBUG` 로그(특히 Actuator healt
 
 - **Pros**: RESTful 규격 준수, 사용자 편의성(이어하기) 증대, 면접 데이터의 체계적 관리 가능.
 - **Cons**: 기존 단수형 API를 호출하던 프론트엔드 코드의 수정이 필요함 (Breaking change).
+
+---
+
+## 2026-02-12: gRPC Domain-based Proto Restructuring & Symbol Collision Resolution (Core Service)
+
+### Context
+
+기존의 Proto 파일들이 서비스 경계 없이 혼재되어 있었고, 버전 관리(`v1`)가 부재하여 서비스 확장에 어려움이 있었음. 또한 Java 생성 시 `java_multiple_files` 옵션 미사용으로 인해 하나의 거대한 아우터 클래스에 의존하게 되어 가독성과 관리 효율이 저하됨. 특히 Core 서비스의 도메인 엔티티(User, Candidate 등)와 gRPC 메시지 클래스명이 동일하여 임포트 충돌이 발생하는 고질적인 문제가 있었음.
+
+### Decisions
+
+1.  **Domain-based Proto Organization with `v1` Versioning**:
+    - 모든 Proto 파일을 `services/proto/<domain>/v1/<domain>.proto` 구조로 재편.
+    - 패키지 명칭에 버전 명시 (예: `package interview.v1`).
+2.  **Centralized Common Enums (`common/v1/enums.proto`)**:
+    - `InterviewStage`, `InterviewRole` 등 여러 도메인에서 공통으로 처리되는 Enum을 중앙 집중화하여 중복 정의 제거 및 일관성 확보.
+3.  **Active use of `java_multiple_files = true`**:
+    - 각 메시지와 서비스를 개별 Java 클래스로 생성하여 모듈성 향상 및 아우터 클래스 의존성 제거.
+4.  **Symbol Collision Resolution via FQCN (Fully Qualified Name)**:
+    - 도메인 엔티티와 gRPC 메시지명이 충돌하는 경우 (예: `me.unbrdn.core.user.domain.entity.User` vs `me.unbrdn.core.grpc.user.v1.User`), gRPC 메시지 참조 시 **FQCN을 사용하여 명시적으로 구분**하는 것을 원칙으로 함.
+5.  **Multi-Service Proto Compilation Script (`compile-proto.sh`)**:
+    - Java(Gradle), TypeScript(BFF/Socket), Python(STT/LLM) 등 각기 다른 기술 스택에 최적화된 컴파일 로직을 단일 스크립트로 통합 관리.
+
+### Consequences
+
+- **Pros**:
+  - 도메인 주도 설계(DDD) 원칙에 부합하는 명확한 서비스 경계 확립.
+  - 타입 안정성 강화 및 Java 코드 내 gRPC 메시지 관리 편의성 증대.
+  - 버전 관리를 통한 하위 호환성 유지 기반 마련.
+- **Cons**:
+  - 기존 모든 서비스의 임포트 경로를 수정해야 하는 대규모 Breaking Change 발생.
+  - 코드 내 FQCN 사용 증가로 인해 일부 구문이 길어질 수 있음.
