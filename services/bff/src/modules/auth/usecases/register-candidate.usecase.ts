@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { AuthGrpcService } from "src/core/grpc-client/services/auth-grpc.service";
+import { AuthGrpcService } from "src/infra/grpc/services/auth-grpc.service";
 
 export class RegisterCandidateCommand {
     constructor(

@@ -10,27 +10,35 @@ import { join } from "path";
             {
                 name: "STT_PACKAGE",
                 imports: [ConfigModule],
-                useFactory: (configService: ConfigService) => ({
-                    transport: Transport.GRPC,
-                    options: {
-                        package: "stt",
-                        protoPath: join(process.cwd(), "../proto/stt.proto"),
-                        url: configService.getOrThrow<string>("STT_GRPC_URL"),
-                    },
-                }),
+                useFactory: (configService: ConfigService) => {
+                    const host = configService.getOrThrow<string>("STT_GRPC_HOST");
+                    const port = configService.getOrThrow<number>("STT_GRPC_PORT");
+                    return {
+                        transport: Transport.GRPC,
+                        options: {
+                            package: "stt",
+                            protoPath: join(process.cwd(), "../proto/stt.proto"),
+                            url: `${host}:${port}`,
+                        },
+                    };
+                },
                 inject: [ConfigService],
             },
             {
                 name: "INTERVIEW_PACKAGE",
                 imports: [ConfigModule],
-                useFactory: (configService: ConfigService) => ({
-                    transport: Transport.GRPC,
-                    options: {
-                        package: "interview",
-                        protoPath: join(process.cwd(), "../proto/interview.proto"),
-                        url: configService.getOrThrow<string>("CORE_GRPC_URL"),
-                    },
-                }),
+                useFactory: (configService: ConfigService) => {
+                    const host = configService.getOrThrow<string>("CORE_GRPC_HOST");
+                    const port = configService.getOrThrow<number>("CORE_GRPC_PORT");
+                    return {
+                        transport: Transport.GRPC,
+                        options: {
+                            package: "interview",
+                            protoPath: join(process.cwd(), "../proto/interview.proto"),
+                            url: `${host}:${port}`,
+                        },
+                    };
+                },
                 inject: [ConfigService],
             },
         ]),

@@ -79,13 +79,13 @@ if [ "$GENERATE_TYPESCRIPT" = true ]; then
         echo "📦 각 서비스로 타입 정의 복사 중..."
         
         # Socket Service
-        SOCKET_DEST="services/socket/src/generated"
+        SOCKET_DEST="services/socket/src/types/grpc"
         mkdir -p "$SOCKET_DEST"
         cp -r "$OUT_DIR"/* "$SOCKET_DEST/"
         echo "   -> Socket Service ($SOCKET_DEST)"
 
         # BFF Service
-        BFF_DEST="services/bff/src/generated"
+        BFF_DEST="services/bff/src/types/grpc"
         mkdir -p "$BFF_DEST"
         cp -r "$OUT_DIR"/* "$BFF_DEST/"
         echo "   -> BFF Service ($BFF_DEST)"

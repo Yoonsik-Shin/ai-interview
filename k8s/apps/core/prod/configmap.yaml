@@ -17,8 +17,8 @@ data:
   SPRING_KAFKA_CONSUMER_GROUP_ID: "core-streaming-group"
   SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: "latest"
 
-  # gRPC Client (LLM Service)
-  LLM_GRPC_URL: "static://llm.unbrdn.svc.cluster.local:50051"
+  LLM_GRPC_HOST: "llm.unbrdn.svc.cluster.local"
+  LLM_GRPC_PORT: "50051"
 
   # Redis (대화 맥락 저장)
   REDIS_HOST: "redis.unbrdn.svc.cluster.local"

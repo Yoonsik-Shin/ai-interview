@@ -19,13 +19,19 @@ public class ListInterviewsInteractor implements ListInterviewsUseCase {
     @Override
     public List<ListInterviewsUseCase.InterviewSummary> execute(UUID userId) {
         return interviewSessionRepository.findByCandidate_IdOrderByStartedAtDesc(userId).stream()
-                .map(this::mapToSummary).toList();
+                .map(this::mapToSummary)
+                .toList();
     }
 
     private ListInterviewsUseCase.InterviewSummary mapToSummary(InterviewSession session) {
-        return ListInterviewsUseCase.InterviewSummary.builder().interviewId(UUID.fromString(session.getSessionUuid()))
-                .startedAt(session.getStartedAt()).status(session.getStatus()).domain(session.getDomain())
-                .type(session.getType()).targetDurationMinutes(session.getTargetDurationMinutes())
-                .interviewerCount(session.getInterviewerCount()).build();
+        return ListInterviewsUseCase.InterviewSummary.builder()
+                .interviewId(UUID.fromString(session.getSessionUuid()))
+                .startedAt(session.getStartedAt())
+                .status(session.getStatus())
+                .domain(session.getDomain())
+                .type(session.getType())
+                .targetDurationMinutes(session.getTargetDurationMinutes())
+                .interviewerCount(session.getInterviewerCount())
+                .build();
     }
 }

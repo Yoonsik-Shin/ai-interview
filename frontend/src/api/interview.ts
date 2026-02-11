@@ -31,7 +31,7 @@ export type InterviewSessionSummary = {
   interviewerCount: number;
 };
 
-export type ListInterviewsRes = {
+export type GetInterviewsRes = {
   interviews: InterviewSessionSummary[];
 };
 
@@ -44,8 +44,8 @@ export async function createInterview(
   });
 }
 
-export async function listInterviews(): Promise<ListInterviewsRes> {
-  return api<ListInterviewsRes>("/v1/interviews", {
+export async function getInterviews(): Promise<GetInterviewsRes> {
+  return api<GetInterviewsRes>("/v1/interviews", {
     method: "GET",
   });
 }

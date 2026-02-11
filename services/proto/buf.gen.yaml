@@ -15,12 +15,12 @@ plugins:
 
   # TypeScript (BFF & Socket Services)
   - remote: buf.build/community/stephenh-ts-proto
-    out: ../bff/src/generated
+    out: ../bff/src/types/grpc
     opt:
       - nestJs=true
       - addGrpcMetadata=true
   - remote: buf.build/community/stephenh-ts-proto
-    out: ../socket/src/generated
+    out: ../socket/src/types/grpc
     opt:
       - nestJs=true
       - addGrpcMetadata=true

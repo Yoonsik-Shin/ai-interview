@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Res, UnauthorizedException, Req } from "@nestjs/common";
 import type { Response, Request } from "express";
-import { RegisterRequestDto, RegisterRole } from "./dto/request/register-request.dto";
+import { RegisterRequestDto } from "./dto/request/register-request.dto";
+import { RegisterRole } from "./enum/auth.enum";
 import { LoginRequestDto } from "./dto/request/login-request.dto";
 import {
     RegisterCandidateCommand,

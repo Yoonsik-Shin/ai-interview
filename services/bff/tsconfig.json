@@ -22,7 +22,7 @@
         "strictBindCallApply": false,
         "noFallthroughCasesInSwitch": false,
         "paths": {
-            "@grpc-types/*": ["./src/generated/*"],
+            "@grpc-types/*": ["./src/types/grpc/*"],
             "@bufbuild/protobuf/wire": [
                 "./node_modules/@bufbuild/protobuf/dist/cjs/wire/index.d.ts"
             ],

@@ -1,4 +1,0 @@
-# 로컬 개발용 - 모든 의존성 포함
-# 프로덕션 빌드는 requirements-prod.txt 사용
--r requirements-prod.txt
--r requirements-dev.txt

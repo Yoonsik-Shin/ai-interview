@@ -1,51 +1,28 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from "@nestjs/common";
+import {
+    ExceptionFilter,
+    Catch,
+    ArgumentsHost,
+    HttpException,
+    HttpStatus,
+    Logger,
+    Injectable,
+} from "@nestjs/common";
 import { Request, Response } from "express";
 
 /** 전역 예외 처리 필터 */
 @Catch()
+@Injectable()
 export class GlobalExceptionFilter implements ExceptionFilter {
-    catch(exception: any, host: ArgumentsHost) {
+    private readonly logger = new Logger(GlobalExceptionFilter.name);
+
+    catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<Response>();
         const request = ctx.getRequest<Request>();
+        const { status, message } = this.getErrorDetails(exception);
+        const traceId = request.traceId;
 
-        let status = HttpStatus.INTERNAL_SERVER_ERROR;
-        let message = "서버 내부 오류가 발생했습니다.";
-
-        if (exception instanceof HttpException) {
-            status = exception.getStatus();
-            const exceptionResponse = exception.getResponse();
-
-            if (typeof exceptionResponse === "string") {
-                message = exceptionResponse;
-            } else if (typeof exceptionResponse === "object" && exceptionResponse !== null) {
-                message = (exceptionResponse as any).message || exception.message;
-            }
-        } else if (exception instanceof Error) {
-            message = exception.message;
-        }
-
-        const traceId = (request as any).traceId;
-
-        // 에러 로깅 (JSON 형식)
-        console.error(
-            JSON.stringify({
-                service: "bff",
-                event: "exception",
-                traceId,
-                path: request.url,
-                method: request.method,
-                status,
-                message: message, // 로그에는 원본 메시지 기록
-                timestamp: new Date().toISOString(),
-                stack: exception instanceof Error ? exception.stack : undefined,
-            }),
-        );
-
-        // 500 에러인 경우 클라이언트에게는 일반적인 메시지 전달 (보안)
-        if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
-            message = "서버 내부 오류가 발생했습니다.";
-        }
+        this.logError(request, status, message, exception, traceId);
 
         response.status(status).json({
             statusCode: status,
@@ -53,5 +30,45 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             path: request.url,
             message,
         });
+    }
+
+    private getErrorDetails(exception: unknown): { status: number; message: string } {
+        if (exception instanceof HttpException) {
+            const status = exception.getStatus();
+            const exceptionResponse = exception.getResponse();
+            const message =
+                typeof exceptionResponse === "string"
+                    ? exceptionResponse
+                    : (exceptionResponse as any).message || exception.message;
+
+            return { status, message };
+        }
+
+        if (exception instanceof Error) {
+            return {
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: exception.message,
+            };
+        }
+
+        return {
+            status: HttpStatus.INTERNAL_SERVER_ERROR,
+            message: "서버 내부 오류가 발생했습니다.",
+        };
+    }
+
+    private logError(
+        request: Request,
+        status: number,
+        message: string,
+        exception: unknown,
+        traceId?: string,
+    ) {
+        const logMessage = `[${request.method}] ${request.url} ${status} - ${message} (TraceID: ${traceId})`;
+        if (status >= 500) {
+            this.logger.error(logMessage, exception instanceof Error ? exception.stack : undefined);
+        } else {
+            this.logger.warn(logMessage);
+        }
     }
 }

@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: inference-config
-  namespace: inference
-  labels:
-    environment: prod
-data:
-  model_repository: /models

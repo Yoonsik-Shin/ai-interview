@@ -1,7 +1,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import styles from "./Interviews.module.css";
 import { useEffect, useState } from "react";
-import { listInterviews, InterviewSessionSummary } from "../api/interview";
+import { getInterviews, InterviewSessionSummary } from "../api/interview";
 import { Skeleton } from "../components/Skeleton";
 
 export function Interviews() {
@@ -10,7 +10,7 @@ export function Interviews() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listInterviews()
+    getInterviews()
       .then((res) => {
         setInterviews(res.interviews || []);
       })

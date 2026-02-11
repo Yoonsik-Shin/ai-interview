@@ -17,19 +17,6 @@ export type ResumeDetail = {
   fileUrl?: string;
 };
 
-export type SimilarResumeInfo = {
-  existingResumeId: string;
-  similarity: number;
-  title: string;
-  uploadedAt: string;
-};
-
-export type UploadResumeRes = {
-  resumeId?: string;
-  message?: string;
-  similarResume?: SimilarResumeInfo;
-};
-
 export type PresignedUrlRes = {
   uploadUrl: string;
   resumeId: string;
@@ -65,77 +52,17 @@ export async function completeUpload(
   resumeId: string,
   validationText?: string,
   embedding?: number[],
+  existingResumeId?: string,
 ): Promise<void> {
   return api<void>("/v1/resumes/complete", {
     method: "POST",
-    body: JSON.stringify({ resumeId, validationText, embedding }),
+    body: JSON.stringify({
+      resumeId,
+      validationText,
+      embedding,
+      existingResumeId,
+    }),
   });
-}
-
-/**
- * Legacy 방식: 파일을 직접 BFF로 전송 (유사도 검증 포함)
- */
-export async function uploadResumeLegacy(
-  file: File,
-  title: string,
-  forceUpload = false,
-  validationText?: string,
-  embedding?: number[],
-): Promise<UploadResumeRes> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("title", title);
-  formData.append("forceUpload", String(forceUpload));
-  if (validationText) formData.append("validationText", validationText);
-  if (embedding) formData.append("embedding", JSON.stringify(embedding));
-
-  const res = await fetch("/api/v1/resumes/upload-legacy", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(errorText || `Upload failed: ${res.status}`);
-  }
-
-  return res.json();
-}
-
-/**
- * 기존 이력서 업데이트
- */
-export async function updateResume(
-  existingResumeId: string,
-  file: File,
-  title: string,
-  validationText?: string,
-  embedding?: number[],
-): Promise<{ resumeId: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("title", title);
-  formData.append("existingResumeId", existingResumeId);
-  if (validationText) formData.append("validationText", validationText);
-  if (embedding) formData.append("embedding", JSON.stringify(embedding));
-
-  const res = await fetch("/api/v1/resumes/update", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(errorText || `Update failed: ${res.status}`);
-  }
-
-  return res.json();
 }
 
 export async function listResumes(): Promise<ResumeItem[]> {

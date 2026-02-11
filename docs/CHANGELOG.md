@@ -2,7 +2,35 @@
 
 ## [2026-02-11]
 
+### 2026-02-11 (Phase 1)
+
+- Global gRPC Configuration Unification: All gRPC connection settings standardized to `${SERVICE}_GRPC_HOST` and `${SERVICE}_GRPC_PORT`.
+- **Resume Update Standardization (Option A)**:
+  - 이력서 업데이트 방식을 Presigned URL 기반으로 표준화하여 업로드 로직과 통합.
+  - **Proto**: `CompleteUploadRequest`에 `existingResumeId` 추가 및 레거시 `UpdateResume` RPC 삭제.
+  - **Core**: `CompleteUploadInteractor`에서 기존 파일 및 임베딩 자동 삭제 로직 구현. 레거시 `UpdateResume` 관련 클래스 전면 삭제.
+  - **BFF**: `POST /resumes/update` 삭제 및 `completeUpload` API 필드 확장. `pnpm-lock.yaml` 동기화로 빌드 에러 해결.
+  - **Frontend**: `ResumeUploadZone` 리팩토링을 통해 신규 업로드 프로세스를 통한 업데이트 구현.
+- BFF & Socket Services: Refactored gRPC client initialization to construct URLs from separated Host/Port env variables using `configService.getOrThrow` for stricter error handling.
+- **Interview API Refactoring & Cleanup**:
+  - **BFF**: `startInterviewUseCase`를 `CreateInterviewUseCase`로 명칭 변경 및 파일명을 `create-interview.usecase.ts`로 리팩토링하여 RESTful 관례와 gRPC 인터페이스 일관성 확보.
+  - **Cleanup**: 더 이상 사용되지 않는 `textToSpeech` gRPC 프록시 엔드포인트 및 관련 `LLM_PACKAGE` 의존성 제거.
+  - **Terminology**: 외부 노출(BFF)은 `Interview`, 내부 도메인(Core)은 `InterviewSession`으로 역할 구분.
+- Core Service (Java): Updated `application.properties` and K8s manifests to support the new Host/Port format.
+- K8s Manifests: Updated all ConfigMaps (`common`, `local`, `prod`) to match the new standardization and removed unused `*_URL` variables.
+- gRPC Module Refactoring: Centralized gRPC configuration in `GrpcConfigService` and used `ClientsModule.registerAsync`.
+- Trace ID Middleware Fix: Handled array header values for `x-trace-id` to prevent type mismatch.
+
 ### 수정
+
+- **BFF gRPC 모듈 리팩토링**:
+  - `GrpcModule`: `ClientsModule.registerAsync` 도입 및 중복된 설정 코드 대폭 제거
+  - `GrpcConfigService`: gRPC URL 및 연결 옵션 생성 로직을 중앙 집중화
+  - `env-validation.schema.ts`: gRPC 관련 환경 변수 유효성 검사 추가
+
+- **기타 수정**:
+  - `trace-id.middleware.ts`: `x-trace-id` 헤더가 배열로 들어올 경우를 대비한 타입 안전성 보완
+  - `AuthGrpcService`: 불필요한 주석 제거 및 `onModuleInit` 규칙 준수 확인
 
 - **Core Service**: 끈질기게 지속되던 `DEBUG` 및 SQL 로그 문제를 최종 해결
   - 클러스터의 `Deployment` 명세에 숨겨져 있던 `DEBUG: "true"` 환경 변수 발견 및 제거
@@ -5345,3 +5373,11 @@ kubectl create secret generic inference-secrets \
 - [Frontend] Updated socket connection to use dynamic auth token for seamless reconnection
 - [Socket] Fixed JWT payload parsing issues by mapping 'sub' claim to 'userId'
 - 2026-02-02: 1분 자기소개 30초 제한 기능 구현 (Socket Abort + Frontend Retry Logic)
+## 2026-02-12
+- Refactored Resume module architecture to follow the pattern used in the interview module.
+- Standardized Resume classification flow: BFF -> Core -> LLM.
+- Removed LLM direct dependency from BFF ResumeGrpcService.
+
+- Normalized User module to follow the Command/Result pattern in BFF.
+- Created services/bff/README.md to document architecture and coding conventions.
+- Verified overall BFF build status.

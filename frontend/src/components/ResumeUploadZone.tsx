@@ -88,13 +88,24 @@ export function ResumeUploadZone({
     async (existingResumeId: string, file: File) => {
       setUploading(true);
       try {
-        const { updateResume } = await import("@/api/resumes");
-        await updateResume(
-          existingResumeId,
-          file,
+        const { getUploadUrl, uploadToPresignedUrl, completeUpload } =
+          await import("@/api/resumes");
+
+        // 1. 업로드 URL 발급 (새로운 파일용)
+        const { uploadUrl, resumeId: newTempId } = await getUploadUrl(
           file.name,
+          file.name,
+        );
+
+        // 2. 스토리지에 직접 업로드
+        await uploadToPresignedUrl(uploadUrl, file);
+
+        // 3. 업로드 완료 알림 (기존 이력서 ID 포함)
+        await completeUpload(
+          newTempId,
           capturedValidationText || undefined,
           capturedEmbedding || undefined,
+          existingResumeId,
         );
 
         onUploadComplete?.(existingResumeId);
@@ -106,6 +117,7 @@ export function ResumeUploadZone({
         setCapturedValidationText(null);
         setCapturedEmbedding(null);
         onFileSelect(null);
+        setCurrentValidationResult(null);
       } catch (e) {
         console.error("Update error:", e);
         onError?.(e instanceof Error ? e.message : "업데이트 실패");
@@ -113,7 +125,14 @@ export function ResumeUploadZone({
         setUploading(false);
       }
     },
-    [onUploadComplete, onSuccess, onError, onFileSelect],
+    [
+      onUploadComplete,
+      onSuccess,
+      onError,
+      onFileSelect,
+      capturedValidationText,
+      capturedEmbedding,
+    ],
   );
 
   // 중복 감지 공통 처리 함수 (인라인 UI 전환으로 상태만 유지)

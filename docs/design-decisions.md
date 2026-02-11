@@ -1,5 +1,60 @@
 # Design Decisions
 
+## 2026-02-11: Resume Update Standardization (Option A - Presigned URL Flow)
+
+### Context
+
+기존 `updateResume` 로직은 BFF에서 직접 파일을 받아 gRPC(`bytes` 필드)로 Core 서비스에 전달하는 방식이었음. 이는 대용량 파일 처리 시 서비스 부하를 유발하며, 이미 구축된 Presigned URL 기반의 신규 업로드 프로세스와 이중화되어 유지보수 복잡도를 높임. 또한 기존 로직은 데이터베이스 레코드만 업데이트하고 실제 물리 파일을 교체하지 않는 결함이 있었음.
+
+### Decisions
+
+1.  **Unified Update via Presigned URL**:
+    - 이력서 업데이트를 "신규 업로드 프로세스"와 동일하게 표준화함.
+    - `GetUploadUrl` -> `S3/MinIO Direct Upload` -> `CompleteUpload` 순서를 따름.
+2.  **Extended `CompleteUpload` Interface**:
+    - `CompleteUploadRequest`에 `existingResumeId` 필드를 추가하여, 업로드 완료 시 이 ID가 제공되면 기존 데이터를 대체(Replace)하도록 함.
+3.  **Legacy Code Removal**:
+    - 직접 `bytes`를 전송하는 `UpdateResume` gRPC RPC 및 관련 인터페이스/구현체를 모두 삭제하여 아키텍처를 단일화함.
+4.  **Automatic Cleanup**:
+    - 업데이트 수행 시 Core 서비스에서 기존 물리 파일과 구식 벡터 임베딩을 자동으로 삭제하여 데이터 일관성을 유지함.
+
+### Consequences
+
+- **Pros**:
+  - 서비스 메모리 및 대역폭 효율 최적화 (대용량 파일 직접 전송 방지).
+  - 업로드/업데이트 로직의 단일화로 유지보수성 향상.
+  - 실제 스토리지 파일 교체 및 데이터 정리 자동화.
+- **Cons**:
+  - 업데이트 시 프론트엔드에서 API 호출 횟수가 증가함 (3단계: URL 발급 -> 업로드 -> 완료).
+  - 기존 레거시 API를 사용하는 클라이언트와의 하위 호환성 단절 (Breaking Change).
+
+---
+
+## 2026-02-11: BFF gRPC Module Refactoring & Centralized Configuration
+
+### Context
+
+BFF 서비스의 `GrpcModule`에서 여러 gRPC 클라이언트 설정이 중복되어 관리되고 있었으며, 환경 변수(`URL`, `HOST`, `PORT`) 처리 로직이 난잡하여 유지보수가 어려운 상태였음.
+
+### Decisions
+
+1.  **Global gRPC Configuration Unification (Separated Host/Port)**:
+    - 모든 gRPC 연결 설정을 `${SERVICE}_GRPC_HOST`와 `${SERVICE}_GRPC_PORT`로 통일.
+    - 기존의 `${SERVICE}_GRPC_URL` 형식은 제거하여 관리 포인트를 단일화함.
+2.  **Centralized gRPC Configuration (`GrpcConfigService` - BFF)**:
+    - BFF 서비스의 경우, 전용 서비스를 통해 설정을 중앙 집중 관리.
+3.  **Cross-Service Application**:
+    - BFF(Node.js), Socket(Node.js), Core(Java) 모든 서비스의 코드 및 K8s manifests(ConfigMap)에 일관되게 적용.
+4.  **Schema-based Environment Validation**:
+    - `env-validation.schema.ts` (BFF) 등에 반영하여 앱 기동 시 유효성 검사 강제.
+
+### Consequences
+
+- **Pros**: 전체 아키텍처 수준에서의 설정 정합성 확보, Redis 등 기존 Host/Port 분리형 패턴과의 일관성 유지.
+- **Cons**: 기존 `*_URL` 환경 변수 사용 불가 (마이그레이션 필요).
+
+---
+
 ## 2026-02-05: Flyway Manual Configuration for Core Service
 
 ### Context

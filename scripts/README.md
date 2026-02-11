@@ -78,7 +78,7 @@ scripts/
 
 **역할:** 로컬 Kind 클러스터에 전체 스택 배포. 인프라(PostgreSQL, Redis, Kafka), 앱 서비스, 모니터링(Prometheus, Grafana, Loki) 포함. 환경 검증 및 이미지 빌드 제안.
 
-**배포 순서:** 네임스페이스 → Strimzi 확인 → PostgreSQL → Redis Sentinel(3대) → Kafka(Strimzi 3노드) → inference, core, bff, socket → 자체 서명 인증서 → Ingress → 모니터링.
+**배포 순서:** 네임스페이스 → Strimzi 확인 → PostgreSQL → Redis Sentinel(3대) → Kafka(Strimzi 3노드) → core, bff, socket → 자체 서명 인증서 → Ingress → 모니터링.
 
 ```bash
 ./scripts/deploy-local.sh

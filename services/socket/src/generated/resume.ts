@@ -51,61 +51,12 @@ export interface CompleteUploadRequest {
   validationText: string;
   /** 프론트엔드에서 생성된 검증용 임베딩 벡터 */
   embedding: number[];
+  /** 업데이트 시 대체할 기존 이력서 ID */
+  existingResumeId?: string | undefined;
 }
 
 export interface CompleteUploadResponse {
   success: boolean;
-}
-
-export interface UploadResumeRequest {
-  /** UUID */
-  userId: string;
-  title: string;
-  fileData: Uint8Array;
-  fileName: string;
-  contentType: string;
-  /** 유사도 검증 스킵 (사용자가 "새로 등록" 선택 시) */
-  forceUpload: boolean;
-  /** 프론트엔드에서 전처리가 완료된 검증용 텍스트 */
-  validationText: string;
-  /** 프론트엔드에서 생성된 검증용 임베딩 벡터 */
-  embedding: number[];
-}
-
-export interface UploadResumeResponse {
-  /** UUID (성공 시) */
-  resumeId: string;
-  /** 유사 이력서 정보 (발견 시) */
-  similarResume: SimilarResumeInfo | undefined;
-}
-
-export interface SimilarResumeInfo {
-  /** 기존 이력서 ID */
-  existingResumeId: string;
-  /** 유사도 (0.0 ~ 1.0) */
-  similarity: number;
-  /** 기존 이력서 제목 */
-  title: string;
-  /** 업로드 날짜 */
-  uploadedAt: string;
-}
-
-export interface UpdateResumeRequest {
-  /** UUID */
-  userId: string;
-  /** 업데이트할 기존 이력서 ID */
-  existingResumeId: string;
-  title: string;
-  fileData: Uint8Array;
-  fileName: string;
-  contentType: string;
-  /** 프론트엔드에서 생성된 검증용 임베딩 벡터 */
-  embedding: number[];
-}
-
-export interface UpdateResumeResponse {
-  /** UUID */
-  resumeId: string;
 }
 
 export interface ListResumesRequest {
@@ -486,6 +437,9 @@ export const CompleteUploadRequest: MessageFns<CompleteUploadRequest> = {
       writer.float(v);
     }
     writer.join();
+    if (message.existingResumeId !== undefined) {
+      writer.uint32(34).string(message.existingResumeId);
+    }
     return writer;
   },
 
@@ -530,6 +484,14 @@ export const CompleteUploadRequest: MessageFns<CompleteUploadRequest> = {
 
           break;
         }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.existingResumeId = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -565,419 +527,6 @@ export const CompleteUploadResponse: MessageFns<CompleteUploadResponse> = {
           }
 
           message.success = reader.bool();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseUploadResumeRequest(): UploadResumeRequest {
-  return {
-    userId: "",
-    title: "",
-    fileData: new Uint8Array(0),
-    fileName: "",
-    contentType: "",
-    forceUpload: false,
-    validationText: "",
-    embedding: [],
-  };
-}
-
-export const UploadResumeRequest: MessageFns<UploadResumeRequest> = {
-  encode(message: UploadResumeRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.userId !== "") {
-      writer.uint32(10).string(message.userId);
-    }
-    if (message.title !== "") {
-      writer.uint32(18).string(message.title);
-    }
-    if (message.fileData.length !== 0) {
-      writer.uint32(26).bytes(message.fileData);
-    }
-    if (message.fileName !== "") {
-      writer.uint32(34).string(message.fileName);
-    }
-    if (message.contentType !== "") {
-      writer.uint32(42).string(message.contentType);
-    }
-    if (message.forceUpload !== false) {
-      writer.uint32(48).bool(message.forceUpload);
-    }
-    if (message.validationText !== "") {
-      writer.uint32(58).string(message.validationText);
-    }
-    writer.uint32(66).fork();
-    for (const v of message.embedding) {
-      writer.float(v);
-    }
-    writer.join();
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): UploadResumeRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseUploadResumeRequest();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.userId = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.title = reader.string();
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.fileData = reader.bytes();
-          continue;
-        }
-        case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.fileName = reader.string();
-          continue;
-        }
-        case 5: {
-          if (tag !== 42) {
-            break;
-          }
-
-          message.contentType = reader.string();
-          continue;
-        }
-        case 6: {
-          if (tag !== 48) {
-            break;
-          }
-
-          message.forceUpload = reader.bool();
-          continue;
-        }
-        case 7: {
-          if (tag !== 58) {
-            break;
-          }
-
-          message.validationText = reader.string();
-          continue;
-        }
-        case 8: {
-          if (tag === 69) {
-            message.embedding.push(reader.float());
-
-            continue;
-          }
-
-          if (tag === 66) {
-            const end2 = reader.uint32() + reader.pos;
-            while (reader.pos < end2) {
-              message.embedding.push(reader.float());
-            }
-
-            continue;
-          }
-
-          break;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseUploadResumeResponse(): UploadResumeResponse {
-  return { resumeId: "", similarResume: undefined };
-}
-
-export const UploadResumeResponse: MessageFns<UploadResumeResponse> = {
-  encode(message: UploadResumeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.resumeId !== "") {
-      writer.uint32(10).string(message.resumeId);
-    }
-    if (message.similarResume !== undefined) {
-      SimilarResumeInfo.encode(message.similarResume, writer.uint32(18).fork()).join();
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): UploadResumeResponse {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseUploadResumeResponse();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.resumeId = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.similarResume = SimilarResumeInfo.decode(reader, reader.uint32());
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseSimilarResumeInfo(): SimilarResumeInfo {
-  return { existingResumeId: "", similarity: 0, title: "", uploadedAt: "" };
-}
-
-export const SimilarResumeInfo: MessageFns<SimilarResumeInfo> = {
-  encode(message: SimilarResumeInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.existingResumeId !== "") {
-      writer.uint32(10).string(message.existingResumeId);
-    }
-    if (message.similarity !== 0) {
-      writer.uint32(17).double(message.similarity);
-    }
-    if (message.title !== "") {
-      writer.uint32(26).string(message.title);
-    }
-    if (message.uploadedAt !== "") {
-      writer.uint32(34).string(message.uploadedAt);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): SimilarResumeInfo {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSimilarResumeInfo();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.existingResumeId = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 17) {
-            break;
-          }
-
-          message.similarity = reader.double();
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.title = reader.string();
-          continue;
-        }
-        case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.uploadedAt = reader.string();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseUpdateResumeRequest(): UpdateResumeRequest {
-  return {
-    userId: "",
-    existingResumeId: "",
-    title: "",
-    fileData: new Uint8Array(0),
-    fileName: "",
-    contentType: "",
-    embedding: [],
-  };
-}
-
-export const UpdateResumeRequest: MessageFns<UpdateResumeRequest> = {
-  encode(message: UpdateResumeRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.userId !== "") {
-      writer.uint32(10).string(message.userId);
-    }
-    if (message.existingResumeId !== "") {
-      writer.uint32(18).string(message.existingResumeId);
-    }
-    if (message.title !== "") {
-      writer.uint32(26).string(message.title);
-    }
-    if (message.fileData.length !== 0) {
-      writer.uint32(34).bytes(message.fileData);
-    }
-    if (message.fileName !== "") {
-      writer.uint32(42).string(message.fileName);
-    }
-    if (message.contentType !== "") {
-      writer.uint32(50).string(message.contentType);
-    }
-    writer.uint32(58).fork();
-    for (const v of message.embedding) {
-      writer.float(v);
-    }
-    writer.join();
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): UpdateResumeRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseUpdateResumeRequest();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.userId = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.existingResumeId = reader.string();
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.title = reader.string();
-          continue;
-        }
-        case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.fileData = reader.bytes();
-          continue;
-        }
-        case 5: {
-          if (tag !== 42) {
-            break;
-          }
-
-          message.fileName = reader.string();
-          continue;
-        }
-        case 6: {
-          if (tag !== 50) {
-            break;
-          }
-
-          message.contentType = reader.string();
-          continue;
-        }
-        case 7: {
-          if (tag === 61) {
-            message.embedding.push(reader.float());
-
-            continue;
-          }
-
-          if (tag === 58) {
-            const end2 = reader.uint32() + reader.pos;
-            while (reader.pos < end2) {
-              message.embedding.push(reader.float());
-            }
-
-            continue;
-          }
-
-          break;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-};
-
-function createBaseUpdateResumeResponse(): UpdateResumeResponse {
-  return { resumeId: "" };
-}
-
-export const UpdateResumeResponse: MessageFns<UpdateResumeResponse> = {
-  encode(message: UpdateResumeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.resumeId !== "") {
-      writer.uint32(10).string(message.resumeId);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): UpdateResumeResponse {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseUpdateResumeResponse();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.resumeId = reader.string();
           continue;
         }
       }
@@ -1320,14 +869,6 @@ export interface ResumeServiceClient {
 
   completeUpload(request: CompleteUploadRequest): Observable<CompleteUploadResponse>;
 
-  /** 이력서 업로드 (Legacy: 직접 파일 전송) */
-
-  uploadResume(request: UploadResumeRequest): Observable<UploadResumeResponse>;
-
-  /** 이력서 업데이트 (기존 이력서 대체) */
-
-  updateResume(request: UpdateResumeRequest): Observable<UpdateResumeResponse>;
-
   /** 사용자 이력서 목록 조회 */
 
   listResumes(request: ListResumesRequest): Observable<ListResumesResponse>;
@@ -1358,18 +899,6 @@ export interface ResumeServiceController {
     request: CompleteUploadRequest,
   ): Promise<CompleteUploadResponse> | Observable<CompleteUploadResponse> | CompleteUploadResponse;
 
-  /** 이력서 업로드 (Legacy: 직접 파일 전송) */
-
-  uploadResume(
-    request: UploadResumeRequest,
-  ): Promise<UploadResumeResponse> | Observable<UploadResumeResponse> | UploadResumeResponse;
-
-  /** 이력서 업데이트 (기존 이력서 대체) */
-
-  updateResume(
-    request: UpdateResumeRequest,
-  ): Promise<UpdateResumeResponse> | Observable<UpdateResumeResponse> | UpdateResumeResponse;
-
   /** 사용자 이력서 목록 조회 */
 
   listResumes(
@@ -1398,8 +927,6 @@ export function ResumeServiceControllerMethods() {
     const grpcMethods: string[] = [
       "getUploadUrl",
       "completeUpload",
-      "uploadResume",
-      "updateResume",
       "listResumes",
       "getResume",
       "deleteResume",
@@ -1443,28 +970,6 @@ export const ResumeServiceService = {
     responseSerialize: (value: CompleteUploadResponse): Buffer =>
       Buffer.from(CompleteUploadResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): CompleteUploadResponse => CompleteUploadResponse.decode(value),
-  },
-  /** 이력서 업로드 (Legacy: 직접 파일 전송) */
-  uploadResume: {
-    path: "/resume.ResumeService/UploadResume",
-    requestStream: false,
-    responseStream: false,
-    requestSerialize: (value: UploadResumeRequest): Buffer => Buffer.from(UploadResumeRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UploadResumeRequest => UploadResumeRequest.decode(value),
-    responseSerialize: (value: UploadResumeResponse): Buffer =>
-      Buffer.from(UploadResumeResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UploadResumeResponse => UploadResumeResponse.decode(value),
-  },
-  /** 이력서 업데이트 (기존 이력서 대체) */
-  updateResume: {
-    path: "/resume.ResumeService/UpdateResume",
-    requestStream: false,
-    responseStream: false,
-    requestSerialize: (value: UpdateResumeRequest): Buffer => Buffer.from(UpdateResumeRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateResumeRequest => UpdateResumeRequest.decode(value),
-    responseSerialize: (value: UpdateResumeResponse): Buffer =>
-      Buffer.from(UpdateResumeResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateResumeResponse => UpdateResumeResponse.decode(value),
   },
   /** 사용자 이력서 목록 조회 */
   listResumes: {
@@ -1516,10 +1021,6 @@ export interface ResumeServiceServer extends UntypedServiceImplementation {
   getUploadUrl: handleUnaryCall<GetUploadUrlRequest, GetUploadUrlResponse>;
   /** 이력서 업로드 완료 알림 */
   completeUpload: handleUnaryCall<CompleteUploadRequest, CompleteUploadResponse>;
-  /** 이력서 업로드 (Legacy: 직접 파일 전송) */
-  uploadResume: handleUnaryCall<UploadResumeRequest, UploadResumeResponse>;
-  /** 이력서 업데이트 (기존 이력서 대체) */
-  updateResume: handleUnaryCall<UpdateResumeRequest, UpdateResumeResponse>;
   /** 사용자 이력서 목록 조회 */
   listResumes: handleUnaryCall<ListResumesRequest, ListResumesResponse>;
   /** 이력서 상세 조회 */

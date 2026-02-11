@@ -23,7 +23,7 @@
         "noFallthroughCasesInSwitch": false,
         "paths": {
             "@/*": ["./src/*"],
-            "@grpc-types/*": ["./src/generated/*"],
+            "@grpc-types/*": ["./src/types/grpc/*"],
             "@bufbuild/protobuf/wire": [
                 "./node_modules/@bufbuild/protobuf/dist/cjs/wire/index.d.ts"
             ],
@@ -32,5 +32,5 @@
             "rxjs": ["./node_modules/rxjs"]
         }
     },
-    "include": ["src/**/*", "../../proto/generated/ts/**/*"]
+    "include": ["src/**/*"]
 }

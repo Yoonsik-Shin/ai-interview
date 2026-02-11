@@ -11,7 +11,12 @@ public interface ListInterviewsUseCase {
     List<InterviewSummary> execute(UUID userId);
 
     @Builder
-    record InterviewSummary(UUID interviewId, LocalDateTime startedAt, InterviewSessionStatus status, String domain,
-            InterviewType type, int targetDurationMinutes, int interviewerCount) {
-    }
+    record InterviewSummary(
+            UUID interviewId,
+            LocalDateTime startedAt,
+            InterviewSessionStatus status,
+            String domain,
+            InterviewType type,
+            int targetDurationMinutes,
+            int interviewerCount) {}
 }

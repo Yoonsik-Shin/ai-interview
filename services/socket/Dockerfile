@@ -6,8 +6,8 @@ WORKDIR /workspace
 # --build-context proto=services/proto 로 주입된 컨텍스트를 사용
 COPY --from=proto . ./proto
 # buf.gen.yaml의 상대 경로(../socket/src/generated 등)를 위한 디렉토리 생성
-RUN mkdir -p bff/src/generated && \
-    mkdir -p socket/src/generated && \
+RUN mkdir -p bff/src/types/grpc && \
+    mkdir -p socket/src/types/grpc && \
     mkdir -p core/src/main/java && \
     mkdir -p llm/generated
 WORKDIR /workspace/proto
@@ -25,7 +25,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /workspace
 
 # proto (generated TS) — ../proto/generated/ts
-COPY --from=proto-gen /workspace/socket/src/generated /workspace/proto/generated/ts
+COPY --from=proto-gen /workspace/socket/src/types/grpc /workspace/proto/generated/ts
 
 
 # socket: 의존성 먼저 (레이어 캐싱)

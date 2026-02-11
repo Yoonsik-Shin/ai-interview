@@ -26,3 +26,5 @@ data:
 
   CORE_GRPC_HOST: "core"
   CORE_GRPC_PORT: "9090"
+  LLM_GRPC_HOST: "llm"
+  LLM_GRPC_PORT: "50051"

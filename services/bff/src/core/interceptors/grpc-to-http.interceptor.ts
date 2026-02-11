@@ -18,25 +18,36 @@ import { Observable, throwError } from "rxjs";
 import { catchError } from "rxjs/operators";
 import { status as GrpcStatus } from "@grpc/grpc-js";
 
+interface GrpcError {
+    code: number;
+    details: string;
+    message?: string;
+}
+
 @Injectable()
 export class GrpcToHttpInterceptor implements NestInterceptor {
-    intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
         return next.handle().pipe(
-            catchError((err) => {
-                // gRPC 에러인지 확인 (code와 details 속성 존재 여부)
-                if (err && typeof err.code === "number" && typeof err.details === "string") {
-                    return throwError(() => this.mapGrpcHelper(err));
-                }
-                // gRPC 에러가 아니면 그대로 전파
-                return throwError(() => err);
-            }),
+            catchError((err: unknown) =>
+                // gRPC 에러인지 확인 후 gRPC 에러가 아니면 그대로 전파
+                throwError(() => (this.isGrpcError(err) ? this.mapGrpcHelper(err) : err)),
+            ),
         );
     }
 
-    private mapGrpcHelper(err: any): HttpException {
-        const message = err.details || err.message;
+    private isGrpcError(err: unknown): err is GrpcError {
+        return (
+            typeof err === "object" &&
+            err !== null &&
+            typeof (err as GrpcError).code === "number" &&
+            typeof (err as GrpcError).details === "string"
+        );
+    }
 
-        switch (err.code) {
+    private mapGrpcHelper(err: GrpcError): HttpException {
+        const message = err.details || err.message || "Unknown gRPC error";
+
+        switch (err.code as GrpcStatus) {
             case GrpcStatus.INVALID_ARGUMENT:
             case GrpcStatus.FAILED_PRECONDITION:
             case GrpcStatus.OUT_OF_RANGE:

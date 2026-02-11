@@ -3,16 +3,7 @@ import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import jwksRsa from "jwks-rsa";
 
-function parsePositiveInt(value: string | undefined, fallback: number): number {
-    if (!value) {
-        return fallback;
-    }
-    const parsed = Number.parseInt(value, 10);
-    if (Number.isNaN(parsed) || parsed <= 0) {
-        return fallback;
-    }
-    return parsed;
-}
+import { ConfigService } from "@nestjs/config";
 
 export interface JwtPayload {
     sub: string;
@@ -22,16 +13,10 @@ export interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-    constructor() {
-        const cacheMaxAgeMs = parsePositiveInt(
-            process.env.JWT_JWKS_CACHE_MAX_AGE_MS,
-            5 * 60 * 1000,
-        );
-        const jwksRequestsPerMinute = parsePositiveInt(
-            process.env.JWT_JWKS_REQUESTS_PER_MINUTE,
-            10,
-        );
-        const timeoutMs = parsePositiveInt(process.env.JWT_JWKS_TIMEOUT_MS, 30 * 1000);
+    constructor(private readonly configService: ConfigService) {
+        const cacheMaxAgeMs = configService.get<number>("JWT_JWKS_CACHE_MAX_AGE_MS", 5 * 60 * 1000);
+        const jwksRequestsPerMinute = configService.get<number>("JWT_JWKS_REQUESTS_PER_MINUTE", 10);
+        const timeoutMs = configService.get<number>("JWT_JWKS_TIMEOUT_MS", 30 * 1000);
 
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -42,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
                 rateLimit: true,
                 jwksRequestsPerMinute,
                 timeout: timeoutMs,
-                jwksUri: process.env.JWT_JWKS_URI || "http://core:8081/.well-known/jwks.json",
+                jwksUri: configService.getOrThrow<string>("JWT_JWKS_URI"),
             }),
             algorithms: ["RS256"],
         });

@@ -1,9 +1,5 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString, MinLength, ValidateIf } from "class-validator";
-
-export enum RegisterRole {
-    Candidate = "CANDIDATE",
-    Recruiter = "RECRUITER",
-}
+import { RegisterRole } from "../../enum/auth.enum";
 
 export class RegisterRequestDto {
     @IsEmail()
