@@ -1,6 +1,6 @@
 import { Controller, Get, Version, VERSION_NEUTRAL } from "@nestjs/common";
 import { HealthCheck, HealthCheckService, MemoryHealthIndicator } from "@nestjs/terminus";
-import { RedisHealthIndicator } from "../../infrastructure/redis/redis-health.indicator";
+import { RedisHealthIndicator } from "../../infra/redis/redis-health.indicator";
 
 @Controller("health")
 export class HealthController {
