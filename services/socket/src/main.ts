@@ -1,10 +1,10 @@
 import { NestFactory } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module";
-import { AuthenticatedSocketAdapter } from "./core/adapters/authenticated-socket.adapter";
+import { AuthenticatedSocketAdapter } from "./infra/socket/authenticated-socket.adapter";
 import { GlobalWsExceptionFilter } from "./core/filters/global-ws-exception.filter";
 
-import { RedisClient } from "./infrastructure/redis/redis.clients";
+import { RedisClient } from "./infra/redis/redis.clients";
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);

@@ -1,13 +1,15 @@
 import { IoAdapter } from "@nestjs/platform-socket.io";
 import { Server, ServerOptions } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
+import { Logger } from "@nestjs/common";
 
 export class RedisIoAdapter extends IoAdapter {
+    protected readonly logger = new Logger(RedisIoAdapter.name);
     private adapterConstructor: any;
 
     connectToRedis(pubClient: any, subClient: any): void {
         this.adapterConstructor = createAdapter(pubClient, subClient);
-        console.log("✅ Socket.io Redis Adapter Connected!");
+        this.logger.log("Socket.io Redis Adapter Connected!");
     }
 
     createIOServer(port: number, options?: ServerOptions): Server {

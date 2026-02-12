@@ -5,4 +5,4 @@ import { GrpcClientsModule } from "./grpc/grpc-clients.module";
 @Module({
     imports: [GrpcClientsModule, RedisModule],
 })
-export class InfrastructureModule {}
+export class InfraModule {}
