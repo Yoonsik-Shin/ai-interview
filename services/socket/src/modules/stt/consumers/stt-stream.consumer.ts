@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { SocketLoggingService } from "../../../core/logging/socket-logging.service";
-import { RedisStreamClient } from "../../../infrastructure/redis/redis.clients";
+import { RedisStreamClient } from "../../../infra/redis/redis.clients";
 import { SttTranscriptPayload } from "../dto/stt-transcript.dto";
 
 @Injectable()
@@ -34,7 +34,7 @@ export class SttStreamConsumer implements OnModuleInit, OnModuleDestroy {
         }
 
         this.startConsumer().catch((error) => {
-            this.logger.log(null, "redis_stt_stream_start_failed", {
+            this.logger.error(null, "redis_stt_stream_start_failed", {
                 error: String(error),
             });
         });
@@ -49,7 +49,7 @@ export class SttStreamConsumer implements OnModuleInit, OnModuleDestroy {
         this.loopRunning = true;
 
         this.redisClient.on("error", (err) => {
-            this.logger.log(null, "redis_stt_stream_error", {
+            this.logger.error(null, "redis_stt_stream_error", {
                 error: String(err),
             });
         });
@@ -65,7 +65,7 @@ export class SttStreamConsumer implements OnModuleInit, OnModuleDestroy {
         } catch (error) {
             const message = String(error);
             if (!message.includes("BUSYGROUP")) {
-                this.logger.log(null, "redis_stt_stream_group_create_failed", {
+                this.logger.error(null, "redis_stt_stream_group_create_failed", {
                     error: message,
                 });
             }
@@ -78,7 +78,7 @@ export class SttStreamConsumer implements OnModuleInit, OnModuleDestroy {
         });
 
         this.runLoop().catch((error) => {
-            this.logger.log(null, "redis_stt_stream_loop_failed", {
+            this.logger.error(null, "redis_stt_stream_loop_failed", {
                 error: String(error),
             });
         });
@@ -87,6 +87,7 @@ export class SttStreamConsumer implements OnModuleInit, OnModuleDestroy {
     private async runLoop(): Promise<void> {
         while (!this.stopSignal) {
             try {
+                // ioredis doesn't have good types for xreadgroup in all versions
                 const result = await (this.redisClient as any).xreadgroup(
                     "GROUP",
                     this.sttRedisGroup,
@@ -102,8 +103,8 @@ export class SttStreamConsumer implements OnModuleInit, OnModuleDestroy {
 
                 if (!result) continue;
 
-                for (const [, entries] of result) {
-                    for (const entry of entries) {
+                for (const [, entries] of result as any[]) {
+                    for (const entry of entries as any[]) {
                         const entryId = entry[0];
                         const fields = entry[1] as string[];
                         const payload = this.parsePayload(fields);
@@ -123,7 +124,7 @@ export class SttStreamConsumer implements OnModuleInit, OnModuleDestroy {
                     }
                 }
             } catch (error) {
-                this.logger.log(null, "redis_stt_stream_read_failed", {
+                this.logger.error(null, "redis_stt_stream_read_failed", {
                     error: String(error),
                 });
                 await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -148,7 +149,7 @@ export class SttStreamConsumer implements OnModuleInit, OnModuleDestroy {
         try {
             return JSON.parse(data.payload) as SttTranscriptPayload;
         } catch (error) {
-            this.logger.log(null, "stt_stream_payload_parse_error", {
+            this.logger.error(null, "stt_stream_payload_parse_error", {
                 error: String(error),
             });
             return null;

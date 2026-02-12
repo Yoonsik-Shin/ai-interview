@@ -1,12 +1,12 @@
 import { Module } from "@nestjs/common";
 
 import { SttStreamConsumer } from "./consumers/stt-stream.consumer";
-import { ProcessAudioService } from "./services/process-audio.service";
-import { SttGrpcService } from "./services/stt-grpc.service";
-import { SttStorageService } from "./services/stt-storage.service";
+import { AudioProcessorService } from "./services/audio-processor.service";
+import { SttGrpcService } from "../../infra/grpc/services/stt-grpc.service";
+import { SttStorageService } from "../../infra/redis/services/stt-storage.service";
 
 @Module({
-    providers: [SttStreamConsumer, ProcessAudioService, SttGrpcService, SttStorageService],
-    exports: [ProcessAudioService, SttGrpcService, SttStorageService],
+    providers: [SttStreamConsumer, AudioProcessorService, SttGrpcService, SttStorageService],
+    exports: [AudioProcessorService, SttGrpcService, SttStorageService],
 })
 export class SttModule {}

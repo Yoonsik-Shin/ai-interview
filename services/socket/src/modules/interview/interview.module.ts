@@ -2,23 +2,46 @@ import { Module } from "@nestjs/common";
 import { InterviewGateway } from "./interview.gateway";
 import { InterviewConnectionListener } from "./listeners/interview-connection.listener";
 import { InterviewSttListener } from "./listeners/interview-stt.listener";
-import { TranscriptPubSubConsumer } from "./transcript-pubsub.consumer";
-import { ThinkingPubSubConsumer } from "./thinking-pubsub.consumer";
-import { AudioPubSubConsumer } from "./audio-pubsub.consumer";
+import { TranscriptPubSubConsumer } from "./consumers/transcript-pubsub.consumer";
+import { ThinkingPubSubConsumer } from "./consumers/thinking-pubsub.consumer";
+import { AudioPubSubConsumer } from "./consumers/audio-pubsub.consumer";
 import { SttModule } from "../stt/stt.module";
-import { CoreInterviewGrpcService } from "./services/core-interview-grpc.service";
-import { RedisModule } from "../../infrastructure/redis/redis.module";
+import { InterviewGrpcService } from "../../infra/grpc/services/interview-grpc.service";
+import { RedisModule } from "../../infra/redis/redis.module";
+
+import { SyncStageUseCase } from "./usecases/sync-stage.usecase";
+import { ProcessCandidateGreetingUseCase } from "./usecases/process-candidate-greeting.usecase";
+import { ProcessSelfIntroUseCase } from "./usecases/process-self-intro.usecase";
+import { ProcessNormalQAUseCase } from "./usecases/process-normal-qa.usecase";
+import { ProcessLastAnswerUseCase } from "./usecases/process-last-answer.usecase";
+import { ProcessClosingGreetingUseCase } from "./usecases/process-closing-greeting.usecase";
+import { AudioProcessorFactory } from "./usecases/audio-processor.factory";
+import { SendSttResultUseCase } from "./usecases/send-stt-result.usecase";
+import { SendTranscriptUseCase } from "./usecases/send-transcript.usecase";
+import { SendThinkingNotificationUseCase } from "./usecases/send-thinking-notification.usecase";
+import { SendAudioDataUseCase } from "./usecases/send-audio-data.usecase";
 
 @Module({
     imports: [SttModule, RedisModule],
     providers: [
         InterviewGateway,
-        CoreInterviewGrpcService, // Core gRPC Stage 관리 서비스
+        InterviewGrpcService,
+        SyncStageUseCase,
+        ProcessCandidateGreetingUseCase,
+        ProcessSelfIntroUseCase,
+        ProcessNormalQAUseCase,
+        ProcessLastAnswerUseCase,
+        ProcessClosingGreetingUseCase,
+        AudioProcessorFactory,
+        SendSttResultUseCase,
+        SendTranscriptUseCase,
+        SendThinkingNotificationUseCase,
+        SendAudioDataUseCase,
         InterviewConnectionListener,
         InterviewSttListener,
-        TranscriptPubSubConsumer, // LLM 토큰
-        ThinkingPubSubConsumer, // LangGraph 노드 (향후)
-        AudioPubSubConsumer, // TTS 음성
+        TranscriptPubSubConsumer,
+        ThinkingPubSubConsumer,
+        AudioPubSubConsumer,
     ],
 })
 export class InterviewModule {}

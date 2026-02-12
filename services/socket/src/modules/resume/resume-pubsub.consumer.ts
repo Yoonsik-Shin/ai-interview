@@ -1,6 +1,10 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
-import { RedisClient } from "../../infrastructure/redis/redis.clients.js";
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from "@nestjs/common";
+import { RedisClient } from "../../infra/redis/redis.clients.js";
 import { ResumeGateway } from "./resume.gateway.js";
+import {
+    NotifyResumeProcessedUseCase,
+    NotifyResumeProcessedCommand,
+} from "./usecases/notify-resume-processed.usecase.js";
 
 /**
  * Resume Pub/Sub Consumer
@@ -8,11 +12,13 @@ import { ResumeGateway } from "./resume.gateway.js";
  */
 @Injectable()
 export class ResumePubSubConsumer implements OnModuleInit, OnModuleDestroy {
+    private readonly logger = new Logger(ResumePubSubConsumer.name);
     private subscriber: ReturnType<typeof RedisClient.prototype.duplicate>;
 
     constructor(
         private readonly redisClient: RedisClient,
         private readonly resumeGateway: ResumeGateway,
+        private readonly notifyResumeProcessedUseCase: NotifyResumeProcessedUseCase,
     ) {}
 
     async onModuleInit() {
@@ -28,7 +34,7 @@ export class ResumePubSubConsumer implements OnModuleInit, OnModuleDestroy {
         // 구독 시작
         await this.subscriber.subscribe("resume:processed");
 
-        console.log("✅ Resume PubSub Consumer started");
+        this.logger.log("Resume PubSub Consumer started");
     }
 
     private handleResumeProcessed(message: string) {
@@ -37,23 +43,24 @@ export class ResumePubSubConsumer implements OnModuleInit, OnModuleDestroy {
             const { userId, resumeId, status } = payload;
 
             if (!userId) {
-                console.warn("⚠️ Resume notification missing userId:", payload);
+                this.logger.warn(`Resume notification missing userId: ${JSON.stringify(payload)}`);
                 return;
             }
 
-            // 특정 사용자 룸에 전송
-            const userRoom = `user-${userId}`;
-            this.resumeGateway.server.to(userRoom).emit("resume:processed", {
-                resumeId,
-                status,
-                timestamp: new Date().toISOString(),
-            });
+            void this.notifyResumeProcessedUseCase.execute(
+                new NotifyResumeProcessedCommand(
+                    this.resumeGateway.server,
+                    userId,
+                    resumeId,
+                    status,
+                ),
+            );
 
-            console.log(
-                `🔔 Resume notification sent to ${userRoom}: resumeId=${resumeId}, status=${status}`,
+            this.logger.log(
+                `Resume notification sent to user-${userId}: resumeId=${resumeId}, status=${status}`,
             );
         } catch (error) {
-            console.error("❌ Resume notification handling error:", error);
+            this.logger.error(`Resume notification handling error: ${error.message}`, error.stack);
         }
     }
 

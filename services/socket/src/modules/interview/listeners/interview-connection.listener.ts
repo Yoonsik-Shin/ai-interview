@@ -3,14 +3,17 @@ import { OnEvent } from "@nestjs/event-emitter";
 import { SocketLoggingService } from "../../../core/logging/socket-logging.service";
 import type { SocketConnectedEvent, SocketDisconnectedEvent } from "src/modules/modules.interface";
 import { ConnectionEventType } from "../../modules.enum";
-import { CoreInterviewGrpcService, InterviewStage } from "../services/core-interview-grpc.service";
-import { RedisClient } from "../../../infrastructure/redis/redis.clients";
+import {
+    InterviewGrpcService,
+    InterviewStage,
+} from "../../../infra/grpc/services/interview-grpc.service";
+import { RedisClient } from "../../../infra/redis/redis.clients";
 
 @Injectable()
 export class InterviewConnectionListener {
     constructor(
         private readonly logger: SocketLoggingService,
-        private readonly stageService: CoreInterviewGrpcService,
+        private readonly stageService: InterviewGrpcService,
         private readonly redisClient: RedisClient,
     ) {}
 

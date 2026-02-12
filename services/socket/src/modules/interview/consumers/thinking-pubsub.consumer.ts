@@ -1,6 +1,10 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
-import { RedisClient } from "@/infrastructure/redis/redis.clients.js";
-import { InterviewGateway } from "./interview.gateway.js";
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from "@nestjs/common";
+import { RedisClient } from "../../../infra/redis/redis.clients.js";
+import { InterviewGateway } from "../interview.gateway.js";
+import {
+    SendThinkingNotificationUseCase,
+    SendThinkingNotificationCommand,
+} from "../usecases/send-thinking-notification.usecase.js";
 
 /**
  * Thinking Pub/Sub Consumer
@@ -9,16 +13,17 @@ import { InterviewGateway } from "./interview.gateway.js";
  */
 @Injectable()
 export class ThinkingPubSubConsumer implements OnModuleInit, OnModuleDestroy {
+    private readonly logger = new Logger(ThinkingPubSubConsumer.name);
     private subscriber: ReturnType<typeof RedisClient.prototype.duplicate>;
 
     constructor(
         private readonly redisClient: RedisClient,
         private readonly interviewGateway: InterviewGateway,
+        private readonly sendThinkingNotificationUseCase: SendThinkingNotificationUseCase,
     ) {}
 
     async onModuleInit() {
         this.subscriber = this.redisClient.duplicate();
-        // Auto-connects or psubscribe will connect
 
         // Set up message handler before subscribing
         this.subscriber.on("pmessage", (_pattern: string, _channel: string, message: string) => {
@@ -28,7 +33,7 @@ export class ThinkingPubSubConsumer implements OnModuleInit, OnModuleDestroy {
         // 패턴 구독: interview:thinking:*
         await this.subscriber.psubscribe("interview:thinking:*");
 
-        console.log("✅ Thinking PubSub Consumer started");
+        this.logger.log("Thinking PubSub Consumer started");
     }
 
     private handleThinking(message: string) {
@@ -36,14 +41,19 @@ export class ThinkingPubSubConsumer implements OnModuleInit, OnModuleDestroy {
             const payload = JSON.parse(message);
             const interviewId = payload.interviewId;
 
-            // WebSocket으로 thinking 상태 전송
-            this.interviewGateway.server.to(`interview:${interviewId}`).emit("interview:thinking", {
-                nodeName: payload.nodeName,
-                status: payload.status,
-                message: payload.message,
-            });
+            if (!interviewId) return;
+
+            void this.sendThinkingNotificationUseCase.execute(
+                new SendThinkingNotificationCommand(
+                    this.interviewGateway.server,
+                    interviewId,
+                    payload.nodeName,
+                    payload.status,
+                    payload.message,
+                ),
+            );
         } catch (error) {
-            console.error("❌ Thinking handling error:", error);
+            this.logger.error(`Thinking handling error: ${error.message}`, error.stack);
         }
     }
 
