@@ -2,6 +2,30 @@
 
 ## [2026-02-12]
 
+- **데이터베이스 마이그레이션 복구 (Core)**:
+  - **FIX**: 리팩토링 과정에서 소실된 수동 Flyway 설정(`FlywayConfig.java`) 재구축 및 기동 시 마이그레이션 실행 강제화.
+  - **BASELINE**: `baselineVersion("0")` 설정을 통해 기존에 `vector_store` 테이블이 존재하더라도 `V001__init.sql`이 정상 실행되도록 조치.
+  - **DB 초기화**: 잘못된 베이스라인 레코드로 인한 `relation users does not exist` 에러 해결을 위해 마이그레이션 이력 초기화 및 재수행 완료. (총 36개 테이블 생성 확인)
+
+### 2026-02-12 (Phase 2)
+
+- **Socket 서비스 아키텍처 정규화 및 인증 로직 추상화**:
+  - **Auth**: `AuthenticatedSocketAdapter`의 JWT/JWKS 검증 로직을 `CoreAuthService`로 캡슐화하고 알고리즘을 환경 변수(`${JWT_ALGORITHM}`)로 설정화함.
+  - **Architecture**: BFF의 패턴을 준수하여 외부 통신용 기술 서비스들을 `src/infra` 레이어로 이동 및 통합.
+    - `CoreInterviewGrpcService` -> `src/infra/grpc/services/InterviewGrpcService` (명칭 통일)
+    - `SttGrpcService` -> `src/infra/grpc/services/SttGrpcService`
+    - `SttStorageService` -> `src/infra/redis/services/SttStorageService`
+  - **USECASE**: 비즈니스 흐름을 `UseCase`로 일원화하고 기술 상세를 `Service`로 분리하여 아키텍처적 층위를 명확히 함.
+  - **STANDARDIZATION**: 약 15개 파일의 전역 리팩토링을 통해 `any` 타입 제거 및 타입 안정성 강화. `pnpm tsc --noEmit` 빌드 성공 확인.
+- **STT 서비스 빌드 에러 해결 및 구조 정규화**:
+  - **DOCKER**: Dockerfile 내 Proto 컴파일 경로를 신규 도메인 구조(`/app/proto/stt/v1/stt.proto`)에 맞게 수정하고, 생성된 파이썬 코드의 패키지 임포트 경로를 상대 경로로 자동 수정하도록 개선.
+  - **STRUCTURE**: 로컬 `services/stt/` 루트에 산재된 도메인 패키지들을 `generated/` 하위로 통합하여 `from generated...` 임포트 구문과 일치시킴.
+- **gRPC 임포트 구조 개선 및 하드코딩 제거 (Phase 3)**:
+  - **DOCKER**: Dockerfile 내의 하드코딩된 문자열 치환(`replace`) 로직을 완전히 제거하고 표준 `protoc` 빌드 절차로 정규화.
+  - **PYTHONPATH**: `ENV PYTHONPATH="/app:/app/generated"` 설정을 통해 기존의 `from generated.xxx`와 새로운 `from xxx` 임포트 방식이 모두 동작하도록 하위 호환성 확보.
+  - **CODE**: LLM 및 STT 서비스 코드 내의 gRPC 임포트 구문을 가독성 높은 표준 방식(예: `from llm.v1 import ...`)으로 업데이트.
+  - **FIX**: BFF, Socket 서비스의 gRPC 로더에 `includeDirs` 옵션을 추가하여 Proto 임포트 경로 해소 실패(`ENOENT`) 문제 해결.
+
 ### 2026-02-12 (Phase 1)
 
 - **gRPC 도메인 기반 구조 재편 및 Core 서비스 리팩토링**:

@@ -27,6 +27,7 @@ export class GrpcConfigService {
                     enums: String,
                     defaults: true,
                     oneofs: true,
+                    includeDirs: [join(process.cwd(), "proto")],
                 },
             },
         };

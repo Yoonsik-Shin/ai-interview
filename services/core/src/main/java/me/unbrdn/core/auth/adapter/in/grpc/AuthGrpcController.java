@@ -2,8 +2,10 @@ package me.unbrdn.core.auth.adapter.in.grpc;
 
 import io.grpc.stub.StreamObserver;
 import java.util.UUID;
+import net.devh.boot.grpc.server.service.GrpcService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import me.unbrdn.core.auth.application.interactor.dto.command.AuthenticateUserCommand;
 import me.unbrdn.core.auth.application.interactor.dto.command.RefreshTokenCommand;
 import me.unbrdn.core.auth.application.interactor.dto.command.RegisterCandidateCommand;
@@ -21,9 +23,8 @@ import me.unbrdn.core.grpc.auth.v1.RefreshTokenResponse;
 import me.unbrdn.core.grpc.auth.v1.RegisterCandidateRequest;
 import me.unbrdn.core.grpc.auth.v1.RegisterRecruiterRequest;
 import me.unbrdn.core.grpc.auth.v1.RegisterResponse;
-import me.unbrdn.core.grpc.auth.v1.User;
 import me.unbrdn.core.grpc.auth.v1.AuthServiceGrpc;
-import net.devh.boot.grpc.server.service.GrpcService;
+import me.unbrdn.core.grpc.auth.v1.User;
 
 @Slf4j
 @GrpcService
@@ -43,13 +44,11 @@ public class AuthGrpcController extends AuthServiceGrpc.AuthServiceImplBase {
 
         AuthenticateUserResult result = authenticateUserUseCase.execute(command);
 
-        me.unbrdn.core.grpc.auth.v1.User user = me.unbrdn.core.grpc.auth.v1.User.newBuilder()
-                .setId(result.getUser().getId().toString()).setEmail(result.getUser().getEmail())
-                .setNickname(result.getUser().getNickname() != null ? result.getUser().getNickname() : "")
-                .setRole(result.getUser().getRole()).build();
-
         AuthenticateUserResponse response = AuthenticateUserResponse.newBuilder()
-                .setAccessToken(result.getAccessToken()).setRefreshToken(result.getRefreshToken()).setUser(user)
+                .setAccessToken(result.getAccessToken()).setRefreshToken(result.getRefreshToken())
+                .setUser(User.newBuilder().setId(result.getUser().getId().toString())
+                        .setEmail(result.getUser().getEmail()).setNickname(result.getUser().getNickname())
+                        .setRole(result.getUser().getRole()).build())
                 .build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
@@ -84,6 +83,7 @@ public class AuthGrpcController extends AuthServiceGrpc.AuthServiceImplBase {
     @Override
     public void refreshToken(RefreshTokenRequest request, StreamObserver<RefreshTokenResponse> responseObserver) {
         RefreshTokenCommand command = RefreshTokenCommand.builder().refreshToken(request.getRefreshToken()).build();
+
         RefreshTokenResult result = refreshTokenUseCase.execute(command);
 
         RefreshTokenResponse response = RefreshTokenResponse.newBuilder().setAccessToken(result.getAccessToken())

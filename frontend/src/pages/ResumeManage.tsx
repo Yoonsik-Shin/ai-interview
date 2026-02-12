@@ -44,7 +44,7 @@ export function ResumeManage() {
     try {
       setError("");
       const data = await listResumes();
-      setResumes(data);
+      setResumes(data.resumes);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "이력서 목록을 불러올 수 없습니다.",
@@ -76,7 +76,7 @@ export function ResumeManage() {
     setDetail(null);
     try {
       const data = await getResume(id);
-      setDetail(data);
+      setDetail(data.resume);
     } catch (e) {
       setError(e instanceof Error ? e.message : "이력서를 불러올 수 없습니다.");
     } finally {

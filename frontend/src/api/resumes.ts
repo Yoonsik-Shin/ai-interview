@@ -22,6 +22,23 @@ export type PresignedUrlRes = {
   resumeId: string;
 };
 
+export type ListResumesRes = {
+  resumes: ResumeItem[];
+};
+
+export type GetResumeRes = {
+  resume: ResumeDetail;
+};
+
+export type DeleteResumeRes = {
+  success: boolean;
+  message: string;
+};
+
+export type CompleteUploadRes = {
+  success: boolean;
+};
+
 export async function getUploadUrl(
   fileName: string,
   title: string,
@@ -53,8 +70,8 @@ export async function completeUpload(
   validationText?: string,
   embedding?: number[],
   existingResumeId?: string,
-): Promise<void> {
-  return api<void>("/v1/resumes/complete", {
+): Promise<CompleteUploadRes> {
+  return api<CompleteUploadRes>("/v1/resumes/complete", {
     method: "POST",
     body: JSON.stringify({
       resumeId,
@@ -65,12 +82,12 @@ export async function completeUpload(
   });
 }
 
-export async function listResumes(): Promise<ResumeItem[]> {
-  return api<ResumeItem[]>("/v1/resumes");
+export async function listResumes(): Promise<ListResumesRes> {
+  return api<ListResumesRes>("/v1/resumes");
 }
 
-export async function getResume(resumeId: string): Promise<ResumeDetail> {
-  return api<ResumeDetail>(`/v1/resumes/${resumeId}`);
+export async function getResume(resumeId: string): Promise<GetResumeRes> {
+  return api<GetResumeRes>(`/v1/resumes/${resumeId}`);
 }
 
 export async function validateContent(text: string): Promise<{
@@ -88,8 +105,8 @@ export async function validateContent(text: string): Promise<{
   });
 }
 
-export const deleteResume = async (id: string) => {
-  return api(`/v1/resumes/${id}`, {
+export const deleteResume = async (id: string): Promise<DeleteResumeRes> => {
+  return api<DeleteResumeRes>(`/v1/resumes/${id}`, {
     method: "DELETE",
   });
 };

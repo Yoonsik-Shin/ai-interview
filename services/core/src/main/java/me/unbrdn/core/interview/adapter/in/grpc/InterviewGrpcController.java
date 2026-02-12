@@ -5,19 +5,36 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.devh.boot.grpc.server.service.GrpcService;
+
 import me.unbrdn.core.grpc.interview.v1.CreateInterviewRequest;
 import me.unbrdn.core.grpc.interview.v1.CreateInterviewResponse;
-// import me.unbrdn.core.grpc.interview.v1.InterviewPersonaProto; // Removed
 import me.unbrdn.core.grpc.common.v1.InterviewStatusProto;
 import me.unbrdn.core.grpc.common.v1.InterviewTypeProto;
 import me.unbrdn.core.grpc.interview.v1.InterviewServiceGrpc;
 import me.unbrdn.core.interview.application.dto.command.CreateInterviewCommand;
 import me.unbrdn.core.interview.application.dto.result.CreateInterviewResult;
 import me.unbrdn.core.interview.application.port.in.CreateInterviewUseCase;
-// import me.unbrdn.core.interview.domain.enums.InterviewPersona; // Removed
 import me.unbrdn.core.interview.domain.enums.InterviewSessionStatus;
 import me.unbrdn.core.interview.domain.enums.InterviewType;
-import net.devh.boot.grpc.server.service.GrpcService;
+import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase;
+import me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase;
+import me.unbrdn.core.interview.application.port.in.IncrementSelfIntroRetryUseCase;
+import me.unbrdn.core.interview.application.port.in.ListInterviewsUseCase;
+import me.unbrdn.core.grpc.interview.v1.IncrementSelfIntroRetryRequest;
+import me.unbrdn.core.grpc.interview.v1.IncrementSelfIntroRetryResponse;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewStageRequest;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewStageResponse;
+import me.unbrdn.core.grpc.interview.v1.ListInterviewsRequest;
+import me.unbrdn.core.grpc.interview.v1.ListInterviewsResponse;
+import me.unbrdn.core.grpc.interview.v1.InterviewSessionSummary;
+import me.unbrdn.core.interview.domain.enums.InterviewRole;
+import me.unbrdn.core.interview.domain.enums.InterviewPersonality;
+import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery;
+import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.InterviewStageResult;
+import me.unbrdn.core.grpc.interview.v1.TransitionStageResponse;
+import me.unbrdn.core.grpc.interview.v1.TransitionStageRequest;
+import me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase.TransitionStageCommand;
 
 /** Interview Application Service의 gRPC 진입점 */
 @GrpcService
@@ -26,14 +43,14 @@ import net.devh.boot.grpc.server.service.GrpcService;
 public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServiceImplBase {
 
     private final CreateInterviewUseCase createInterviewUseCase;
-    private final me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase getInterviewStageUseCase;
-    private final me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase transitionInterviewStageUseCase;
-    private final me.unbrdn.core.interview.application.port.in.IncrementSelfIntroRetryUseCase incrementSelfIntroRetryUseCase;
-    private final me.unbrdn.core.interview.application.port.in.ListInterviewsUseCase listInterviewsUseCase;
+    private final GetInterviewStageUseCase getInterviewStageUseCase;
+    private final TransitionInterviewStageUseCase transitionInterviewStageUseCase;
+    private final IncrementSelfIntroRetryUseCase incrementSelfIntroRetryUseCase;
+    private final ListInterviewsUseCase listInterviewsUseCase;
 
     @Override
-    public void incrementSelfIntroRetry(me.unbrdn.core.grpc.interview.v1.IncrementSelfIntroRetryRequest request,
-            StreamObserver<me.unbrdn.core.grpc.interview.v1.IncrementSelfIntroRetryResponse> responseObserver) {
+    public void incrementSelfIntroRetry(IncrementSelfIntroRetryRequest request,
+            StreamObserver<IncrementSelfIntroRetryResponse> responseObserver) {
         log.debug("gRPC request received: IncrementSelfIntroRetry interviewSessionId={}",
                 request.getInterviewSessionId());
 
@@ -41,8 +58,8 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             UUID interviewSessionId = UUID.fromString(request.getInterviewSessionId());
             int newCount = incrementSelfIntroRetryUseCase.execute(interviewSessionId);
 
-            me.unbrdn.core.grpc.interview.v1.IncrementSelfIntroRetryResponse response = me.unbrdn.core.grpc.interview.v1.IncrementSelfIntroRetryResponse
-                    .newBuilder().setNewRetryCount(newCount).build();
+            IncrementSelfIntroRetryResponse response = IncrementSelfIntroRetryResponse.newBuilder()
+                    .setNewRetryCount(newCount).build();
 
             responseObserver.onNext(response);
             responseObserver.onCompleted();
@@ -88,16 +105,14 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
     }
 
     @Override
-    public void listInterviews(me.unbrdn.core.grpc.interview.v1.ListInterviewsRequest request,
-            StreamObserver<me.unbrdn.core.grpc.interview.v1.ListInterviewsResponse> responseObserver) {
+    public void listInterviews(ListInterviewsRequest request, StreamObserver<ListInterviewsResponse> responseObserver) {
         log.info("gRPC request received: ListInterviews userId={}", request.getUserId());
 
         try {
             UUID userId = UUID.fromString(request.getUserId());
             var summaries = listInterviewsUseCase.execute(userId);
 
-            me.unbrdn.core.grpc.interview.v1.ListInterviewsResponse.Builder responseBuilder = me.unbrdn.core.grpc.interview.v1.ListInterviewsResponse
-                    .newBuilder();
+            ListInterviewsResponse.Builder responseBuilder = ListInterviewsResponse.newBuilder();
 
             responseBuilder.addAllInterviews(summaries.stream().map(this::toProtoInterviewSummary).toList());
 
@@ -111,10 +126,8 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
         }
     }
 
-    private me.unbrdn.core.grpc.interview.v1.InterviewSessionSummary toProtoInterviewSummary(
-            me.unbrdn.core.interview.application.port.in.ListInterviewsUseCase.InterviewSummary summary) {
-        return me.unbrdn.core.grpc.interview.v1.InterviewSessionSummary.newBuilder()
-                .setInterviewId(summary.interviewId().toString())
+    private InterviewSessionSummary toProtoInterviewSummary(ListInterviewsUseCase.InterviewSummary summary) {
+        return InterviewSessionSummary.newBuilder().setInterviewId(summary.interviewId().toString())
                 .setStartedAt(summary.startedAt() != null ? summary.startedAt().toString() : "")
                 .setStatus(toProtoInterviewStatus(summary.status())).setDomain(summary.domain())
                 .setType(toProtoInterviewType(summary.type())).setTargetDurationMinutes(summary.targetDurationMinutes())
@@ -131,23 +144,22 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
         };
     }
 
-    private static me.unbrdn.core.interview.domain.enums.InterviewRole toDomainInterviewRole(
-            me.unbrdn.core.grpc.common.v1.InterviewRoleProto proto) {
+    private static InterviewRole toDomainInterviewRole(me.unbrdn.core.grpc.common.v1.InterviewRoleProto proto) {
         return switch (proto) {
-        case TECH -> me.unbrdn.core.interview.domain.enums.InterviewRole.TECH;
-        case HR -> me.unbrdn.core.interview.domain.enums.InterviewRole.HR;
-        case LEADER -> me.unbrdn.core.interview.domain.enums.InterviewRole.LEADER;
-        default -> me.unbrdn.core.interview.domain.enums.InterviewRole.TECH;
+        case TECH -> InterviewRole.TECH;
+        case HR -> InterviewRole.HR;
+        case LEADER -> InterviewRole.LEADER;
+        default -> InterviewRole.TECH;
         };
     }
 
-    private static me.unbrdn.core.interview.domain.enums.InterviewPersonality toDomainInterviewPersonality(
+    private static InterviewPersonality toDomainInterviewPersonality(
             me.unbrdn.core.grpc.common.v1.InterviewPersonalityProto proto) {
         return switch (proto) {
-        case PRESSURE -> me.unbrdn.core.interview.domain.enums.InterviewPersonality.PRESSURE;
-        case COMFORTABLE -> me.unbrdn.core.interview.domain.enums.InterviewPersonality.COMFORTABLE;
-        case RANDOM -> me.unbrdn.core.interview.domain.enums.InterviewPersonality.RANDOM;
-        default -> me.unbrdn.core.interview.domain.enums.InterviewPersonality.COMFORTABLE;
+        case PRESSURE -> InterviewPersonality.PRESSURE;
+        case COMFORTABLE -> InterviewPersonality.COMFORTABLE;
+        case RANDOM -> InterviewPersonality.RANDOM;
+        default -> InterviewPersonality.COMFORTABLE;
         };
     }
 
@@ -163,20 +175,18 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
     // ==================== Stage Management RPCs ====================
 
     @Override
-    public void getInterviewStage(me.unbrdn.core.grpc.interview.v1.GetInterviewStageRequest request,
-            StreamObserver<me.unbrdn.core.grpc.interview.v1.GetInterviewStageResponse> responseObserver) {
+    public void getInterviewStage(GetInterviewStageRequest request,
+            StreamObserver<GetInterviewStageResponse> responseObserver) {
         log.debug("gRPC request received: GetInterviewStage interviewSessionId={}", request.getInterviewSessionId());
 
         try {
             UUID interviewSessionId = UUID.fromString(request.getInterviewSessionId());
-            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery query = new me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery(
-                    interviewSessionId);
+            GetInterviewStageQuery query = new GetInterviewStageQuery(interviewSessionId);
 
-            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.InterviewStageResult result = getInterviewStageUseCase
-                    .execute(query);
+            InterviewStageResult result = getInterviewStageUseCase.execute(query);
 
-            me.unbrdn.core.grpc.interview.v1.GetInterviewStageResponse.Builder responseBuilder = me.unbrdn.core.grpc.interview.v1.GetInterviewStageResponse
-                    .newBuilder().setStage(toProtoInterviewStage(result.stage()))
+            GetInterviewStageResponse.Builder responseBuilder = GetInterviewStageResponse.newBuilder()
+                    .setStage(toProtoInterviewStage(result.stage()))
                     .setSelfIntroElapsedSeconds(result.selfIntroElapsedSeconds());
 
             if (result.roles() != null) {
@@ -205,8 +215,8 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
     }
 
     @Override
-    public void transitionStage(me.unbrdn.core.grpc.interview.v1.TransitionStageRequest request,
-            StreamObserver<me.unbrdn.core.grpc.interview.v1.TransitionStageResponse> responseObserver) {
+    public void transitionStage(TransitionStageRequest request,
+            StreamObserver<TransitionStageResponse> responseObserver) {
         log.info("gRPC request received: TransitionStage interviewSessionId={}, newStage={}",
                 request.getInterviewSessionId(), request.getNewStage());
 
@@ -215,19 +225,16 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             me.unbrdn.core.interview.domain.enums.InterviewStage newStage = toDomainInterviewStage(
                     request.getNewStage());
 
-            me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase.TransitionStageCommand command = new me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase.TransitionStageCommand(
-                    interviewSessionId, newStage);
+            TransitionStageCommand command = new TransitionStageCommand(interviewSessionId, newStage);
 
             transitionInterviewStageUseCase.execute(command);
 
             // 다시 조회해서 현재 stage 반환
-            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery query = new me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery(
-                    interviewSessionId);
-            me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.InterviewStageResult result = getInterviewStageUseCase
-                    .execute(query);
+            GetInterviewStageQuery query = new GetInterviewStageQuery(interviewSessionId);
+            InterviewStageResult result = getInterviewStageUseCase.execute(query);
 
-            me.unbrdn.core.grpc.interview.v1.TransitionStageResponse response = me.unbrdn.core.grpc.interview.v1.TransitionStageResponse
-                    .newBuilder().setCurrentStage(toProtoInterviewStage(result.stage())).build();
+            TransitionStageResponse response = TransitionStageResponse.newBuilder()
+                    .setCurrentStage(toProtoInterviewStage(result.stage())).build();
 
             responseObserver.onNext(response);
             responseObserver.onCompleted();

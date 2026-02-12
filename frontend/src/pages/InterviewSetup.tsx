@@ -77,11 +77,11 @@ export function InterviewSetup() {
     async function loadResumes() {
       try {
         const list = await listResumes();
-        setExistingResumes(list);
-        if (list.length === 0) {
+        setExistingResumes(list.resumes);
+        if (list.resumes.length === 0) {
           setIsNewUpload(true);
         } else {
-          setSelectedResumeId(list[0].id);
+          setSelectedResumeId(list.resumes[0].id);
         }
       } catch (err) {
         console.error("이력서 목록 로드 실패:", err);
@@ -97,7 +97,7 @@ export function InterviewSetup() {
     setDetail(null);
     try {
       const data = await getResume(id);
-      setDetail(data);
+      setDetail(data.resume);
     } catch (e) {
       setError(e instanceof Error ? e.message : "이력서를 불러올 수 없습니다.");
     } finally {

@@ -7,7 +7,6 @@ import lombok.Getter;
 @Getter
 @Builder
 public class AuthenticateUserCommand {
-
     private final String email;
     private final String password;
 }

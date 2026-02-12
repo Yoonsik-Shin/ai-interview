@@ -296,3 +296,31 @@ Core 서비스에서 불필요하게 많은 `DEBUG` 로그(특히 Actuator healt
 - **Cons**:
   - 기존 모든 서비스의 임포트 경로를 수정해야 하는 대규모 Breaking Change 발생.
   - 코드 내 FQCN 사용 증가로 인해 일부 구문이 길어질 수 있음.
+
+---
+
+## 2026-02-12: UseCase vs Service Distinction (Socket Service)
+
+### Context
+
+Socket 서비스 리팩토링 과정에서 비즈니스 로직을 처리하는 `UseCase`와 기술적 상세를 다루는 `Service`가 명확한 기준 없이 혼용되고 있었음. 특히 `ProcessAudioService`와 같이 유스케이스 성격의 로직이 서비스로 명명되어 아키텍처 일관성을 해치는 문제가 발생함.
+
+### Decisions
+
+1.  **UseCase (Interactor) [Application Layer]**:
+    - **정의**: 단일 비즈니스 액션 또는 사용자 흐름의 "진입점".
+    - **역할**: 도메인 로직을 오케스트레이션하고, 필요한 서비스(어댑터)들을 호출하여 비즈니스 목표를 달성함.
+    - **명명 규칙**: `~UseCase` 접미사 사용 (예: `HandleConnectionUseCase`, `ProcessAudioUseCase`).
+2.  **Service (Adapter/Technical) [Infrastructure/Core Layer]**:
+    - **정의**: 구체적인 기술 구현 상세나 외부 시스템(gRPC, Redis, DB)과의 통신을 담당.
+    - \*역할\*\*: UseCase에서 필요로 하는 기술적 기능을 제공하며, 비즈니스 흐름 제어권은 가지지 않음.
+    - **명명 규칙**:
+      - 외부 시스템 연동: `~GrpcService`, `~PersistenceAdapter`, `~CacheAdapter`.
+      - 기술적 유틸리티/캡슐화: `~Service` (예: `CoreAuthService`, `SocketLoggingService`).
+3.  **Refactoring Direction**:
+    - `ProcessAudioService`와 같이 비즈니스 오케스트레이션을 담당하는 객체는 `UseCase`로 전환하거나, 철저히 기술적 "Dispatch/Hub" 역할로만 제한함.
+
+### Consequences
+
+- **Pros**: 코드의 역할과 책임이 명확해져 유지보수 및 테스트가 용이해짐. BFF 및 Core 서비스와의 설계 일관성 확보.
+- **Cons**: 기존에 'Service'로 불리던 객체들의 대규모 명칭 변경 및 이동이 필요할 수 있음.

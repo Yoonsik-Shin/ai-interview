@@ -23,10 +23,7 @@ public class RegisterCandidateInteractor implements RegisterCandidateUseCase {
             throw new UserAlreadyExistsException("이미 존재하는 이메일입니다: " + command.getEmail());
         }
 
-        return userGrpcClient.createCandidate(
-                command.getEmail(),
-                command.getPassword(),
-                command.getNickname(),
+        return userGrpcClient.createCandidate(command.getEmail(), command.getPassword(), command.getNickname(),
                 command.getPhoneNumber());
     }
 }

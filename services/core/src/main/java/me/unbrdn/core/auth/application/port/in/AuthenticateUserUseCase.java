@@ -1,5 +1,6 @@
 package me.unbrdn.core.auth.application.port.in;
 
+import me.unbrdn.core.auth.application.exception.AuthenticationException;
 import me.unbrdn.core.auth.application.interactor.dto.command.AuthenticateUserCommand;
 import me.unbrdn.core.auth.application.interactor.dto.result.AuthenticateUserResult;
 
@@ -11,7 +12,7 @@ public interface AuthenticateUserUseCase {
      *
      * @param command 인증 명령 (이메일, 비밀번호)
      * @return 인증 결과 (사용자 정보)
-     * @throws me.unbrdn.core.auth.application.exception.AuthenticationException 인증 실패 시
+     * @throws AuthenticationException 인증 실패 시
      */
     AuthenticateUserResult execute(AuthenticateUserCommand command);
 }
