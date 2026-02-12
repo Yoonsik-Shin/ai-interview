@@ -1,6 +1,6 @@
 from datetime import datetime
 import time
-from generated.stt.v1 import stt_pb2
+from stt.v1 import stt_pb2
 from config import (
     SAMPLE_RATE,
     SERVER_VAD_SILENCE_THRESHOLD,

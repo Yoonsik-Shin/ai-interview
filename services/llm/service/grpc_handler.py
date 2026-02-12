@@ -6,9 +6,9 @@ from concurrent import futures
 from grpc_health.v1 import health
 from grpc_health.v1 import health_pb2
 from grpc_health.v1 import health_pb2_grpc
-from generated.llm.v1 import llm_pb2
-from generated.llm.v1 import llm_pb2_grpc
-from generated.common.v1 import enums_pb2
+from llm.v1 import llm_pb2
+from llm.v1 import llm_pb2_grpc
+from common.v1 import enums_pb2
 from engine.openai_engine import OpenAIEngine
 from config import GRPC_PORT
 from utils.log_format import log_json
