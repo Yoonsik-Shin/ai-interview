@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import storage_pb2 as storage__pb2
+from storage.v1 import storage_pb2 as storage_dot_v1_dot_storage__pb2
 
 GRPC_GENERATED_VERSION = '1.76.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in storage_pb2_grpc.py depends on'
+        + ' but the generated code in storage/v1/storage_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -35,14 +35,14 @@ class StorageServiceStub(object):
             channel: A grpc.Channel.
         """
         self.GetPresignedUrl = channel.unary_unary(
-                '/storage.StorageService/GetPresignedUrl',
-                request_serializer=storage__pb2.GetPresignedUrlRequest.SerializeToString,
-                response_deserializer=storage__pb2.GetPresignedUrlResponse.FromString,
+                '/storage.v1.StorageService/GetPresignedUrl',
+                request_serializer=storage_dot_v1_dot_storage__pb2.GetPresignedUrlRequest.SerializeToString,
+                response_deserializer=storage_dot_v1_dot_storage__pb2.GetPresignedUrlResponse.FromString,
                 _registered_method=True)
         self.DeleteObject = channel.unary_unary(
-                '/storage.StorageService/DeleteObject',
-                request_serializer=storage__pb2.DeleteObjectRequest.SerializeToString,
-                response_deserializer=storage__pb2.DeleteObjectResponse.FromString,
+                '/storage.v1.StorageService/DeleteObject',
+                request_serializer=storage_dot_v1_dot_storage__pb2.DeleteObjectRequest.SerializeToString,
+                response_deserializer=storage_dot_v1_dot_storage__pb2.DeleteObjectResponse.FromString,
                 _registered_method=True)
 
 
@@ -50,14 +50,14 @@ class StorageServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetPresignedUrl(self, request, context):
-        """발급된 Presigned URL 요청
+        """Get presigned URL for upload/download
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def DeleteObject(self, request, context):
-        """객체 삭제 요청
+        """Delete object from storage
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -68,19 +68,19 @@ def add_StorageServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetPresignedUrl': grpc.unary_unary_rpc_method_handler(
                     servicer.GetPresignedUrl,
-                    request_deserializer=storage__pb2.GetPresignedUrlRequest.FromString,
-                    response_serializer=storage__pb2.GetPresignedUrlResponse.SerializeToString,
+                    request_deserializer=storage_dot_v1_dot_storage__pb2.GetPresignedUrlRequest.FromString,
+                    response_serializer=storage_dot_v1_dot_storage__pb2.GetPresignedUrlResponse.SerializeToString,
             ),
             'DeleteObject': grpc.unary_unary_rpc_method_handler(
                     servicer.DeleteObject,
-                    request_deserializer=storage__pb2.DeleteObjectRequest.FromString,
-                    response_serializer=storage__pb2.DeleteObjectResponse.SerializeToString,
+                    request_deserializer=storage_dot_v1_dot_storage__pb2.DeleteObjectRequest.FromString,
+                    response_serializer=storage_dot_v1_dot_storage__pb2.DeleteObjectResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'storage.StorageService', rpc_method_handlers)
+            'storage.v1.StorageService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('storage.StorageService', rpc_method_handlers)
+    server.add_registered_method_handlers('storage.v1.StorageService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -101,9 +101,9 @@ class StorageService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/storage.StorageService/GetPresignedUrl',
-            storage__pb2.GetPresignedUrlRequest.SerializeToString,
-            storage__pb2.GetPresignedUrlResponse.FromString,
+            '/storage.v1.StorageService/GetPresignedUrl',
+            storage_dot_v1_dot_storage__pb2.GetPresignedUrlRequest.SerializeToString,
+            storage_dot_v1_dot_storage__pb2.GetPresignedUrlResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -128,9 +128,9 @@ class StorageService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/storage.StorageService/DeleteObject',
-            storage__pb2.DeleteObjectRequest.SerializeToString,
-            storage__pb2.DeleteObjectResponse.FromString,
+            '/storage.v1.StorageService/DeleteObject',
+            storage_dot_v1_dot_storage__pb2.DeleteObjectRequest.SerializeToString,
+            storage_dot_v1_dot_storage__pb2.DeleteObjectResponse.FromString,
             options,
             channel_credentials,
             insecure,
