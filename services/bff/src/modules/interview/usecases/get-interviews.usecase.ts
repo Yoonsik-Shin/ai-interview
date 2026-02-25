@@ -3,10 +3,15 @@ import { InterviewGrpcService } from "src/infra/grpc/services/interview-grpc.ser
 import { InterviewType } from "../enum/interview.enum";
 
 export class GetInterviewsCommand {
-    constructor(public readonly userId: string) {}
+    constructor(
+        public readonly userId: string,
+        public readonly status?: string,
+        public readonly limit?: number,
+        public readonly sort?: string,
+    ) {}
 }
 
-export class InterviewSessionSummary {
+export class InterviewSummary {
     constructor(
         public readonly interviewId: string,
         public readonly startedAt: string,
@@ -19,7 +24,7 @@ export class InterviewSessionSummary {
 }
 
 export class GetInterviewsResult {
-    constructor(public readonly interviews: InterviewSessionSummary[]) {}
+    constructor(public readonly interviews: InterviewSummary[]) {}
 }
 
 @Injectable()
@@ -27,12 +32,21 @@ export class GetInterviewsUseCase {
     constructor(private readonly interviewGrpcService: InterviewGrpcService) {}
 
     async execute(command: GetInterviewsCommand): Promise<GetInterviewsResult> {
-        const response = await this.interviewGrpcService.listInterviews({ userId: command.userId });
+        const statuses = command.status
+            ? command.status.split(",").map((s) => this.interviewGrpcService.toProtoStatus(s))
+            : [];
+
+        const response = await this.interviewGrpcService.listInterviews({
+            userId: command.userId,
+            status: statuses,
+            limit: command.limit ?? 0,
+            sort: command.sort ?? "",
+        });
 
         return new GetInterviewsResult(
             response.interviews.map(
                 (interview) =>
-                    new InterviewSessionSummary(
+                    new InterviewSummary(
                         interview.interviewId,
                         interview.startedAt,
                         this.interviewGrpcService.fromProtoStatus(interview.status),

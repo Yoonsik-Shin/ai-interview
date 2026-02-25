@@ -24,7 +24,6 @@ export class GrpcConfigService {
                 loader: {
                     keepCase: false,
                     longs: String,
-                    enums: String,
                     defaults: true,
                     oneofs: true,
                     includeDirs: [join(process.cwd(), "proto")],

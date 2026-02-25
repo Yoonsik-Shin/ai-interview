@@ -13,9 +13,10 @@ export const protobufPackage = "storage.v1";
 
 export interface GetPresignedUrlRequest {
   objectKey: string;
-  /** "put_object" or "get_object" */
+  /** "GET", "PUT", "DELETE" */
   method: string;
   expirationSec: number;
+  internalAccess: boolean;
 }
 
 export interface GetPresignedUrlResponse {

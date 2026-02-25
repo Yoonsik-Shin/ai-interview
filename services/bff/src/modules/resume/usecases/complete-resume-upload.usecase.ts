@@ -11,7 +11,10 @@ export class CompleteResumeUploadCommand {
 }
 
 export class CompleteResumeUploadResult {
-    constructor(public readonly success: boolean) {}
+    constructor(
+        public readonly success: boolean,
+        public readonly resume?: any,
+    ) {}
 }
 
 @Injectable()

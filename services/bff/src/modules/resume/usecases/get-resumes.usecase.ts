@@ -27,7 +27,14 @@ export class GetResumesUseCase {
         const resumeList = await this.resumeGrpcService.listResumes({ userId: command.userId });
 
         const resumes = resumeList.resumes.map(
-            (resume) => new ResumeSummary(resume.id, resume.title, resume.status, resume.createdAt),
+            (resume) =>
+                new ResumeSummary(
+                    resume.id,
+                    resume.title,
+                    resume.status,
+                    resume.createdAt,
+                    resume.embedding,
+                ),
         );
 
         return new GetResumesResult(resumes);

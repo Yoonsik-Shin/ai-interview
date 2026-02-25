@@ -47,7 +47,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         if (exception instanceof Error) {
             return {
                 status: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: exception.message,
+                message:
+                    "서버 내부 오류가 발생했습니다. 담당자에게 문의하거나 로그(TraceID)를 확인해 주세요.",
             };
         }
 

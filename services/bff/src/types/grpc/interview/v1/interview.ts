@@ -43,7 +43,7 @@ export interface CreateInterviewResponse {
 
 /** Stage 조회 */
 export interface GetInterviewStageRequest {
-  interviewSessionId: string;
+  interviewId: string;
 }
 
 export interface GetInterviewStageResponse {
@@ -59,7 +59,7 @@ export interface GetInterviewStageResponse {
 
 /** Stage 전환 */
 export interface TransitionStageRequest {
-  interviewSessionId: string;
+  interviewId: string;
   newStage: InterviewStageProto;
 }
 
@@ -69,7 +69,7 @@ export interface TransitionStageResponse {
 
 /** 자기소개 재시도 증분 */
 export interface IncrementSelfIntroRetryRequest {
-  interviewSessionId: string;
+  interviewId: string;
 }
 
 export interface IncrementSelfIntroRetryResponse {
@@ -80,9 +80,15 @@ export interface IncrementSelfIntroRetryResponse {
 export interface ListInterviewsRequest {
   /** UUID */
   userId: string;
+  /** 필터링할 상태 목록 (Optional) */
+  status: InterviewStatusProto[];
+  /** 조회 개수 제한 (Optional, 0이면 전체) */
+  limit: number;
+  /** 정렬 기준 (예: "desc", "asc" - start_at 기준) */
+  sort: string;
 }
 
-export interface InterviewSessionSummary {
+export interface InterviewSummary {
   interviewId: string;
   /** ISO 8601 */
   startedAt: string;
@@ -94,7 +100,116 @@ export interface InterviewSessionSummary {
 }
 
 export interface ListInterviewsResponse {
-  interviews: InterviewSessionSummary[];
+  interviews: InterviewSummary[];
+}
+
+/** 면접 이력 조회 */
+export interface GetInterviewHistoryRequest {
+  interviewId: string;
+}
+
+export interface GetInterviewHistoryResponse {
+  messages: InterviewMessage[];
+}
+
+export interface InterviewMessage {
+  /** USER, ASSISTANT, SYSTEM */
+  role: string;
+  /** TEXT, EVENT, STAGE_TRANSITION */
+  type: string;
+  /** 메시지 내용 */
+  content: string;
+  /** ISO 8601 형식 */
+  timestamp: string;
+  /** 추가 메타데이터 */
+  payload: { [key: string]: string };
+}
+
+export interface InterviewMessage_PayloadEntry {
+  key: string;
+  value: string;
+}
+
+/** 면접 완료 */
+export interface CompleteInterviewRequest {
+  interviewId: string;
+}
+
+export interface CompleteInterviewResponse {
+  interviewId: string;
+  status: InterviewStatusProto;
+  /** ISO 8601 */
+  endedAt: string;
+}
+
+/** 면접 취소 */
+export interface CancelInterviewRequest {
+  interviewId: string;
+  /** 취소 사유 (선택적) */
+  reason: string;
+}
+
+export interface CancelInterviewResponse {
+  interviewId: string;
+  status: InterviewStatusProto;
+  /** ISO 8601 */
+  endedAt: string;
+}
+
+/** 면접 중지 */
+export interface PauseInterviewRequest {
+  interviewId: string;
+}
+
+export interface PauseInterviewResponse {
+  interviewId: string;
+  status: InterviewStatusProto;
+  /** ISO 8601 */
+  pausedAt: string;
+}
+
+/** 면접 재개 */
+export interface ResumeInterviewRequest {
+  interviewId: string;
+}
+
+export interface ResumeInterviewResponse {
+  interviewId: string;
+  status: InterviewStatusProto;
+  /** ISO 8601 */
+  resumedAt: string;
+}
+
+/** [DevTool] 면접 단계 강제 변경 */
+export interface ForceStageRequest {
+  interviewId: string;
+  targetStage: InterviewStageProto;
+}
+
+export interface ForceStageResponse {
+  interviewId: string;
+  currentStage: InterviewStageProto;
+  message: string;
+}
+
+/** 면접 단건 조회 */
+export interface GetInterviewRequest {
+  interviewId: string;
+}
+
+export interface GetInterviewResponse {
+  interviewId: string;
+  status: InterviewStatusProto;
+  currentStage: InterviewStageProto;
+  type: InterviewTypeProto;
+  domain: string;
+  targetDurationMinutes: number;
+  selfIntroduction: string;
+  interviewerRoles: InterviewRoleProto[];
+  personality: InterviewPersonalityProto;
+  interviewerCount: number;
+  createdAt?: string | undefined;
+  resumedAt?: string | undefined;
 }
 
 export const INTERVIEW_V1_PACKAGE_NAME = "interview.v1";
@@ -122,6 +237,37 @@ export interface InterviewServiceClient {
   /** 면접 목록 조회 */
 
   listInterviews(request: ListInterviewsRequest, metadata?: Metadata): Observable<ListInterviewsResponse>;
+
+  /** 면접 이력 조회 */
+
+  getInterviewHistory(
+    request: GetInterviewHistoryRequest,
+    metadata?: Metadata,
+  ): Observable<GetInterviewHistoryResponse>;
+
+  /** 면접 완료 (정상 종료) */
+
+  completeInterview(request: CompleteInterviewRequest, metadata?: Metadata): Observable<CompleteInterviewResponse>;
+
+  /** 면접 취소 (비정상 종료) */
+
+  cancelInterview(request: CancelInterviewRequest, metadata?: Metadata): Observable<CancelInterviewResponse>;
+
+  /** 면접 중지 */
+
+  pauseInterview(request: PauseInterviewRequest, metadata?: Metadata): Observable<PauseInterviewResponse>;
+
+  /** 면접 재개 */
+
+  resumeInterview(request: ResumeInterviewRequest, metadata?: Metadata): Observable<ResumeInterviewResponse>;
+
+  /** [DevTool] 면접 단계 강제 변경 (개발 환경 전용) */
+
+  forceStage(request: ForceStageRequest, metadata?: Metadata): Observable<ForceStageResponse>;
+
+  /** 면접 단건 조회 (상태 확인용) */
+
+  getInterview(request: GetInterviewRequest, metadata?: Metadata): Observable<GetInterviewResponse>;
 }
 
 /** === 서비스 정의 (인터페이스) === */
@@ -162,6 +308,55 @@ export interface InterviewServiceController {
     request: ListInterviewsRequest,
     metadata?: Metadata,
   ): Promise<ListInterviewsResponse> | Observable<ListInterviewsResponse> | ListInterviewsResponse;
+
+  /** 면접 이력 조회 */
+
+  getInterviewHistory(
+    request: GetInterviewHistoryRequest,
+    metadata?: Metadata,
+  ): Promise<GetInterviewHistoryResponse> | Observable<GetInterviewHistoryResponse> | GetInterviewHistoryResponse;
+
+  /** 면접 완료 (정상 종료) */
+
+  completeInterview(
+    request: CompleteInterviewRequest,
+    metadata?: Metadata,
+  ): Promise<CompleteInterviewResponse> | Observable<CompleteInterviewResponse> | CompleteInterviewResponse;
+
+  /** 면접 취소 (비정상 종료) */
+
+  cancelInterview(
+    request: CancelInterviewRequest,
+    metadata?: Metadata,
+  ): Promise<CancelInterviewResponse> | Observable<CancelInterviewResponse> | CancelInterviewResponse;
+
+  /** 면접 중지 */
+
+  pauseInterview(
+    request: PauseInterviewRequest,
+    metadata?: Metadata,
+  ): Promise<PauseInterviewResponse> | Observable<PauseInterviewResponse> | PauseInterviewResponse;
+
+  /** 면접 재개 */
+
+  resumeInterview(
+    request: ResumeInterviewRequest,
+    metadata?: Metadata,
+  ): Promise<ResumeInterviewResponse> | Observable<ResumeInterviewResponse> | ResumeInterviewResponse;
+
+  /** [DevTool] 면접 단계 강제 변경 (개발 환경 전용) */
+
+  forceStage(
+    request: ForceStageRequest,
+    metadata?: Metadata,
+  ): Promise<ForceStageResponse> | Observable<ForceStageResponse> | ForceStageResponse;
+
+  /** 면접 단건 조회 (상태 확인용) */
+
+  getInterview(
+    request: GetInterviewRequest,
+    metadata?: Metadata,
+  ): Promise<GetInterviewResponse> | Observable<GetInterviewResponse> | GetInterviewResponse;
 }
 
 export function InterviewServiceControllerMethods() {
@@ -172,6 +367,13 @@ export function InterviewServiceControllerMethods() {
       "transitionStage",
       "incrementSelfIntroRetry",
       "listInterviews",
+      "getInterviewHistory",
+      "completeInterview",
+      "cancelInterview",
+      "pauseInterview",
+      "resumeInterview",
+      "forceStage",
+      "getInterview",
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);

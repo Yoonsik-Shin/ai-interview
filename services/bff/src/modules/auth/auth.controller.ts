@@ -16,7 +16,7 @@ import {
 import { RegisterResponseDto } from "./dto/response/register-response.dto";
 import { LoginUseCase } from "./usecases/login.usecase";
 import { LoginResponseDto } from "./dto/response/login-response.dto";
-import { RefreshTokenUseCase } from "./usecases/refresh-token.usecase";
+import { RefreshTokenCommand, RefreshTokenUseCase } from "./usecases/refresh-token.usecase";
 
 @Controller({ path: "auth", version: "1" })
 export class AuthController {
@@ -88,7 +88,9 @@ export class AuthController {
             throw new UnauthorizedException("Refresh token is required");
         }
 
-        const result = await this.refreshTokenUseCase.execute(refreshToken);
+        const result = await this.refreshTokenUseCase.execute(
+            new RefreshTokenCommand(refreshToken),
+        );
 
         response.cookie("refreshToken", result.refreshToken, {
             httpOnly: true,
