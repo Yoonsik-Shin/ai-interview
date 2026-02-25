@@ -143,6 +143,7 @@ export function Interview() {
   const [subtitle, setSubtitle] = useState<string | null>(null);
   const [currentPersonaId, setCurrentPersonaId] = useState<string | null>(null); // New State
   const [timeReducedToast, setTimeReducedToast] = useState(false);
+  const [showSelfIntroGuide, setShowSelfIntroGuide] = useState(false);
   const [sttHistory, setSttHistory] = useState<string[]>([]); // New State
   const subtitleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isStoppingRef = useRef(false);
@@ -777,6 +778,9 @@ export function Interview() {
         // SELF_INTRO 시작
         stageStartTimeRef.current = Date.now();
         setTimeLeft(90);
+        // 자기소개 안내 팝업 표시 (3초 후 자동 dismiss)
+        setShowSelfIntroGuide(true);
+        setTimeout(() => setShowSelfIntroGuide(false), 3000);
         if (!manualPaused && connected) {
           startRecording();
         }
@@ -1173,6 +1177,39 @@ export function Interview() {
                 (예: "안녕하세요, 잘 부탁드립니다.")
               </span>
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* SELF_INTRO 단계 안내 팝업 (3초 자동 dismiss) */}
+      {showSelfIntroGuide && currentStage === InterviewStage.SELF_INTRO && (
+        <div
+          className={styles.interventionOverlay}
+          onClick={() => setShowSelfIntroGuide(false)}
+          style={{ cursor: "pointer" }}
+        >
+          <div className={styles.interventionContent}>
+            <div className={styles.interventionHeader}>
+              <span className={styles.interventionIcon}>🎤</span>
+              <span className={styles.interventionTitle}>자기소개</span>
+            </div>
+            <p className={styles.interventionMessage}>
+              1분 30초 이내로 자기소개를 해주세요!
+              <br />
+              <span style={{ fontSize: "0.9em", color: "#888" }}>
+                (30초 미만은 재시도 요청이 올 수 있습니다)
+              </span>
+            </p>
+            <span
+              style={{
+                fontSize: "0.8em",
+                color: "#666",
+                marginTop: "10px",
+                display: "block",
+              }}
+            >
+              (클릭하여 닫기)
+            </span>
           </div>
         </div>
       )}
