@@ -16,7 +16,7 @@ data:
   REDIS_SENTINEL_HOST: "redis-node-0.redis-headless.unbrdn.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
   REDIS_SENTINEL_NAME: "mymaster"
-  REDIS_DB: "0"
+  REDIS_DB: "2"
   # Fallback
   REDIS_HOST: "redis.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"

@@ -2,19 +2,19 @@
 
 ## 핵심 원칙
 
-1. **아키텍처 우선 참조**: 모든 질문에 답변할 때는 항상 `@docs/architecture.md` 파일 내용을 우선적으로 참고하세요.
+1. **아키텍처 우선 참조**: 모든 질문에 답변할 때는 항상 `@docs/architecture/architecture.md` 파일 내용을 우선적으로 참고하세요.
 2. **비용 고려**: 새로운 인프라 도입 시 항상 `@archive/docs/oracle-cloud-always-free.md` 파일의 내용을 참고하여 비용에 대한 내용도 추가해주세요.
-3. **코딩 컨벤션 준수**: 코드를 작성할 때는 `@docs/coding_convention.md`의 규칙을 따라야 합니다.
+3. **코딩 컨벤션 준수**: 코드를 작성할 때는 `@docs/guide/coding_convention.md`의 규칙을 따라야 합니다.
 4. **변경 이력 기록**: 코드를 다 작성하면 진행한 작업을 간단히 `@docs/CHANGELOG.md` 파일에 업데이트 진행하는데 이는 백그라운드에서 해주세요.
-5. **의사결정 기록**: 중요한 설계 결정이나 고민 사항은 `@docs/design-decisions.md` 파일에 작성해주세요.
+5. **의사결정 기록**: 중요한 설계 결정이나 고민 사항은 `@docs/architecture/design-decisions.md` 파일에 작성해주세요.
 6. k8s 코드 작성시 local 환경과 prod 환경을 구분하되 공통되는 부분은 분리해서 common으로 관리해주세요. 무조건 pods 수는 두 환경 모두 동일하게 관리해주세요.
 
 ## 아키텍처 참조
 
-- **랜딩 페이지**: `docs/architecture.md` - 아키텍처 첫 진입점
-- **통합 요약**: `docs/architecture_consolidated.md` - 전체 아키텍처 요약
-- **다이어그램**: `docs/architecture-diagrams.md` - 시각화된 아키텍처
-- **운영 요약**: `docs/ops_consolidated.md` - 배포 및 운영 요약
+- **랜딩 페이지**: `docs/architecture/architecture.md` - 아키텍처 첫 진입점
+- **통합 요약**: `docs/architecture/architecture_consolidated.md` - 전체 아키텍처 요약
+- **다이어그램**: `docs/architecture/architecture-diagrams.md` - 시각화된 아키텍처
+- **운영 요약**: `docs/ops/ops_consolidated.md` - 배포 및 운영 요약
 
 ## 서비스별 아키텍처 문서
 
@@ -24,7 +24,7 @@
 - **LLM**: `services/llm/ARCHITECTURE.md`
 - **STT**: `services/stt/ARCHITECTURE.md`
 - **Storage**: `services/storage/ARCHITECTURE.md`
-- **Core**: `docs/coding_convention.md` (Java/Clean Architecture 섹션)
+- **Core**: `docs/guide/coding_convention.md` (Java/Clean Architecture 섹션)
 
 ## 주요 패턴
 

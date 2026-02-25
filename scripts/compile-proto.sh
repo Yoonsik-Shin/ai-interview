@@ -18,27 +18,33 @@ echo ""
 # 프로젝트 루트로 이동
 cd "$(dirname "$0")/.."
 
-# LLM Service
-echo "📦 LLM Service..."
-cd services/llm
-python -m grpc_tools.protoc \
-  -I../proto \
-  --python_out=. \
-  --grpc_python_out=. \
-  $(find ../proto -name "*.proto")
-echo "✅ LLM proto compiled"
-cd ../..
+# Helper function to compile Python protos
+compile_python_protos() {
+    local service=$1
+    echo "📦 Rendering Protos for: ${service}"
+    cd "services/${service}"
+    mkdir -p generated
+    touch generated/__init__.py
+    
+    # Compile all protos into the generated directory
+    python -m grpc_tools.protoc \
+        -I../proto \
+        --python_out=generated \
+        --grpc_python_out=generated \
+        $(find ../proto -name "*.proto")
+    
+    # Create __init__.py in nested directories for Python package consistency
+    find generated -type d -not -path 'generated' -exec touch {}/__init__.py \;
+    
+    echo "✅ ${service} proto compiled"
+    cd ../..
+}
 
-# STT
-echo "📦 STT..."
-cd services/stt
-python -m grpc_tools.protoc \
-  -I../proto \
-  --python_out=. \
-  --grpc_python_out=. \
-  $(find ../proto -name "*.proto")
-echo "✅ STT proto compiled"
-cd ../..
+# Python Services
+compile_python_protos "llm"
+compile_python_protos "stt"
+compile_python_protos "storage"
+compile_python_protos "document"
 
 # Core Service (Java - Gradle이 자동 처리)
 echo "📦 Core Service (Java)..."

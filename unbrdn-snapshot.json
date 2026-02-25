@@ -1389,6 +1389,20 @@
           "relFieldId": "zywn6K2ebYnc9KLtv",
           "relType": "ZERO_OR_ONE_OR_MANY",
           "relGroupId": "drAmMc8jLf2x9BW8x"
+        },
+        {
+          "_id": "turn_count_idx_1",
+          "name": "현재 진행 턴 수",
+          "pName": "turn_count",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "0",
+          "isAllowNull": false,
+          "comment": "Redis와의 동기화를 위한 변수",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
         }
       ],
       "color": "rgba(10, 10, 10, 0.5)"
@@ -3077,6 +3091,136 @@
         }
       ],
       "color": "rgba(10, 10, 10, 0.5)"
+    },
+    {
+      "_id": "interview_qna_id_77",
+      "_diagramId": "eKfDKYSsN5CqBEwFk",
+      "position": {
+        "x": 2880,
+        "y": 2500
+      },
+      "name": "면접 질의응답 (RDB)",
+      "pName": "interview_qna",
+      "keys": {
+        "pks": [
+          {
+            "_id": "qna_id_pk_1",
+            "name": "QnA ID",
+            "pName": "id",
+            "domain": "",
+            "type": "BIGINT",
+            "defaultValue": "",
+            "isAllowNull": false,
+            "comment": "",
+            "relEntity": null,
+            "relFieldId": null,
+            "relType": null,
+            "relGroupId": null
+          }
+        ],
+        "fks": []
+      },
+      "fields": [
+        {
+          "_id": "qna_session_id_1",
+          "name": "면접 세션 ID",
+          "pName": "interview_id",
+          "domain": "",
+          "type": "UUID",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "",
+          "relEntity": "Qs9Qz3Ku3n7Gvxfct",
+          "relFieldId": "75HRrzmpXuxBP9PoN",
+          "relType": "ZERO_OR_MANY",
+          "relGroupId": "qna_session_rel"
+        },
+        {
+          "_id": "qna_turn_number_1",
+          "name": "턴 번호",
+          "pName": "turn_number",
+          "domain": "",
+          "type": "Integer",
+          "defaultValue": "",
+          "isAllowNull": false,
+          "comment": "0-based index",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "qna_question_text_1",
+          "name": "질문 내용",
+          "pName": "question_text",
+          "domain": "",
+          "type": "TEXT",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "qna_answer_text_1",
+          "name": "답변 내용",
+          "pName": "answer_text",
+          "domain": "",
+          "type": "TEXT",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "qna_stt_text_1",
+          "name": "STT 보정 텍스트",
+          "pName": "stt_text",
+          "domain": "",
+          "type": "TEXT",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "qna_analysis_data_1",
+          "name": "분석 데이터 (평가 포함)",
+          "pName": "analysis_data",
+          "domain": "",
+          "type": "JSONB",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "점수, 피드백, 키워드 등 포함",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        },
+        {
+          "_id": "qna_media_url_1",
+          "name": "오디오/영상 URL",
+          "pName": "media_url",
+          "domain": "",
+          "type": "String",
+          "defaultValue": "",
+          "isAllowNull": true,
+          "comment": "",
+          "relEntity": null,
+          "relFieldId": null,
+          "relType": null,
+          "relGroupId": null
+        }
+      ],
+      "color": "rgba(43, 156, 143, 0.5)"
     }
   ],
   "memoData": [],

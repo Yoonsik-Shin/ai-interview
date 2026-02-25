@@ -33,11 +33,16 @@ is_service() {
 
 # 인자 파싱: 첫 번째가 서비스명이면 TAG는 latest로 유지
 NO_CACHE=false
+SKIP_MENU=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --no-cache)
             NO_CACHE=true
+            shift
+            ;;
+        --skip-menu)
+            SKIP_MENU=true
             shift
             ;;
         *)
@@ -533,78 +538,81 @@ if [[ "$CURRENT_CONTEXT" == "kind-unbrdn-local" ]]; then
     echo ""
 fi
 
-# 인터랙티브 메뉴
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}💡 다음 동작을 선택하세요 (30초 후 자동 종료):${NC}"
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo "  0. 종료"
-echo "  1. 이미지 확인 (docker images)"
-echo "  2. 로컬 배포 (./scripts/deploy-local.sh)"
-echo ""
-echo -n "선택 (0-2) [엔터]: "
-
-# 30초 타임아웃으로 사용자 입력 대기 (엔터 필요)
-if read -t 30 choice; then
+# 인터랙티브 메뉴 (skip-menu 플래그가 없을 때만 실행)
+if [ "$SKIP_MENU" = false ]; then
+    echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BOLD}💡 다음 동작을 선택하세요 (30초 후 자동 종료):${NC}"
+    echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    
-    case $choice in
-        0)
-            echo -e "${GREEN}✅ 종료합니다.${NC}"
-            ;;
-        1)
-            echo ""
-            echo -e "${BLUE}🔍 빌드된 이미지 목록을 확인합니다.${NC}"
-            echo ""
-            docker images | head -n 1
-            docker images | grep -E "bff|core|llm|socket" | grep "${TAG}"
-            echo ""
-            ;;
-        2)
-            echo ""
-            echo -e "${BLUE}🚀 로컬 배포를 시작합니다.${NC}"
-            echo -e "${YELLOW}⚠️  이 작업은 Kubernetes 클러스터에 리소스를 배포합니다.${NC}"
-            echo ""
-            
-            # 선택된 서비스가 있으면 표시
-            if [ ${#SELECTED_SERVICES[@]} -gt 0 ]; then
-                echo -e "${CYAN}🎯 다음 서비스만 배포됩니다: ${SELECTED_SERVICES[*]}${NC}"
-            else
-                echo -e "${CYAN}📦 모든 서비스를 배포합니다.${NC}"
-            fi
-            echo ""
-            
-            read -p "정말 배포하시겠습니까? (y/n): " confirm
-            if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    echo "  0. 종료"
+    echo "  1. 이미지 확인 (docker images)"
+    echo "  2. 로컬 배포 (./scripts/deploy-local.sh)"
+    echo ""
+    echo -n "선택 (0-2) [엔터]: "
+
+    # 30초 타임아웃으로 사용자 입력 대기 (엔터 필요)
+    if read -t 30 choice; then
+        echo ""
+        
+        case $choice in
+            0)
+                echo -e "${GREEN}✅ 종료합니다.${NC}"
+                ;;
+            1)
                 echo ""
-                if [ -f "${PROJECT_ROOT}/scripts/deploy-local.sh" ]; then
-                    # 선택된 서비스를 인자로 전달
-                    if [ ${#SELECTED_SERVICES[@]} -gt 0 ]; then
-                        exec "${PROJECT_ROOT}/scripts/deploy-local.sh" "${SELECTED_SERVICES[@]}"
+                echo -e "${BLUE}🔍 빌드된 이미지 목록을 확인합니다.${NC}"
+                echo ""
+                docker images | head -n 1
+                docker images | grep -E "bff|core|llm|socket" | grep "${TAG}"
+                echo ""
+                ;;
+            2)
+                echo ""
+                echo -e "${BLUE}🚀 로컬 배포를 시작합니다.${NC}"
+                echo -e "${YELLOW}⚠️  이 작업은 Kubernetes 클러스터에 리소스를 배포합니다.${NC}"
+                echo ""
+                
+                # 선택된 서비스가 있으면 표시
+                if [ ${#SELECTED_SERVICES[@]} -gt 0 ]; then
+                    echo -e "${CYAN}🎯 다음 서비스만 배포됩니다: ${SELECTED_SERVICES[*]}${NC}"
+                else
+                    echo -e "${CYAN}📦 모든 서비스를 배포합니다.${NC}"
+                fi
+                echo ""
+                
+                read -p "정말 배포하시겠습니까? (y/n): " confirm
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    echo ""
+                    if [ -f "${PROJECT_ROOT}/scripts/deploy-local.sh" ]; then
+                        # 선택된 서비스를 인자로 전달
+                        if [ ${#SELECTED_SERVICES[@]} -gt 0 ]; then
+                            exec "${PROJECT_ROOT}/scripts/deploy-local.sh" "${SELECTED_SERVICES[@]}"
+                        else
+                            exec "${PROJECT_ROOT}/scripts/deploy-local.sh"
+                        fi
                     else
-                        exec "${PROJECT_ROOT}/scripts/deploy-local.sh"
+                        echo -e "${RED}❌ deploy-local.sh 파일을 찾을 수 없습니다.${NC}"
+                        exit 1
                     fi
                 else
-                    echo -e "${RED}❌ deploy-local.sh 파일을 찾을 수 없습니다.${NC}"
-                    exit 1
+                    echo -e "${YELLOW}배포가 취소되었습니다.${NC}"
                 fi
-            else
-                echo -e "${YELLOW}배포가 취소되었습니다.${NC}"
-            fi
-            ;;
-        "")
-            # 엔터만 눌렀을 때 (빈 입력) - 종료
-            echo -e "${GREEN}✅ 종료합니다.${NC}"
-            ;;
-        *)
-            echo -e "${YELLOW}⚠️  잘못된 선택입니다. 종료합니다.${NC}"
-            ;;
-    esac
-else
-    # 타임아웃 발생
-    echo ""
-    echo ""
-    echo -e "${YELLOW}⏱️  시간 초과로 자동 종료합니다.${NC}"
+                ;;
+            "")
+                # 엔터만 눌렀을 때 (빈 입력) - 종료
+                echo -e "${GREEN}✅ 종료합니다.${NC}"
+                ;;
+            *)
+                echo -e "${YELLOW}⚠️  잘못된 선택입니다. 종료합니다.${NC}"
+                ;;
+        esac
+    else
+        # 타임아웃 발생
+        echo ""
+        echo ""
+        echo -e "${YELLOW}⏱️  시간 초과로 자동 종료합니다.${NC}"
+    fi
 fi
+
 
 echo ""

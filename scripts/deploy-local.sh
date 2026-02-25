@@ -9,6 +9,33 @@ NAMESPACE="unbrdn"
 KAFKA_NAMESPACE="kafka"
 MONITORING_NAMESPACE="monitoring"
 
+# 서비스 목록 정의 및 인자 처리 (최상단으로 이동)
+ALL_APP_SERVICES=("llm" "stt" "tts" "storage" "document" "core" "bff" "socket")
+SELECTED_SERVICES=()
+
+if [ $# -gt 0 ]; then
+    for arg in "$@"; do
+        FOUND=false
+        for svc in "${ALL_APP_SERVICES[@]}"; do
+            if [ "$svc" == "$arg" ]; then
+                SELECTED_SERVICES+=("$svc")
+                FOUND=true
+                break
+            fi
+        done
+        if [ "$FOUND" = false ]; then
+            echo -e "\033[0;33m⚠️  알 수 없는 서비스: $arg (무시됨)\033[0m"
+        fi
+    done
+fi
+
+# 배포 대상 서비스 확정
+if [ ${#SELECTED_SERVICES[@]} -gt 0 ]; then
+    SERVICES=("${SELECTED_SERVICES[@]}")
+else
+    SERVICES=("${ALL_APP_SERVICES[@]}")
+fi
+
 # 색상 정의
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -501,71 +528,31 @@ if [ "$READY_COUNT" -lt "$NODE_COUNT" ]; then
     done
 fi
 
-# Docker 이미지 존재 확인 (Kind는 로컬 이미지 사용)
-REQUIRED_IMAGES=("bff:latest" "core:latest" "llm:latest" "socket:latest" "stt:latest" "tts:latest" "storage:latest" "document:latest")
-MISSING_IMAGES=()
+# Docker 이미지 빌드 및 Kind 로드 (자동 통합)
+log_section "Docker 이미지 빌드 및 클러스터 로드"
 
-for IMAGE in "${REQUIRED_IMAGES[@]}"; do
-    if ! docker image inspect "$IMAGE" &> /dev/null; then
-        MISSING_IMAGES+=("$IMAGE")
+if [ -f "./scripts/build-images-local.sh" ]; then
+    log_task "이미지 빌드 시작..."
+    # 배포 대상 서비스만 빌드 (인자가 없으면 전체 빌드, 메뉴 스킵)
+    if ! ./scripts/build-images-local.sh --skip-menu "${SELECTED_SERVICES[@]}"; then
+        log_error "이미지 빌드에 실패했습니다. 배포를 중단합니다."
+        exit 1
     fi
-done
-
-if [ ${#MISSING_IMAGES[@]} -gt 0 ]; then
-    log_warning "다음 이미지를 찾을 수 없습니다:"
-    for IMAGE in "${MISSING_IMAGES[@]}"; do
-        log_info "Missing: ${IMAGE}"
-    done
+    log_success "이미지 빌드 완료"
     
-    log_task "이미지를 빌드해야 합니다."
-    read -p "이미지를 지금 빌드하시겠습니까? (Y/n): " -n 1 -r
-    echo
-    
-    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-        if [ -f "./scripts/build-images-local.sh" ]; then
-            log_task "이미지 빌드 시작..."
-            if ! ./scripts/build-images-local.sh; then
-                log_error "이미지 빌드에 실패했습니다."
-                exit 1
-            fi
-            
-            log_success "이미지 빌드가 완료되었습니다."
-            
-            # 빌드된 이미지를 Kind에 로드
-            log_task "빌드된 이미지를 Kind 클러스터에 로드합니다..."
-            for IMAGE in "${REQUIRED_IMAGES[@]}"; do
-                start_spinner "로드 중: ${IMAGE}"
-                kind load docker-image "$IMAGE" --name unbrdn-local >/dev/null 2>&1
-                stop_spinner "success" "로드 완료: ${IMAGE}"
-            done
-        else
-            log_error "build-images-local.sh 파일을 찾을 수 없습니다."
-            exit 1
-        fi
-    else
-        log_warning "이미지 없이 계속 진행합니다 (Pod 에러 가능성 있음)."
-        read -p "계속 진행하시겠습니까? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_warning "배포를 중단합니다."
-            exit 1
-        fi
-    fi
-else
-    # log_success "모든 로컬 이미지 확인 완료" # 생략
-    
-    log_task "Kind 클러스터 이미지 로드"
-    for IMAGE in "${REQUIRED_IMAGES[@]}"; do
-        start_spinner "이미지 로드 중: ${IMAGE}"
-        # suppress output, only show error if fails (but logic || true masks it?)
-        # kind load is noisy.
+    log_task "Kind 클러스터에 이미지 로드 중..."
+    for SVC in "${SERVICES[@]}"; do
+        IMAGE="${SVC}:latest"
+        start_spinner "로드 중: ${IMAGE}"
         if kind load docker-image "$IMAGE" --name unbrdn-local >/dev/null 2>&1; then
-             stop_spinner "success" "이미지 로드 완료: ${IMAGE}"
+             stop_spinner "success" "로드 완료: ${IMAGE}"
         else
-             # 이미 존재하거나 실패. kind load doesn't explicitly fail if present usually.
-             stop_spinner "success" "이미지 로드 완료 (또는 이미 존재): ${IMAGE}"
+             stop_spinner "warning" "로드 실패 또는 이미 존재: ${IMAGE}"
         fi
     done
+else
+    log_error "build-images-local.sh 파일을 찾을 수 없습니다."
+    exit 1
 fi
 
 log_success "배포 환경 검증 완료"
@@ -630,268 +617,256 @@ else
 fi
 
 # =============================================================================
-# 1. 인프라 배포
+# 1. 인프라 배포 (병렬)
 # =============================================================================
 
-# Step 2: PostgreSQL 배포
-start_spinner "PostgreSQL 배포 중..."
-# PostgreSQL은 로컬 전용이므로 local 경로 사용
-if [ -d "k8s/infra/postgres/local" ]; then
-    kubectl apply -f k8s/infra/postgres/local/ >/dev/null 2>&1
-else
-    # local이 없으면 oracle 로컬 경로 확인
-    if [ -d "k8s/infra/oracle" ]; then
-        kubectl apply -f k8s/infra/oracle/ >/dev/null 2>&1 || true
-    fi
-fi
-stop_spinner "success" "PostgreSQL 매니페스트 적용 완료"
+log_section "인프라 배포 (병렬)"
 
-show_pod_status "${NAMESPACE}" "app=postgres" 60 "PostgreSQL" || {
-    log_warning "로그 확인: kubectl logs -l app=postgres -n ${NAMESPACE}"
-}
+# 병렬 배포를 위해 서비스 목록 교체
+APP_SERVICES=("${SERVICES[@]}")
+APP_SERVICE_LABELS=("${SERVICE_LABELS[@]}")
 
-# Step 2.5: Postgres Port Forwarding (Daemon)
-if ! ps aux | grep -v grep | grep -q "port-forward svc/postgres 5432:5432"; then
-    log_task "Postgres 포트포워딩 시작 중 (5432:5432)..."
-    # 백그라운드 실행, 로그는 /tmp에 저장
-    nohup kubectl port-forward svc/postgres 5432:5432 -n ${NAMESPACE} > /tmp/postgres-pf.log 2>&1 &
-    # 약간의 대기 후 성공 여부 확인 (기본적인 프로세스 실행 확인)
-    sleep 1
-    if ps aux | grep -v grep | grep -q "port-forward svc/postgres 5432:5432"; then
-        log_success "Postgres 포트포워딩 백그라운드 실행 완료"
+SERVICES=("postgres" "mongo" "redis" "kafka" "minio")
+# Label은 모니터링용 (선택적)
+SERVICE_LABELS=("app=postgres" "app=mongo" "app.kubernetes.io/name=redis" "strimzi.io/cluster=kafka-cluster" "app=minio")
+
+mkdir -p "${DEPLOY_STATUS_DIR}"
+INFRA_PIDS=()
+
+# 1. PostgreSQL
+(
+    SERVICE="postgres"
+    echo "$(date +%s)" > "${DEPLOY_STATUS_DIR}/${SERVICE}.start"
+    SUCCESS=true
+    LOG_FILE="${DEPLOY_STATUS_DIR}/${SERVICE}.log"
+    
+    {
+        if [ -d "k8s/infra/postgres/local" ]; then
+            kubectl apply -f k8s/infra/postgres/local/ > "$LOG_FILE" 2>&1
+        elif [ -d "k8s/infra/oracle" ]; then
+            kubectl apply -f k8s/infra/oracle/ > "$LOG_FILE" 2>&1
+        fi
+        
+        # 대기
+        if ! show_pod_status "${NAMESPACE}" "app=postgres" 60 "PostgreSQL" >/dev/null 2>&1; then
+            SUCCESS=false
+        fi
+        
+        # Port Forwarding
+        if [ "$SUCCESS" = true ]; then
+            if ! ps aux | grep -v grep | grep -q "port-forward svc/postgres 5432:5432"; then
+                nohup kubectl port-forward svc/postgres 5432:5432 -n ${NAMESPACE} > /tmp/postgres-pf.log 2>&1 &
+                sleep 1
+            fi
+        fi
+    } || SUCCESS=false
+    
+    if [ "$SUCCESS" = true ]; then
+        echo "success" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
     else
-        log_error "Postgres 포트포워딩 실행 실패 (/tmp/postgres-pf.log 확인)"
+        echo "failed" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
     fi
-else
-    log_success "Postgres 포트포워딩 이미 실행 중"
-fi
+) &
+INFRA_PIDS+=($!)
 
-# Step 3: Redis Sentinel 배포 (Bitnami Helm Chart)
-# log_task "Redis Sentinel 배포 중 (Helm)..."
-start_spinner "Redis Helm Chart 배포 중..."
-
-# Bitnami Helm Repository 추가
-if ! helm repo list | grep -q bitnami; then
-    helm repo add bitnami https://charts.bitnami.com/bitnami >/dev/null 2>&1
-    helm repo update >/dev/null 2>&1
-fi
-
-# Helm values 파일 확인 (로컬/프로덕션 동일)
-REDIS_VALUES_FILE="k8s/infra/redis/helm/values.yaml"
-if [ ! -f "$REDIS_VALUES_FILE" ]; then
-    stop_spinner "error" "Helm values 파일이 없습니다: k8s/infra/redis/helm/values.yaml"
-    exit 1
-fi
-
-# 실패한 Helm Release 정리
-REDIS_EXISTS=$(helm list -n ${NAMESPACE} -q 2>/dev/null | grep -x "^redis$" || echo "")
-if [ -n "$REDIS_EXISTS" ]; then
-    REDIS_STATUS=$(helm status redis -n ${NAMESPACE} 2>/dev/null | grep "^STATUS:" | awk '{print $2}' || echo "")
-    if [ "$REDIS_STATUS" = "failed" ] || [ "$REDIS_STATUS" = "pending-install" ] || [ "$REDIS_STATUS" = "pending-upgrade" ]; then
-        helm uninstall redis -n ${NAMESPACE} --ignore-not-found 2>/dev/null || true
-        sleep 2
-    fi
-fi
-
-# Helm 미관리 Redis 리소스 정리
-drop_old_redis() {
-    local kind=$1 name=$2
-    if kubectl get "$kind" "$name" -n "${NAMESPACE}" &>/dev/null; then
-        local managed
-        managed=$(kubectl get "$kind" "$name" -n "${NAMESPACE}" -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || echo "")
-        if [ "$managed" != "Helm" ]; then
-            kubectl delete "$kind" "$name" -n "${NAMESPACE}" --ignore-not-found --wait=false 2>/dev/null || true
+# 2. MongoDB
+(
+    SERVICE="mongo"
+    echo "$(date +%s)" > "${DEPLOY_STATUS_DIR}/${SERVICE}.start"
+    SUCCESS=true
+    LOG_FILE="${DEPLOY_STATUS_DIR}/${SERVICE}.log"
+    
+    {
+        if [ -d "k8s/infra/mongo/local" ]; then
+            kubectl apply -f k8s/infra/mongo/local/ > "$LOG_FILE" 2>&1
+            
+            if ! show_pod_status "${NAMESPACE}" "app=mongo" 60 "MongoDB" >/dev/null 2>&1; then
+                SUCCESS=false
+            fi
+            
+            if [ "$SUCCESS" = true ]; then
+                if ! ps aux | grep -v grep | grep -q "port-forward svc/mongo 27017:27017"; then
+                    nohup kubectl port-forward svc/mongo 27017:27017 -n ${NAMESPACE} > /tmp/mongo-pf.log 2>&1 &
+                    sleep 1
+                fi
+            fi
+        else
+            # 없으면 성공 처리하되 경고 없음 (로직상)
+            true
         fi
+    } || SUCCESS=false
+
+    if [ "$SUCCESS" = true ]; then
+        echo "success" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
+    else
+        echo "failed" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
     fi
-}
-drop_old_redis svc redis-headless
-drop_old_redis svc redis
-drop_old_redis configmap redis-config
-if kubectl get statefulset redis -n "${NAMESPACE}" &>/dev/null; then
-    managed=$(kubectl get statefulset redis -n "${NAMESPACE}" -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || echo "")
-    if [ "$managed" != "Helm" ]; then
-        kubectl -n "${NAMESPACE}" delete statefulset redis --cascade=orphan --ignore-not-found 2>/dev/null || true
-        kubectl -n "${NAMESPACE}" delete pods -l app=redis --ignore-not-found --grace-period=0 --force 2>/dev/null || true
-    fi
-fi
-sleep 2
+) &
+INFRA_PIDS+=($!)
 
-# helm upgrade --install 사용 
-HELM_OUTPUT=$(helm upgrade --install redis bitnami/redis \
-    --namespace ${NAMESPACE} \
-    --create-namespace \
-    --values ${REDIS_VALUES_FILE} \
-    2>&1)
-HELM_EXIT=$?
-
-if [ $HELM_EXIT -ne 0 ]; then
-    if echo "$HELM_OUTPUT" | grep -q "cannot reuse a name"; then
-        helm uninstall redis -n ${NAMESPACE} --ignore-not-found 2>/dev/null || true
-        sleep 2
-        HELM_OUTPUT=$(helm install redis bitnami/redis \
-            --namespace ${NAMESPACE} \
-            --create-namespace \
-            --values ${REDIS_VALUES_FILE} \
-            2>&1)
-        HELM_EXIT=$?
-    fi
-fi
-
-if [ $HELM_EXIT -ne 0 ]; then
-    stop_spinner "error" "Redis Helm 배포 실패"
-    echo "$HELM_OUTPUT"
-    log_info "상태 확인: helm status redis -n ${NAMESPACE}"
-    exit 1
-fi
-
-stop_spinner "success" "Redis Helm Chart 배포 완료"
-
-# Redis Pod 준비 확인
-REDIS_TIMEOUT=300
-REDIS_ELAPSED=0
-REDIS_INTERVAL=3
-
-# show_pod_status와 유사하지만 Master+Replica 체크 로직이 있어 별도 루프 유지하되 로그 스타일 변경
-while [ $REDIS_ELAPSED -lt $REDIS_TIMEOUT ]; do
-    REDIS_PODS=$(kubectl get pods -n ${NAMESPACE} -l app.kubernetes.io/name=redis --no-headers 2>/dev/null | wc -l | tr -d ' ')
-    REDIS_READY=$(kubectl get pods -n ${NAMESPACE} -l app.kubernetes.io/name=redis --no-headers 2>/dev/null | grep "Running" | awk '$2 ~ /^[0-9]+\/[0-9]+$/ {split($2,a,"/"); if(a[1]==a[2]) print}' | wc -l | tr -d ' ')
+# 3. Redis
+(
+    SERVICE="redis"
+    echo "$(date +%s)" > "${DEPLOY_STATUS_DIR}/${SERVICE}.start"
+    SUCCESS=true
+    LOG_FILE="${DEPLOY_STATUS_DIR}/${SERVICE}.log"
     
-    # Sentinel 모드: Master 1개 + Replica 2개 = 3개 Pod
-    if [ "$REDIS_READY" -ge 3 ] && [ "$REDIS_PODS" -ge 3 ]; then
-        printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} ${GREEN}✅${NC} Redis Sentinel 준비 완료 (${REDIS_READY}/3 Pods)\n"
-        break
-    fi
-    
-    ERROR_PODS=$(kubectl get pods -n ${NAMESPACE} -l app.kubernetes.io/name=redis --no-headers 2>/dev/null | grep -E "ImagePullBackOff|ErrImagePull|CrashLoopBackOff|Error" | wc -l | tr -d ' ')
-    if [ "$ERROR_PODS" -gt 0 ]; then
-        printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} ${YELLOW}⚠️  Redis Pod 상태: ${REDIS_READY}/3 Ready (에러: ${ERROR_PODS}개)${NC}\n"
-        log_info "문제 Pod 확인 필요"
-        break
-    fi
-    
-    printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} 🔄 Redis: ${REDIS_READY}/${REDIS_PODS} Pods 준비됨 ${DIM}(${REDIS_ELAPSED}/${REDIS_TIMEOUT}s)${NC}"
-    
-    sleep $REDIS_INTERVAL
-    REDIS_ELAPSED=$((REDIS_ELAPSED + REDIS_INTERVAL))
-done
-
-if [ $REDIS_ELAPSED -ge $REDIS_TIMEOUT ]; then
-    printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} ${YELLOW}⚠️  Redis Pod 준비 타임아웃${NC}\n"
-fi
-
-# Step 3.5: Redis Insight 배포
-start_spinner "Redis Insight UI 배포 중..."
-if [ -f "k8s/infra/redis/redis-insight.yaml" ]; then
-    kubectl apply -f k8s/infra/redis/redis-insight.yaml >/dev/null 2>&1
-    stop_spinner "success" "Redis Insight 매니페스트 적용 완료"
-else
-    stop_spinner "warning" "Redis Insight 매니페스트가 없습니다"
-fi
-
-# Step 4: Kafka 클러스터 배포
-# echo -e "${CYAN}📦${NC} Kafka 클러스터 매니페스트 적용 중..."
-start_spinner "Kafka 클러스터 배포 중..."
-
-# Kind 기본 StorageClass 없으면 local-path-provisioner 설치 후 default 지정 (Kafka PVC용)
-DEFAULT_SC=$(kubectl get storageclass -o jsonpath='{.items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")].metadata.name}' 2>/dev/null || echo "")
-if [ -z "$DEFAULT_SC" ]; then
-    if ! kubectl get storageclass local-path &>/dev/null; then
-        # echo "   Kind에 default StorageClass 없음 → local-path-provisioner 설치 중..."
-        kubectl apply -f 'https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml' 2>/dev/null || \
-        kubectl apply -f 'https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml' 2>/dev/null || true
-        # echo "   local-path-provisioner Deployment 준비 대기 중..."
-        kubectl wait --for=condition=available deployment/local-path-provisioner -n local-path-storage --timeout=120s 2>/dev/null || true
-    fi
-    if kubectl get storageclass local-path &>/dev/null; then
-        kubectl patch storageclass local-path -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' 2>/dev/null || true
-        # echo "   default StorageClass: local-path"
-    elif kubectl get storageclass standard &>/dev/null; then
-        kubectl patch storageclass standard -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' 2>/dev/null || true
-    fi
-fi
-# Kafka: common(ConfigMap, Kafka CR) → local(NodePool, Kafka UI)
-# 변경 없으면 apply는 no-op. NodePool 삭제하지 않아 기존 Pod 유지.
-if [ -d "k8s/infra/kafka/common" ]; then
-    kubectl apply -f k8s/infra/kafka/common/
-fi
-
-if [ -d "k8s/infra/kafka/local" ]; then
-    for f in kafka-nodepool.yaml kafka-ui-deployment.yaml kafka-ui-service.yaml kafka-ui-externalname.yaml; do
-        [ -f "k8s/infra/kafka/local/$f" ] && kubectl apply -f "k8s/infra/kafka/local/$f"
-    done
-else
-    stop_spinner "error" "로컬용 Kafka 매니페스트가 없습니다"
-    exit 1
-fi
-stop_spinner "success" "Kafka 클러스터 매니페스트 적용 완료"
-
-# Kafka 이미 Ready면 대기 스킵 (변화 없을 때 Pod 재생성 방지)
-KAFKA_STATUS=$(kubectl get kafka kafka-cluster -n ${KAFKA_NAMESPACE} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "Unknown")
-if [ "$KAFKA_STATUS" == "True" ]; then
-    KAFKA_READY=$(kubectl get pods -n ${KAFKA_NAMESPACE} -l strimzi.io/cluster=kafka-cluster --no-headers 2>/dev/null | grep "Running" | wc -l | tr -d ' ')
-    log_success "Kafka 클러스터 이미 준비됨 (${KAFKA_READY} Pods)"
-else
-    # Kafka 클러스터 준비 대기 (Strimzi 3노드, 최대 5분)
-    # echo -e "${CYAN}⏳${NC} Kafka 클러스터 준비 대기 중 (3노드, 최대 5분)..."
-    KAFKA_TIMEOUT=300
-    KAFKA_ELAPSED=0
-    KAFKA_INTERVAL=3
-
-    while [ $KAFKA_ELAPSED -lt $KAFKA_TIMEOUT ]; do
-        KAFKA_STATUS=$(kubectl get kafka kafka-cluster -n ${KAFKA_NAMESPACE} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "Unknown")
-        if [ "$KAFKA_STATUS" == "True" ]; then
-            printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} ${GREEN}✅${NC} Kafka 클러스터 준비 완료 (${KAFKA_ELAPSED}초)\n"
-            break
+    {
+        # Redis가 이미 정상 실행 중인지 확인 (Sentinel 구조상 3개 이상의 포드 기대)
+        REDIS_RUNNING_COUNT=$(kubectl get pods -n ${NAMESPACE} -l app.kubernetes.io/name=redis --no-headers 2>/dev/null | grep "Running" | wc -l | tr -d ' ')
+        
+        if [ "$REDIS_RUNNING_COUNT" -lt 3 ]; then
+            log_info "Redis 배포 또는 업데이트를 시작합니다..." >> "$LOG_FILE"
+            # Bitnami Repo 추가 및 업데이트 (이미 있으면 건너뜀)
+            helm repo add bitnami https://charts.bitnami.com/bitnami >/dev/null 2>&1 || true
+            helm repo update bitnami >/dev/null 2>&1 || true
+            
+            # 원격 Bitnami 차트와 로컬 values.yaml 사용
+            helm upgrade --install redis bitnami/redis \
+                -n ${NAMESPACE} \
+                --values k8s/infra/redis/helm/values.yaml \
+                --wait --timeout 300s > "$LOG_FILE" 2>&1
+            
+            REDIS_TIMEOUT=300
+            REDIS_ELAPSED=0
+            while [ $REDIS_ELAPSED -lt $REDIS_TIMEOUT ]; do
+                # Redis Pod 개수 확인 (ready 상태)
+                REDIS_READY=$(kubectl get pods -n ${NAMESPACE} -l app.kubernetes.io/name=redis --no-headers 2>/dev/null | grep "Running" | wc -l | tr -d ' ')
+                
+                if [ "$REDIS_READY" -ge 3 ]; then
+                    break
+                fi
+                sleep 5
+                REDIS_ELAPSED=$((REDIS_ELAPSED + 5))
+            done
+            
+            if [ $REDIS_ELAPSED -ge $REDIS_TIMEOUT ]; then
+                SUCCESS=false
+                echo "Redis deployment timed out" >> "$LOG_FILE"
+            fi
+        else
+            echo "Redis is already running with $REDIS_RUNNING_COUNT replicas. Skipping deployment." >> "$LOG_FILE"
         fi
-        KAFKA_PODS=$(kubectl get pods -n ${KAFKA_NAMESPACE} -l strimzi.io/cluster=kafka-cluster --no-headers 2>/dev/null | grep -v "Evicted\|Failed\|Unknown" | wc -l | tr -d ' ')
-        KAFKA_READY=$(kubectl get pods -n ${KAFKA_NAMESPACE} -l strimzi.io/cluster=kafka-cluster --no-headers 2>/dev/null | grep "Running" | wc -l | tr -d ' ')
-        printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} 🔄 Kafka: ${KAFKA_READY}/${KAFKA_PODS} Pods 준비됨 ${DIM}(${KAFKA_ELAPSED}/${KAFKA_TIMEOUT}s)${NC}"
-        sleep $KAFKA_INTERVAL
-        KAFKA_ELAPSED=$((KAFKA_ELAPSED + KAFKA_INTERVAL))
-    done
+        
+        # Redis Insight (상태와 무관하게 확인/적용)
+        if [ -f "k8s/infra/redis/redis-insight.yaml" ]; then
+            kubectl apply -f k8s/infra/redis/redis-insight.yaml >/dev/null 2>&1
+        fi
+    } || SUCCESS=false
 
-    if [ $KAFKA_ELAPSED -ge $KAFKA_TIMEOUT ]; then
-        printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} ${YELLOW}⚠️  Kafka 클러스터 준비 지연${NC}\n"
-        log_info "상태 확인: kubectl get kafka -n ${KAFKA_NAMESPACE}"
+    if [ "$SUCCESS" = true ]; then
+        echo "success" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
+    else
+        echo "failed" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
     fi
-fi
+) &
+INFRA_PIDS+=($!)
+
+# 4. Kafka
+(
+    SERVICE="kafka"
+    echo "$(date +%s)" > "${DEPLOY_STATUS_DIR}/${SERVICE}.start"
+    SUCCESS=true
+    LOG_FILE="${DEPLOY_STATUS_DIR}/${SERVICE}.log"
+    
+    {
+        # StorageClass Check (Concurrent safe typically)
+        DEFAULT_SC=$(kubectl get storageclass -o jsonpath='{.items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")].metadata.name}' 2>/dev/null || echo "")
+        if [ -z "$DEFAULT_SC" ]; then
+            if ! kubectl get storageclass local-path &>/dev/null; then
+                kubectl apply -f 'https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml' >/dev/null 2>&1 || \
+                kubectl apply -f 'https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml' >/dev/null 2>&1 || true
+                kubectl wait --for=condition=available deployment/local-path-provisioner -n local-path-storage --timeout=120s >/dev/null 2>&1 || true
+            fi
+            kubectl patch storageclass local-path -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' >/dev/null 2>&1 || true
+        fi
+        
+        # Apply Manifests
+        if [ -d "k8s/infra/kafka/common" ]; then
+            kubectl apply -f k8s/infra/kafka/common/ > "$LOG_FILE" 2>&1
+        fi
+        if [ -d "k8s/infra/kafka/local" ]; then
+            for f in kafka-nodepool.yaml kafka-ui-deployment.yaml kafka-ui-service.yaml kafka-ui-externalname.yaml; do
+                [ -f "k8s/infra/kafka/local/$f" ] && kubectl apply -f "k8s/infra/kafka/local/$f" >> "$LOG_FILE" 2>&1
+            done
+        fi
+        
+        # Wait for Ready
+        KAFKA_TIMEOUT=300
+        KAFKA_ELAPSED=0
+        while [ $KAFKA_ELAPSED -lt $KAFKA_TIMEOUT ]; do
+            KAFKA_STATUS=$(kubectl get kafka kafka-cluster -n ${KAFKA_NAMESPACE} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "Unknown")
+            if [ "$KAFKA_STATUS" == "True" ]; then
+                break
+            fi
+            sleep 3
+            KAFKA_ELAPSED=$((KAFKA_ELAPSED + 3))
+        done
+        if [ $KAFKA_ELAPSED -ge $KAFKA_TIMEOUT ]; then
+            SUCCESS=false
+        fi
+    } || SUCCESS=false
+
+    if [ "$SUCCESS" = true ]; then
+        echo "success" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
+    else
+        echo "failed" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
+    fi
+) &
+INFRA_PIDS+=($!)
+
+# 5. MinIO
+(
+    SERVICE="minio"
+    echo "$(date +%s)" > "${DEPLOY_STATUS_DIR}/${SERVICE}.start"
+    SUCCESS=true
+    LOG_FILE="${DEPLOY_STATUS_DIR}/${SERVICE}.log"
+    
+    {
+        if [ -d "k8s/infra/minio" ]; then
+            kubectl apply -f k8s/infra/minio/ > "$LOG_FILE" 2>&1
+            
+            # Wait Pod
+            MINIO_TIMEOUT=120
+            MINIO_ELAPSED=0
+            while [ $MINIO_ELAPSED -lt $MINIO_TIMEOUT ]; do
+                MINIO_READY=$(kubectl get pods -n ${NAMESPACE} -l app=minio --no-headers 2>/dev/null | grep "Running" | wc -l | tr -d ' ')
+                if [ "$MINIO_READY" -ge 1 ]; then
+                    break
+                fi
+                sleep 3
+                MINIO_ELAPSED=$((MINIO_ELAPSED + 3))
+            done
+            if [ $MINIO_ELAPSED -ge $MINIO_TIMEOUT ]; then
+                SUCCESS=false
+            else
+                # Bucket Job
+                if [ -f "k8s/infra/minio/job-create-bucket.yaml" ]; then
+                    kubectl apply -f k8s/infra/minio/job-create-bucket.yaml >/dev/null 2>&1
+                fi
+            fi
+        fi
+    } || SUCCESS=false
+
+    if [ "$SUCCESS" = true ]; then
+        echo "success" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
+    else
+        echo "failed" > "${DEPLOY_STATUS_DIR}/${SERVICE}.status"
+    fi
+) &
+INFRA_PIDS+=($!)
+
+# 모니터링 시작
+monitor_deployment_status "${INFRA_PIDS[@]}"
+
+# 서비스 목록 복구 (앱 배포용)
+SERVICES=("${APP_SERVICES[@]}")
+SERVICE_LABELS=("${APP_SERVICE_LABELS[@]}")
+
+# 로그 정리 (선택적)
+# rm -f "${DEPLOY_STATUS_DIR}"/*.log
+
 echo ""
-
-# Step 4.5: MinIO 배포 (Storage 서비스용)
-start_spinner "MinIO 배포 중..."
-if [ -d "k8s/infra/minio" ]; then
-    kubectl apply -f k8s/infra/minio/ >/dev/null 2>&1
-    stop_spinner "success" "MinIO 매니페스트 적용 완료"
-    
-    # MinIO Pod 준비 대기
-    # echo -e "${CYAN}⏳${NC} MinIO Pod 준비 확인 중..."
-    MINIO_TIMEOUT=120
-    MINIO_ELAPSED=0
-    MINIO_INTERVAL=3
-    
-    while [ $MINIO_ELAPSED -lt $MINIO_TIMEOUT ]; do
-        MINIO_READY=$(kubectl get pods -n ${NAMESPACE} -l app=minio --no-headers 2>/dev/null | grep "Running" | awk '$2 ~ /^[0-9]+\/[0-9]+$/ {split($2,a,"/"); if(a[1]==a[2]) print}' | wc -l | tr -d ' ')
-        if [ "$MINIO_READY" -ge 1 ]; then
-            printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} ${GREEN}✅${NC} MinIO 준비 완료 (${MINIO_ELAPSED}초)\n"
-            break
-        fi
-        printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} 🔄 MinIO: ${MINIO_READY}/1 Pod 준비 중 ${DIM}(${MINIO_ELAPSED}/${MINIO_TIMEOUT}s)${NC}"
-        sleep $MINIO_INTERVAL
-        MINIO_ELAPSED=$((MINIO_ELAPSED + MINIO_INTERVAL))
-    done
-    
-    if [ $MINIO_ELAPSED -ge $MINIO_TIMEOUT ]; then
-        printf "\r${CLEAR_LINE}${CYAN}│   ├──${NC} ${YELLOW}⚠️  MinIO 준비 타임아웃${NC}\n"
-    fi
-    
-    # interview-archives 버킷 생성 Job 실행
-    if [ -f "k8s/infra/minio/job-create-bucket.yaml" ]; then
-        kubectl apply -f k8s/infra/minio/job-create-bucket.yaml >/dev/null 2>&1
-        log_success "MinIO 버킷 생성 Job 실행"
-    fi
-else
-    stop_spinner "warning" "MinIO 매니페스트 없음 (건너뜀)"
-fi
 
 # =============================================================================
 # 2. Secrets 확인 및 입력 생성
@@ -1089,47 +1064,14 @@ fi
 
 log_section "애플리케이션 배포"
 
-# 서비스별 배포
-SERVICES=("llm" "stt" "tts" "storage" "document" "core" "bff" "socket")
-SERVICE_LABELS=("app=llm" "app=stt" "app=tts" "app=storage" "app=document" "app=core" "app=bff" "app=socket")
-
-# 선택적 배포 로직 추가
-SELECTED_SERVICES=()
-if [ $# -gt 0 ]; then
-    for arg in "$@"; do
-        LOADING=false
-        for svc in "${SERVICES[@]}"; do
-            if [ "$svc" == "$arg" ]; then
-                SELECTED_SERVICES+=("$svc")
-                LOADING=true
-                break
-            fi
-        done
-        if [ "$LOADING" = false ]; then
-            log_warning "알 수 없는 서비스: $arg (무시됨)"
-        fi
-    done
-fi
+# 애플리케이션 서비스 레이블 정의 (SERVICES 배열은 상단에서 확정됨)
+SERVICE_LABELS=()
+for SVC in "${SERVICES[@]}"; do
+    SERVICE_LABELS+=("app=${SVC}")
+done
 
 if [ ${#SELECTED_SERVICES[@]} -gt 0 ]; then
-    log_info "선택된 서비스만 배포합니다: ${SELECTED_SERVICES[*]}"
-    # SERVICES 배열을 선택된 서비스 순서대로 재구성 (의존성 순서 유지 로직은 여기서는 단순 필터링으로 처리)
-    # 기존 순서를 유지하면서 필터링
-    NEW_SERVICES=()
-    NEW_LABELS=()
-    for i in "${!SERVICES[@]}"; do
-        SVC="${SERVICES[$i]}"
-        LABEL="${SERVICE_LABELS[$i]}"
-        for SEL in "${SELECTED_SERVICES[@]}"; do
-            if [ "$SVC" == "$SEL" ]; then
-                NEW_SERVICES+=("$SVC")
-                NEW_LABELS+=("$LABEL")
-                break
-            fi
-        done
-    done
-    SERVICES=("${NEW_SERVICES[@]}")
-    SERVICE_LABELS=("${NEW_LABELS[@]}")
+    log_info "선택된 서비스만 배포합니다: ${SERVICES[*]}"
 fi
 
 # 로컬 배포: common + local만 참조 (prod 미참조). 둘 다 없으면 에러
