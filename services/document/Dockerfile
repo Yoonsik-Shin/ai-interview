@@ -20,6 +20,7 @@ ENV HF_HOME=/home/appuser/.cache/huggingface \
     HUGGINGFACE_HUB_CACHE=/home/appuser/.cache/huggingface \
     TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface \
     PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app:/app/generated" \
     PORT=8100
 
 WORKDIR /app

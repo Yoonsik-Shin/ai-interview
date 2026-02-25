@@ -10,8 +10,7 @@ from utils.log_format import log_json
 
 
 async def process_tts_event(event: dict[str, Any], redis_client) -> None:
-    interview_id = event.get('interviewId')  # legacy sessionUuid
-    interview_session_id = event.get('interviewSessionId')  # 실제 PK (ULID)
+    interview_id = event.get('interviewId')
     sentence = event.get('sentence', '')
     sentence_index = event.get('sentenceIndex', 0)
     persona = event.get('persona', 'COMFORTABLE')
@@ -19,14 +18,13 @@ async def process_tts_event(event: dict[str, Any], redis_client) -> None:
     trace_id = event.get('traceId')
     user_id = event.get('userId')
 
-    if not interview_session_id or not sentence:
-        log_json('tts_event_missing_fields', interview_id=interview_id, interview_session_id=interview_session_id, sentence_index=sentence_index)
+    if not interview_id or not sentence:
+        log_json('tts_event_missing_fields', interview_id=interview_id, sentence_index=sentence_index)
         return
 
     log_json(
         'tts_processing_start',
         interview_id=interview_id,
-        interview_session_id=interview_session_id,
         sentence_index=sentence_index,
         mode=mode,
         persona=persona,
@@ -43,19 +41,19 @@ async def process_tts_event(event: dict[str, Any], redis_client) -> None:
         audio_bytes = await synthesize_edge(sentence, persona)
 
     if not audio_bytes:
-        log_json('tts_generation_failed', interview_id=interview_id, interview_session_id=interview_session_id)
+        log_json('tts_generation_failed', interview_id=interview_id)
         return
 
-    # interviewSessionId를 사용하여 채널 이름 생성
-    channel = f'interview:audio:{interview_session_id}'
+    # interviewId를 사용하여 채널 이름 생성
+    channel = f'interview:audio:{interview_id}'
     payload = {
-        'interviewId': interview_id,  # legacy
-        'interviewSessionId': interview_session_id,  # 실제 ID
+        'interviewId': interview_id,
         'sentenceIndex': sentence_index,
         'audioData': base64.b64encode(audio_bytes).decode('utf-8'),
         'timestamp': datetime.now().isoformat(),
         'persona': persona,
         'mode': mode,
+        'text': sentence,
     }
     if trace_id:
         payload['traceId'] = trace_id
@@ -67,7 +65,6 @@ async def process_tts_event(event: dict[str, Any], redis_client) -> None:
         'tts_published',
         channel=channel,
         interview_id=interview_id,
-        interview_session_id=interview_session_id,
         sentence_index=sentence_index,
         size=len(audio_bytes),
     )

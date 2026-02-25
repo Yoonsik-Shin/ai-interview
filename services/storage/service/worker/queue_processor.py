@@ -121,15 +121,33 @@ def process_audio_queue(
         )
 
         # Upload to Object Storage
-        object_url = storage_engine.upload_file(
+        upload_result = storage_engine.upload_file(
             interview_id, user_id, total_audio, metadata
         )
 
-        if object_url:
+        if upload_result:
+            object_url, object_key = upload_result
+            
+            # Generate Presigned URL for verification (publicly accessible for a limited time)
+            presigned_url = storage_engine.generate_presigned_url(object_key)
+            
+            # Publish to Redis Pub/Sub for real-time notification to socket service
+            notification_payload = {
+                "interviewId": interview_id,
+                "objectUrl": presigned_url or object_url,
+                "objectKey": object_key,
+                "timestamp": metadata.get("timestamp")
+            }
+            redis_client.publish(
+                f"interview:audio:completed:{interview_id}", 
+                json.dumps(notification_payload)
+            )
+
             log_json(
                 "queue_processing_completed",
                 queue_key=queue_key,
                 object_url=object_url,
+                presigned_url_generated=bool(presigned_url)
             )
             return True
         else:

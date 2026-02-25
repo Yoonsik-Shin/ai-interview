@@ -1,7 +1,7 @@
 import grpc
 from concurrent import futures
 import numpy as np
-from generated import document_pb2, document_pb2_grpc
+from document.v1 import document_pb2, document_pb2_grpc
 from engine.embedding_engine import EmbeddingEngine
 from utils.log_format import log_json
 

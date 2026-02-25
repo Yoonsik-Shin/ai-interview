@@ -4,8 +4,11 @@ import redis
 import config
 from utils.log_format import log_json
 from engine.object_storage import ObjectStorageEngine
+from engine.mongodb import MongoDBEngine
 from event.consumer import init_redis_client
 from service.worker.queue_processor import process_audio_queue
+from service.worker.history_sink import start_history_sink_worker
+import threading
 
 
 class StorageService:
@@ -14,6 +17,7 @@ class StorageService:
     def __init__(self):
         self.redis_client: redis.Redis = None
         self.storage_engine: ObjectStorageEngine = None
+        self.mongodb_engine: MongoDBEngine = None
         self.running = False
 
     def initialize(self):
@@ -42,12 +46,29 @@ class StorageService:
             public_endpoint=config.OBJECT_STORAGE_PUBLIC_ENDPOINT,
         )
 
+        # Initialize MongoDB
+        self.mongodb_engine = MongoDBEngine(
+            uri=config.MONGODB_URI,
+            database_name=config.MONGODB_DB_NAME,
+            collection_name=config.MONGODB_COLLECTION
+        )
+        self.mongodb_engine.connect()
+
         log_json("storage_service_initialized")
 
     def start(self):
         """Start the storage service worker loop"""
         log_json("storage_service_starting")
         self.running = True
+
+        # Start History Sync Worker in a separate thread
+        history_thread = threading.Thread(
+            target=start_history_sink_worker,
+            args=(self.mongodb_engine,),
+            daemon=True
+        )
+        history_thread.start()
+        log_json("history_sink_thread_started")
 
         while self.running:
             try:
@@ -73,6 +94,9 @@ class StorageService:
         while True:
             cursor, keys = self.redis_client.scan(cursor=cursor, match=pattern, count=10)
 
+            if keys:
+                log_json("redis_scan_found_keys", pattern=pattern, count=len(keys), keys=[k.decode("utf-8") if isinstance(k, bytes) else k for k in keys])
+
             for key in keys:
                 # Parse key: interview:audio:queue:{interview_id}
                 key_str = key.decode("utf-8") if isinstance(key, bytes) else key
@@ -81,6 +105,7 @@ class StorageService:
                 if len(parts) >= 4:
                     try:
                         interview_id = parts[3]
+                        log_json("processing_interview_queue", interview_id=interview_id, key=key_str)
                         # TODO: Retrieve actual user_id from metadata or separate Redis key
                         user_id = interview_id  # Placeholder
 
@@ -109,5 +134,7 @@ class StorageService:
         """Stop the storage service and cleanup resources"""
         log_json("storage_service_stopping")
         self.running = False
+        if self.mongodb_engine:
+            self.mongodb_engine.close()
         log_json("storage_service_stopped")
 

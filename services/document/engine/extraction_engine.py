@@ -7,7 +7,7 @@ import config
 from utils.log_format import log_json
 import requests
 import grpc
-from generated import storage_pb2, storage_pb2_grpc
+from storage.v1 import storage_pb2, storage_pb2_grpc
 
 class ExtractionEngine:
     def __init__(self):

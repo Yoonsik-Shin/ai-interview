@@ -61,8 +61,8 @@ class ObjectStorageEngine:
                 raise
 
     def upload_file(
-        self, interview_id: int, user_id: int, audio_data: bytes, metadata: dict
-    ) -> Optional[str]:
+        self, interview_id: str, user_id: str, audio_data: bytes, metadata: dict
+    ) -> Optional[tuple[str, str]]:
         """
         Upload audio file to Object Storage
 
@@ -73,7 +73,7 @@ class ObjectStorageEngine:
             metadata: Metadata (sample_rate, channels, format, etc.)
 
         Returns:
-            URL of the uploaded object, or None if upload failed
+            Tuple of (URL, Key) of the uploaded object, or None if upload failed
         """
         if not self.client:
             log_json("s3_client_not_initialized")
@@ -110,7 +110,7 @@ class ObjectStorageEngine:
                 size_bytes=len(audio_data),
             )
 
-            return object_url
+            return object_url, object_key
 
         except Exception as e:
             log_json("file_upload_failed", interview_id=interview_id, error=str(e))

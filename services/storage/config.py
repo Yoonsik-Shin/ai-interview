@@ -61,10 +61,17 @@ OBJECT_STORAGE_ACCESS_KEY = _env("OBJECT_STORAGE_ACCESS_KEY", "")
 OBJECT_STORAGE_SECRET_KEY = _env("OBJECT_STORAGE_SECRET_KEY", "")
 OBJECT_STORAGE_BUCKET = _env("OBJECT_STORAGE_BUCKET", "interview-archives")
 OBJECT_STORAGE_REGION = _env("OBJECT_STORAGE_REGION", "ap-seoul-1")
+ 
+# MongoDB Configuration
+MONGODB_URI = _env("MONGODB_URI", "mongodb://root:rootpassword@mongo.unbrdn.svc.cluster.local:27017/unbrdn?authSource=admin")
+MONGODB_DB_NAME = _env("MONGODB_DB_NAME", "unbrdn")
+MONGODB_COLLECTION = _env("MONGODB_COLLECTION", "interview_messages")
 
 # Kafka Configuration
 KAFKA_BROKER = _env("KAFKA_BROKER", "kafka:29092")
 STORAGE_COMPLETED_TOPIC = _env("STORAGE_COMPLETED_TOPIC", "storage.completed")
+INTERVIEW_MESSAGES_TOPIC = _env("INTERVIEW_MESSAGES_TOPIC", "interview.messages")
+KAFKA_GROUP_ID = _env("KAFKA_GROUP_ID", "storage-service-group")
 
 # Worker Configuration
 QUEUE_SCAN_INTERVAL_SEC = _env_int("QUEUE_SCAN_INTERVAL_SEC", 10)

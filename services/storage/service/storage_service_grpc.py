@@ -1,6 +1,6 @@
 import grpc
 from concurrent import futures
-from generated import storage_pb2, storage_pb2_grpc
+from storage.v1 import storage_pb2, storage_pb2_grpc
 from utils.log_format import log_json
 from config import PORT # gRPC 포트도 기존 PORT 환경변수 사용
 

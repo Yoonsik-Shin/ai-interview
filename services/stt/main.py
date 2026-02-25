@@ -5,6 +5,11 @@ import multiprocessing
 import sys
 from service.stt_service import serve_grpc
 
+import os
+
+# Add generated directory to sys.path to fix gRPC internal import issues
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'generated')))
+
 if __name__ == "__main__":
     # uv driven execution
     # Set start method to spawn for safety with libraries using threads/locks, though single process gRPC usually fine.

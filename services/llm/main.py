@@ -7,6 +7,11 @@ import threading
 from service.grpc_handler import serve_grpc
 from utils.log_format import log_json
 
+import os
+
+# Add generated directory to sys.path to fix gRPC internal import issues
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'generated')))
+
 if __name__ == "__main__":
     try:
         # gRPC 서버를 메인 스레드에서 실행 (블로킹)
