@@ -13,7 +13,7 @@ export class SendTranscriptCommand {
 export class SendTranscriptUseCase {
     async execute(command: SendTranscriptCommand): Promise<void> {
         const { server, interviewId, payload } = command;
-        const room = `interview:${interviewId}`;
+        const room = `interview-session-${interviewId}`;
 
         if (payload.type === "STAGE_CHANGE") {
             server.to(room).emit("interview:stage_changed", {
