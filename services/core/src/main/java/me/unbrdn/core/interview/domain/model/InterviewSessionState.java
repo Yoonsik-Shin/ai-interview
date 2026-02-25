@@ -1,10 +1,13 @@
 package me.unbrdn.core.interview.domain.model;
 
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import me.unbrdn.core.interview.domain.entity.InterviewSession;
 
 /** 면접 진행 중 빈번하게 변경되는 세션의 '뜨거운(Hot)' 상태를 관리하는 객체. Redis Hash에 저장되어 빠른 읽기/쓰기를 지원합니다. */
 @Data
@@ -18,9 +21,11 @@ public class InterviewSessionState implements Serializable {
     private String lastInterviewerId;
     private Integer turnCount;
     private Long remainingTimeSeconds;
+    private Long startTime; // 면접 시작 시간 (Epoch Memory)
+    private Long cumulatedPauseSeconds; // 누적 일시정지 시간
 
     // Sequential Intro fields
-    private java.util.List<String> participatingPersonas;
+    private List<String> participatingPersonas;
     private Integer nextPersonaIndex;
     private Integer selfIntroRetryCount;
 
@@ -28,6 +33,22 @@ public class InterviewSessionState implements Serializable {
         return InterviewSessionState.builder()
                 .currentDifficulty(3) // 기본값 3
                 .turnCount(0)
+                .selfIntroRetryCount(0)
+                .build();
+    }
+
+    public static InterviewSessionState fromEntity(InterviewSession session) {
+        return InterviewSessionState.builder()
+                .currentDifficulty(session.getCurrentDifficulty())
+                .lastInterviewerId(session.getLastInterviewerId())
+                .turnCount(session.getTurnCount())
+                .remainingTimeSeconds(session.getTargetDurationMinutes() * 60L)
+                .selfIntroRetryCount(0)
+                .participatingPersonas(
+                        session.getRoles() != null
+                                ? session.getRoles().stream().map(Enum::name).toList()
+                                : Collections.emptyList())
+                .nextPersonaIndex(0)
                 .build();
     }
 }

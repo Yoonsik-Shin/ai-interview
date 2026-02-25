@@ -3,7 +3,9 @@ package me.unbrdn.core.interview.application.interactor;
 import lombok.RequiredArgsConstructor;
 import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
+import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
+import me.unbrdn.core.interview.domain.model.InterviewSessionState;
 import org.springframework.stereotype.Service;
 
 /** 면접 세션의 현재 Stage 조회 Interactor */
@@ -12,26 +14,22 @@ import org.springframework.stereotype.Service;
 public class GetInterviewStageInteractor implements GetInterviewStageUseCase {
 
     private final InterviewPort interviewPort;
-    private final me.unbrdn.core.interview.application.port.out.ManageSessionStatePort
-            sessionStatePort;
+    private final ManageSessionStatePort sessionStatePort;
 
     @Override
     public InterviewStageResult execute(GetInterviewStageQuery query) {
         InterviewSession session =
                 interviewPort
-                        .loadById(query.interviewSessionId())
+                        .loadById(query.interviewId())
                         .orElseThrow(
                                 () ->
                                         new IllegalArgumentException(
-                                                "Interview session not found: "
-                                                        + query.interviewSessionId()));
+                                                "Interview not found: " + query.interviewId()));
 
         Integer retryCount =
                 sessionStatePort
-                        .getState(query.interviewSessionId().toString())
-                        .map(
-                                me.unbrdn.core.interview.domain.model.InterviewSessionState
-                                        ::getSelfIntroRetryCount)
+                        .getState(query.interviewId().toString())
+                        .map(InterviewSessionState::getSelfIntroRetryCount)
                         .orElse(0);
 
         return new InterviewStageResult(

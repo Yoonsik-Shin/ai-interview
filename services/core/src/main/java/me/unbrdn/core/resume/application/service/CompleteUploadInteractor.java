@@ -3,7 +3,10 @@ package me.unbrdn.core.resume.application.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.unbrdn.core.resume.application.dto.CompleteUploadCommand;
+import me.unbrdn.core.resume.application.dto.CompleteUploadResult;
+import me.unbrdn.core.resume.application.dto.ResumeDetailDto;
 import me.unbrdn.core.resume.application.port.in.CompleteUploadUseCase;
+import me.unbrdn.core.resume.application.port.out.DeleteFilePort;
 import me.unbrdn.core.resume.application.port.out.GeneratePresignedUrlPort;
 import me.unbrdn.core.resume.application.port.out.LoadResumePort;
 import me.unbrdn.core.resume.application.port.out.SaveResumePort;
@@ -23,14 +26,14 @@ public class CompleteUploadInteractor implements CompleteUploadUseCase {
     private final GeneratePresignedUrlPort generatePresignedUrlPort;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ResumeVectorService resumeVectorService;
-    private final me.unbrdn.core.resume.application.port.out.DeleteFilePort deleteFilePort;
+    private final DeleteFilePort deleteFilePort;
 
     private static final String TOPIC_RESUME_UPLOADED =
             "resume.uploaded"; // Should match Python consumer config
 
     @Override
     @Transactional
-    public void execute(CompleteUploadCommand command) {
+    public CompleteUploadResult execute(CompleteUploadCommand command) {
         // 1. Load New Resume (Uploaded record)
         Resumes newResume =
                 loadResumePort
@@ -81,28 +84,11 @@ public class CompleteUploadInteractor implements CompleteUploadUseCase {
                             command.getExistingResumeId(),
                             e);
                 }
-
-                // 2.3 기존 레코드 정보를 새 레코드 정보로 업데이트 (단순 교체 전략)
-                // 여기서는 기존 레코드를 삭제하고 새 레코드를 쓰는 대신,
-                // 기존 레코드를 폐기하고 새 레코드를 활성화하는 방향으로 갈 수 있으나,
-                // 사용자 입장에서 ID가 유지되는 것이 좋다면 데이터를 덮어쓰거나,
-                // 새로운 ID로 교체됨을 인지시켜야 함.
-                // 여기서는 "Standardize" 목적에 맞게 기존 레코드를 삭제하고 새 레코드를 메인으로 둡니다.
-                // (Interview 서비스에서 기존 resumeId를 참조하고 있을 경우를 대비해
-                // 기존 레코드를 삭제하기 전 주의가 필요하지만, 요구사항은 "제거하고 변경"임)
-
-                // 임시로 기존 레코드를 삭제합니다.
-                // TODO: 만약 인터뷰 결과가 이 ID를 참조하고 있다면 Soft Delete나
-                // 혹은 기존 레코드에 새로운 filePath를 덮어쓰는 방식이 안전함.
-                // 여기서는 단순함을 위해 기존 레코드를 삭제합니다.
-                // deleteResumePort가 필요할 수 있음. 하지만 여기서는 일단 Interactor에서 하던 것처럼 삭제 로직 수행.
-                // (현재 DeleteResumeInteractor가 존재하므로 이를 참조하거나, deleteResumePort를 직접 호출)
-                // 일단 여기서는 "Update"의 의미를 "Replace"로 해석하여 새 레코드를 사용합니다.
             }
 
-            // 3. Generate Download URL for the Document Service
+            // 3. Generate Download URL for the Document Service (Internal routing)
             String downloadUrl =
-                    generatePresignedUrlPort.generateDownloadUrl(newResume.getFilePath());
+                    generatePresignedUrlPort.generateDownloadUrl(newResume.getFilePath(), true);
 
             // 4. Update Status to PROCESSING
             newResume.startProcessing();
@@ -135,6 +121,21 @@ public class CompleteUploadInteractor implements CompleteUploadUseCase {
                     newResume.getId(),
                     command.getValidationText() != null && !command.getValidationText().isEmpty(),
                     command.getEmbedding() != null);
+
+            // 7. Return Enriched Result (Public URL for Frontend)
+            String publicUrl =
+                    generatePresignedUrlPort.generateDownloadUrl(newResume.getFilePath(), false);
+            ResumeDetailDto detailDto =
+                    ResumeDetailDto.builder()
+                            .id(newResume.getId())
+                            .title(newResume.getTitle())
+                            .content(newResume.getContent() != null ? newResume.getContent() : "")
+                            .status(newResume.getStatus().name())
+                            .createdAt(newResume.getCreatedAt())
+                            .fileUrl(publicUrl)
+                            .build();
+
+            return CompleteUploadResult.builder().success(true).resume(detailDto).build();
 
         } catch (Exception e) {
             log.error("Failed to complete upload/update process: {}", e.getMessage());

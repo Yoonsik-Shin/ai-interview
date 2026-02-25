@@ -10,7 +10,7 @@ import me.unbrdn.core.interview.application.port.out.CallLlmPort;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPort;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
-// import me.unbrdn.core.interview.domain.enums.InterviewPersona; // Removed
+import me.unbrdn.core.interview.domain.enums.InterviewRole;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -28,18 +28,17 @@ public class InterviewSequentialIntroListener {
     @EventListener
     public void handleInterviewerIntroFinished(InterviewerIntroFinishedEvent event) {
         log.info(
-                "Received InterviewerIntroFinishedEvent for session: {}",
-                event.getInterviewSessionId());
+                "Received InterviewerIntroFinishedEvent for interview: {}", event.getInterviewId());
 
         try {
-            UUID sessionId = UUID.fromString(event.getInterviewSessionId());
-            var sessionOpt = interviewPort.loadById(sessionId);
+            UUID interviewId = UUID.fromString(event.getInterviewId());
+            var sessionOpt = interviewPort.loadById(interviewId);
 
             sessionOpt.ifPresent(
                     session -> {
                         if (session.getStage() == InterviewStage.INTERVIEWER_INTRO) {
                             sessionStatePort
-                                    .getState(event.getInterviewSessionId())
+                                    .getState(event.getInterviewId())
                                     .ifPresent(
                                             state -> {
                                                 List<String> personas =
@@ -58,16 +57,19 @@ public class InterviewSequentialIntroListener {
                                                             personas.get(
                                                                     nextIdx); // Actually role names
                                                     // now
-                                                    me.unbrdn.core.interview.domain.enums
-                                                                    .InterviewRole
-                                                            nextRole =
-                                                                    me.unbrdn.core.interview.domain
-                                                                            .enums.InterviewRole
-                                                                            .valueOf(nextRoleName);
+                                                    InterviewRole nextRole =
+                                                            InterviewRole.valueOf(nextRoleName);
 
                                                     log.info(
                                                             "Triggering next sequential interviewer intro: {}",
                                                             nextRoleName);
+
+                                                    // Increment turn count to avoid duplicate key
+                                                    // in InterviewQnA
+                                                    sessionStatePort.incrementTurnCount(
+                                                            event.getInterviewId());
+                                                    session.incrementTurnCount();
+                                                    interviewPort.save(session);
 
                                                     long totalDurationSeconds =
                                                             session.getTargetDurationMinutes()
@@ -78,26 +80,20 @@ public class InterviewSequentialIntroListener {
                                                     CallLlmCommand llmCommand =
                                                             CallLlmCommand.builder()
                                                                     .interviewId(
-                                                                            event.getInterviewId())
-                                                                    .interviewSessionId(
                                                                             session.getId()
                                                                                     .toString())
                                                                     .userId(event.getUserId())
                                                                     .userText(
-                                                                            "면접관님, 지원자에게 간단히 본인 소개를 해주세요.")
+                                                                            "앞선 면접관의 소개가 끝났습니다. 이제 면접관님의 차례입니다. 지원자에게 짧고 밝게 본인 소개를 해주세요. 단, 이름이나 '[면접관 이름]' 같은 임의의 텍스트를 사용하지 말고 (예: 기술 면접관입니다) 본인의 직무 역할만으로 자연스럽게 소개해주세요.")
                                                                     .inputRole("system")
                                                                     .availableRoles(
                                                                             List.of(nextRole))
                                                                     .personality(
                                                                             session
-                                                                                    .getPersonality()) // Same
-                                                                    // personality
-                                                                    // for all
+                                                                                    .getPersonality())
                                                                     .history(
-                                                                            conversationHistoryPort
-                                                                                    .loadHistory(
-                                                                                            event
-                                                                                                    .getInterviewId()))
+                                                                            java.util.Collections
+                                                                                    .emptyList())
                                                                     .mode(event.getMode())
                                                                     .stage(session.getStage())
                                                                     .interviewerCount(
@@ -131,7 +127,7 @@ public class InterviewSequentialIntroListener {
                                                     // Update next index
                                                     state.setNextPersonaIndex(nextIdx + 1);
                                                     sessionStatePort.saveState(
-                                                            event.getInterviewSessionId(), state);
+                                                            event.getInterviewId(), state);
                                                 } else {
                                                     log.info(
                                                             "All interviewers introduced. Transitioning to SELF_INTRO_PROMPT.");
