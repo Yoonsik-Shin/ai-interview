@@ -68,6 +68,9 @@ dependencies {
 	implementation platform('org.springframework.ai:spring-ai-bom:1.0.0-M4')
 	implementation 'org.springframework.ai:spring-ai-pgvector-store-spring-boot-starter'
 
+	// 3-3. MongoDB
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+
 	// 4. 편의 도구 (Lombok)
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'

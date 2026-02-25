@@ -14,8 +14,10 @@ public class RefreshTokenRedisAdapter implements RefreshTokenPort {
     private final StringRedisTemplate redisTemplate;
     private final Duration refreshTokenTtl;
 
-    public RefreshTokenRedisAdapter(StringRedisTemplate redisTemplate,
-            @Value("${jwt.refresh-token-expiration-seconds:604800}") long refreshTokenExpirationSeconds) {
+    public RefreshTokenRedisAdapter(
+            StringRedisTemplate redisTemplate,
+            @Value("${jwt.refresh-token-expiration-seconds:604800}")
+                    long refreshTokenExpirationSeconds) {
         this.redisTemplate = redisTemplate;
         this.refreshTokenTtl = Duration.ofSeconds(refreshTokenExpirationSeconds);
     }

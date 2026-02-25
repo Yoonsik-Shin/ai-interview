@@ -1,13 +1,5 @@
 package me.unbrdn.core.payment.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,31 +18,20 @@ import me.unbrdn.core.user.domain.entity.User;
  * <p>비즈니스 규칙: - 결제 완료(COMPLETED) 후 크레딧 지급 또는 인벤토리 추가 - 환불(REFUNDED) 시 크레딧 차감 또는 인벤토리 회수 - 모든 상태 변경은
  * 추적 가능해야 함 (updated_at)
  */
-@Entity
-@Table(name = "payment")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment extends BaseTimeEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false)
     private Integer amount;
 
-    @Column(nullable = false, length = 10)
     private String currency;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
     private PaymentStatus status;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pg_provider_id", nullable = false)
     private PGProvider pgProvider;
 
-    @Column(name = "pg_transaction_id", nullable = false, unique = true, length = 255)
     private String pgTransactionId;
 
     private Payment(

@@ -20,16 +20,14 @@ public class RedisTtsQueueAdapter implements PushTtsQueuePort {
                 Map.of(
                         "interviewId",
                         command.getInterviewId(),
-                        "interviewSessionId",
-                        command.getInterviewSessionId(),
                         "sentence",
                         command.getSentence(),
                         "sentenceIndex",
                         command.getSentenceIndex(),
-                        "persona",
-                        command.getPersona(),
                         "mode",
-                        command.getMode());
+                        command.getMode(),
+                        "persona",
+                        command.getPersonaId() != null ? command.getPersonaId() : "DEFAULT");
 
         // GenericJacksonJsonRedisSerializer will handle the serialization
         redisTemplate.opsForList().rightPush(TTS_QUEUE, message);

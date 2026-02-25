@@ -1,8 +1,5 @@
 package me.unbrdn.core.subscription.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -20,22 +17,16 @@ import me.unbrdn.core.common.domain.BaseTimeEntity;
  *
  * <p>비즈니스 규칙: - 플랜은 삭제하지 않고 deprecated_at으로 관리 (과거 구독 이력 보존) - 각 플랜은 여러 개의 PlanQuota를 가질 수 있음
  */
-@Entity
-@Table(name = "plan")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Plan extends BaseTimeEntity {
 
-    @Column(nullable = false, unique = true, length = 100)
     private String name;
 
-    @Column(nullable = false)
     private Integer price;
 
-    @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "deprecated_at")
     private LocalDateTime deprecatedAt;
 
     private Plan(String name, Integer price, String description) {

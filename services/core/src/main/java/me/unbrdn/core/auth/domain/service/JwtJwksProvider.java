@@ -17,8 +17,10 @@ public class JwtJwksProvider {
     private final JwtKeyProvider keyProvider;
 
     public Map<String, Object> getJwks() {
-        List<Map<String, String>> keys = keyProvider.getKeysById().values().stream().map(this::toJwk)
-                .collect(Collectors.toList());
+        List<Map<String, String>> keys =
+                keyProvider.getKeysById().values().stream()
+                        .map(this::toJwk)
+                        .collect(Collectors.toList());
         Map<String, Object> jwks = new LinkedHashMap<>();
         jwks.put("keys", keys);
         return jwks;

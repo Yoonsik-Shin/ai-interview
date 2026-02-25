@@ -79,7 +79,7 @@ public class SttTranscriptRedisStreamConsumer
             Map<String, String> body = message.getValue();
 
             // STT payload 파싱
-            String interviewSessionId = body.get("interviewSessionId");
+            String interviewId = body.get("interviewId");
             String text = body.get("text");
             String userId = body.get("userId");
             String traceId = body.get("traceId");
@@ -95,7 +95,7 @@ public class SttTranscriptRedisStreamConsumer
             // ProcessUserAnswerCommand 생성
             ProcessUserAnswerCommand command =
                     ProcessUserAnswerCommand.builder()
-                            .interviewId(interviewSessionId)
+                            .interviewId(interviewId)
                             .userId(userId)
                             .userText(text)
                             .persona("COMFORTABLE") // 기본값, 추후 payload에서 받을 수 있음

@@ -1,7 +1,8 @@
 package me.unbrdn.core.resume.application.port.in;
 
 import me.unbrdn.core.resume.application.dto.CompleteUploadCommand;
+import me.unbrdn.core.resume.application.dto.CompleteUploadResult;
 
 public interface CompleteUploadUseCase {
-    void execute(CompleteUploadCommand command);
+    CompleteUploadResult execute(CompleteUploadCommand command);
 }

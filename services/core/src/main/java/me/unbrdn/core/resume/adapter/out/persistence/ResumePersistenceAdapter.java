@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import me.unbrdn.core.resume.adapter.out.persistence.repository.ResumeJpaRepository;
 import me.unbrdn.core.resume.application.port.out.DeleteResumePort;
 import me.unbrdn.core.resume.application.port.out.LoadResumePort;
 import me.unbrdn.core.resume.application.port.out.LoadResumesByUserPort;
@@ -11,10 +12,11 @@ import me.unbrdn.core.resume.application.port.out.LoadUserPort;
 import me.unbrdn.core.resume.application.port.out.SaveResumePort;
 import me.unbrdn.core.resume.application.port.out.SearchResumeByVectorPort;
 import me.unbrdn.core.resume.domain.entity.Resumes;
-import me.unbrdn.core.resume.domain.repository.ResumesRepository;
+import me.unbrdn.core.user.adapter.out.persistence.UserMapper;
+import me.unbrdn.core.user.adapter.out.persistence.repository.UserJpaRepository;
 import me.unbrdn.core.user.domain.entity.User;
-import me.unbrdn.core.user.domain.repository.UsersRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /** 이력서 Persistence Adapter */
 @Component("resumePersistenceAdapter")
@@ -27,33 +29,42 @@ public class ResumePersistenceAdapter
                 SearchResumeByVectorPort,
                 DeleteResumePort {
 
-    private final UsersRepository usersRepository;
-    private final ResumesRepository resumesRepository;
+    private final UserJpaRepository usersRepository;
+    private final UserMapper userMapper;
+    private final ResumeJpaRepository resumesRepository;
+    private final ResumeMapper resumeMapper;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> loadUserById(UUID userId) {
-        return usersRepository.findById(userId);
+        return usersRepository.findById(userId).map(userMapper::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Resumes> loadResumeById(UUID resumeId) {
-        return resumesRepository.findById(resumeId);
+        return resumesRepository.findById(resumeId).map(resumeMapper::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Resumes> loadByUserIdAndFileHash(UUID userId, String fileHash) {
-        return resumesRepository.findByUser_IdAndFileHash(userId, fileHash);
+        // Simple implementation assuming user scope for file hash uniqueness
+        return resumesRepository
+                .findByFileHash(fileHash)
+                .filter(r -> r.getUser().getId().equals(userId))
+                .map(resumeMapper::toDomain);
     }
 
     @Override
     public Resumes save(Resumes resume) {
-        return resumesRepository.save(resume);
+        return resumeMapper.toDomain(resumesRepository.save(resumeMapper.toJpaEntity(resume)));
     }
 
     @Override
     public List<Resumes> loadResumesByUserId(UUID userId) {
-        return resumesRepository.findByUser_Id(userId);
+        return resumesRepository.findByUserId(userId).stream().map(resumeMapper::toDomain).toList();
     }
 
     @Override
@@ -92,7 +103,7 @@ public class ResumePersistenceAdapter
                         vectorString,
                         limit);
 
-        return resumesRepository.findAllById(ids);
+        return resumesRepository.findAllById(ids).stream().map(resumeMapper::toDomain).toList();
     }
 
     private String getDatabaseType() {

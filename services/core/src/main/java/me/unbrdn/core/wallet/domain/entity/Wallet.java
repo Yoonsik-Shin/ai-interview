@@ -1,41 +1,23 @@
 package me.unbrdn.core.wallet.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import me.unbrdn.core.common.domain.BaseEntity;
 import me.unbrdn.core.user.domain.entity.User;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /** 크레딧 관리 지갑 엔티티 */
-@Entity
-@Table(name = "wallet")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
 public class Wallet extends BaseEntity {
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(name = "free_credits", nullable = false)
     private Integer freeCredits;
 
-    @Column(name = "paid_credits", nullable = false)
     private Integer paidCredits;
 
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     private Wallet(User user, Integer freeCredits, Integer paidCredits) {

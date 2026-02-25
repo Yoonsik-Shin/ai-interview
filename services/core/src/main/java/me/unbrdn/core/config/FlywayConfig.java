@@ -28,8 +28,13 @@ public class FlywayConfig {
         System.out.println("========== Starting Manual Flyway Migration ==========");
         System.out.println("Locations: " + locations);
 
-        Flyway flyway = Flyway.configure().dataSource(dataSource).locations(locations)
-                .baselineOnMigrate(baselineOnMigrate).baselineVersion("0").load();
+        Flyway flyway =
+                Flyway.configure()
+                        .dataSource(dataSource)
+                        .locations(locations)
+                        .baselineOnMigrate(baselineOnMigrate)
+                        .baselineVersion("0")
+                        .load();
 
         flyway.migrate();
         System.out.println("========== Manual Flyway Migration Completed ==========");

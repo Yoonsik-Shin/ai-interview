@@ -22,21 +22,22 @@ public class StorageGrpcAdapter implements GeneratePresignedUrlPort, DeleteFileP
 
     @Override
     public String generateUploadUrl(String objectKey) {
-        return getPresignedUrl(objectKey, "put_object");
+        return getPresignedUrl(objectKey, "put_object", false);
     }
 
     @Override
-    public String generateDownloadUrl(String objectKey) {
-        return getPresignedUrl(objectKey, "get_object");
+    public String generateDownloadUrl(String objectKey, boolean internalAccess) {
+        return getPresignedUrl(objectKey, "get_object", internalAccess);
     }
 
-    private String getPresignedUrl(String objectKey, String method) {
+    private String getPresignedUrl(String objectKey, String method, boolean internalAccess) {
         try {
             GetPresignedUrlRequest request =
                     GetPresignedUrlRequest.newBuilder()
                             .setObjectKey(objectKey)
                             .setMethod(method)
                             .setExpirationSec(3600)
+                            .setInternalAccess(internalAccess)
                             .build();
 
             GetPresignedUrlResponse response = storageStub.getPresignedUrl(request);

@@ -16,23 +16,21 @@ public class IncrementSelfIntroRetryInteractor implements IncrementSelfIntroRetr
     private final ManageSessionStatePort sessionStatePort;
 
     @Override
-    public int execute(UUID interviewSessionId) {
-        String sessionId = interviewSessionId.toString();
+    public int execute(UUID interviewId) {
+        String idStr = interviewId.toString();
         InterviewSessionState state =
-                sessionStatePort
-                        .getState(sessionId)
-                        .orElseGet(InterviewSessionState::createDefault);
+                sessionStatePort.getState(idStr).orElseGet(InterviewSessionState::createDefault);
 
         int currentCount =
                 state.getSelfIntroRetryCount() != null ? state.getSelfIntroRetryCount() : 0;
         int newCount = currentCount + 1;
 
         state.setSelfIntroRetryCount(newCount);
-        sessionStatePort.saveState(sessionId, state);
+        sessionStatePort.saveState(idStr, state);
 
         log.info(
-                "Incremented self-introduction retry count for session {}: {} -> {}",
-                sessionId,
+                "Incremented self-introduction retry count for interview {}: {} -> {}",
+                idStr,
                 currentCount,
                 newCount);
 

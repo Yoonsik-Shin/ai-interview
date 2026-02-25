@@ -1,13 +1,5 @@
 package me.unbrdn.core.subscription.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,24 +16,16 @@ import me.unbrdn.core.subscription.domain.enums.QuotaUnit;
  *
  * <p>비즈니스 규칙: - 각 플랜은 여러 개의 할당량 항목을 가질 수 있음 - 할당량은 매월 1일 00:00에 초기화됨 (SubscriptionUsage 참조)
  */
-@Entity
-@Table(name = "plan_quota")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PlanQuota extends BaseTimeEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "plan_id", nullable = false)
     private Plan plan;
 
-    @Column(name = "quota_name", nullable = false, length = 100)
     private String quotaName;
 
-    @Column(name = "quota_amount", nullable = false)
     private Integer quotaAmount;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "quota_unit", nullable = false, length = 20)
     private QuotaUnit quotaUnit;
 
     private PlanQuota(Plan plan, String quotaName, Integer quotaAmount, QuotaUnit quotaUnit) {

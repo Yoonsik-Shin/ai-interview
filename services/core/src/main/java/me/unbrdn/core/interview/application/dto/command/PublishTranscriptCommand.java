@@ -16,7 +16,8 @@ public class PublishTranscriptCommand {
     private final String currentPersonaId;
 
     // New Fields for Stage Change Event
-    private final String type; // "TRANSCRIPT" or "STAGE_CHANGE"
+    private final String type; // "TRANSCRIPT", "STAGE_CHANGE", "INTERVENE", "RETRY_ANSWER"
     private final String currentStage;
     private final String previousStage;
+    private final String content;
 }

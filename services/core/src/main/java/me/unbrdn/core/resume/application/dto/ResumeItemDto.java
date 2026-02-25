@@ -12,4 +12,5 @@ public class ResumeItemDto {
     private String title;
     private String status;
     private Instant createdAt;
+    private float[] embedding;
 }

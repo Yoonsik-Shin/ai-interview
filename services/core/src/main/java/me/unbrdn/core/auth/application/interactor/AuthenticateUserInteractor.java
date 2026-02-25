@@ -16,8 +16,7 @@ import org.springframework.stereotype.Service;
 /**
  * 사용자 인증
  *
- * <p>
- * 비즈니스 로직: 1. 이메일로 사용자 조회 2. 비밀번호 검증 3. 인증 결과 반환
+ * <p>비즈니스 로직: 1. 이메일로 사용자 조회 2. 비밀번호 검증 3. 인증 결과 반환
  */
 @Service
 @RequiredArgsConstructor
@@ -29,8 +28,10 @@ public class AuthenticateUserInteractor implements AuthenticateUserUseCase {
 
     @Override
     public AuthenticateUserResult execute(AuthenticateUserCommand command) {
-        AuthUser user = userGrpcClient.loadByEmail(command.getEmail())
-                .orElseThrow(() -> new AuthenticationException("이메일 또는 비밀번호가 올바르지 않습니다."));
+        AuthUser user =
+                userGrpcClient
+                        .loadByEmail(command.getEmail())
+                        .orElseThrow(() -> new AuthenticationException("이메일 또는 비밀번호가 올바르지 않습니다."));
 
         if (!passwordEncoder.matches(command.getPassword(), user.getPasswordHash())) {
             throw new AuthenticationException("이메일 또는 비밀번호가 올바르지 않습니다.");
@@ -42,11 +43,20 @@ public class AuthenticateUserInteractor implements AuthenticateUserUseCase {
 
         refreshTokenPort.saveRefreshToken(userId, refreshToken);
 
-        AuthenticatedUser authenticatedUser = AuthenticatedUser.builder().id(user.getId()).email(user.getEmail())
-                .role(user.getRole()).nickname(user.getNickname()).phoneNumber(user.getPhoneNumber())
-                .profileImageUrl(user.getProfileImageUrl()).build();
+        AuthenticatedUser authenticatedUser =
+                AuthenticatedUser.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .role(user.getRole())
+                        .nickname(user.getNickname())
+                        .phoneNumber(user.getPhoneNumber())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .build();
 
-        return AuthenticateUserResult.builder().accessToken(accessToken).refreshToken(refreshToken)
-                .user(authenticatedUser).build();
+        return AuthenticateUserResult.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .user(authenticatedUser)
+                .build();
     }
 }

@@ -2,7 +2,8 @@ package me.unbrdn.core.common.infrastructure.grpc;
 
 import io.grpc.Status;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import net.devh.boot.grpc.server.advice.GrpcAdvice;
+import net.devh.boot.grpc.server.advice.GrpcExceptionHandler;
 
 /**
  * gRPC 전역 예외 처리 핸들러
@@ -11,8 +12,13 @@ import org.springframework.stereotype.Component;
  * INTERNAL로 처리됩니다.
  */
 @Slf4j
-@Component
+@GrpcAdvice
 public class GlobalGrpcExceptionHandler {
+
+    @GrpcExceptionHandler(Exception.class)
+    public Status handleException(Exception e) {
+        return toGrpcStatus(e);
+    }
 
     /**
      * 예외를 gRPC Status로 변환
@@ -44,6 +50,7 @@ public class GlobalGrpcExceptionHandler {
         }
 
         // 기본적으로 INTERNAL로 처리
-        return Status.INTERNAL.withDescription("서버 내부 오류가 발생했습니다: " + throwable.getMessage());
+        return Status.INTERNAL.withDescription(
+                "서버 내부 오류가 발생했습니다. 담당자에게 문의하거나 로그(TraceID)를 확인해 주세요.");
     }
 }

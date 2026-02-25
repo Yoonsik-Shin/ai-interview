@@ -1,11 +1,5 @@
 package me.unbrdn.core.reference.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -14,33 +8,22 @@ import me.unbrdn.core.common.domain.BaseTimeEntity;
 import me.unbrdn.core.user.domain.entity.User;
 
 /** 커리어 엔티티 사용자의 경력 정보 */
-@Entity
-@Table(name = "career")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Career extends BaseTimeEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "job_field_id", nullable = false)
     private JobField jobField;
 
-    @Column(name = "company_name", nullable = false, length = 255)
     private String companyName;
 
-    @Column(length = 255)
     private String department;
 
-    @Column(name = "started_at", nullable = false)
     private LocalDate startedAt;
 
-    @Column(name = "ended_at")
     private LocalDate endedAt;
 
-    @Column(columnDefinition = "TEXT")
     private String description;
 
     private Career(

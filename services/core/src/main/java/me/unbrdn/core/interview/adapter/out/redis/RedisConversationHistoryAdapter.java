@@ -1,6 +1,5 @@
 package me.unbrdn.core.interview.adapter.out.redis;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -24,17 +23,20 @@ public class RedisConversationHistoryAdapter implements ManageConversationHistor
     @Override
     public List<ConversationHistory> loadHistory(String interviewId) {
         String key = "interview:history:" + interviewId;
-        String json = redisTemplate.opsForValue().get(key);
-        if (json == null) {
+        List<String> jsonList = redisTemplate.opsForList().range(key, 0, -1);
+        if (jsonList == null || jsonList.isEmpty()) {
             return new ArrayList<>();
         }
 
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<ConversationHistory>>() {});
-        } catch (Exception e) {
-            log.error("Failed to parse conversation history", e);
-            return new ArrayList<>();
+        List<ConversationHistory> history = new ArrayList<>();
+        for (String json : jsonList) {
+            try {
+                history.add(objectMapper.readValue(json, ConversationHistory.class));
+            } catch (Exception e) {
+                log.error("Failed to parse conversation history item", e);
+            }
         }
+        return history;
     }
 
     @Override
@@ -44,39 +46,30 @@ public class RedisConversationHistoryAdapter implements ManageConversationHistor
 
     @Override
     public void appendExchange(String interviewId, String role, String userText, String aiAnswer) {
-        List<ConversationHistory> history = loadHistory(interviewId);
-        history.add(new ConversationHistory(role, userText));
-        history.add(new ConversationHistory("assistant", aiAnswer));
-
-        saveHistory(interviewId, history);
+        appendUserMessage(interviewId, role, userText);
+        appendAiMessage(interviewId, aiAnswer);
     }
 
     @Override
     public void appendUserMessage(String interviewId, String role, String userText) {
-        List<ConversationHistory> history = loadHistory(interviewId);
-        history.add(new ConversationHistory(role, userText));
-        saveHistory(interviewId, history);
+        saveMessage(interviewId, new ConversationHistory(role, userText));
     }
 
     @Override
     public void appendAiMessage(String interviewId, String aiAnswer) {
-        List<ConversationHistory> history = loadHistory(interviewId);
-        history.add(new ConversationHistory("assistant", aiAnswer));
-        saveHistory(interviewId, history);
+        saveMessage(interviewId, new ConversationHistory("assistant", aiAnswer));
     }
 
-    private void saveHistory(String interviewId, List<ConversationHistory> history) {
-        // 최대 20개 유지
-        if (history.size() > MAX_HISTORY) {
-            history = history.subList(history.size() - MAX_HISTORY, history.size());
-        }
-
+    private void saveMessage(String interviewId, ConversationHistory historyItem) {
         String key = "interview:history:" + interviewId;
         try {
-            String json = objectMapper.writeValueAsString(history);
-            redisTemplate.opsForValue().set(key, json, Duration.ofHours(1));
+            String json = objectMapper.writeValueAsString(historyItem);
+            redisTemplate.opsForList().rightPush(key, json);
+            // 최대 20개 유지 (최신 20개)
+            redisTemplate.opsForList().trim(key, -MAX_HISTORY, -1);
+            redisTemplate.expire(key, Duration.ofHours(1));
         } catch (Exception e) {
-            log.error("Failed to save conversation history", e);
+            log.error("Failed to save conversation message", e);
         }
     }
 }

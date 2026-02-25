@@ -1,8 +1,5 @@
 package me.unbrdn.core.payment.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,13 +13,10 @@ import me.unbrdn.core.common.domain.BaseTimeEntity;
  *
  * <p>목적: - 여러 PG사를 지원할 수 있도록 확장 가능한 구조 - Payment 테이블에서 참조하여 결제 수단별 집계 가능
  */
-@Entity
-@Table(name = "pg_provider")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PGProvider extends BaseTimeEntity {
 
-    @Column(nullable = false, unique = true, length = 100)
     private String name;
 
     private PGProvider(String name) {

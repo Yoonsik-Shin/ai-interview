@@ -6,7 +6,7 @@ public interface RefreshTokenPort {
     /**
      * 리프레시 토큰 저장
      *
-     * @param userId       사용자 ID
+     * @param userId 사용자 ID
      * @param refreshToken 리프레시 토큰
      */
     void saveRefreshToken(String userId, String refreshToken);

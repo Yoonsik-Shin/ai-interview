@@ -1,19 +1,9 @@
 package me.unbrdn.core.subscription.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import me.unbrdn.core.common.domain.BaseEntity;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import me.unbrdn.core.common.domain.BaseTimeEntity;
 
 /**
  * 구독 할당량 사용량 엔티티
@@ -28,29 +18,17 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * <p>예시: - subscription_id=1, quota_name="interview_count", used_amount=3, usage_month="2026-01" -
  * subscription_id=1, quota_name="resume_count", used_amount=1, usage_month="2026-01"
  */
-@Entity
-@Table(name = "subscription_usages")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
-public class SubscriptionUsage extends BaseEntity {
+public class SubscriptionUsage extends BaseTimeEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subscription_id", nullable = false)
     private Subscription subscription;
 
-    @Column(name = "quota_name", nullable = false, length = 100)
     private String quotaName;
 
-    @Column(name = "used_amount", nullable = false)
     private Integer usedAmount;
 
-    @Column(name = "usage_month", nullable = false, length = 7)
     private String usageMonth;
-
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 
     private SubscriptionUsage(Subscription subscription, String quotaName, String usageMonth) {
         this.subscription = subscription;

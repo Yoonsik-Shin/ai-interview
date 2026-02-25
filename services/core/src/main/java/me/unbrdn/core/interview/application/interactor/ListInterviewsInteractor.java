@@ -1,11 +1,10 @@
 package me.unbrdn.core.interview.application.interactor;
 
 import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import me.unbrdn.core.interview.application.port.in.ListInterviewsUseCase;
+import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
-import me.unbrdn.core.interview.domain.repository.InterviewSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,18 +13,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ListInterviewsInteractor implements ListInterviewsUseCase {
 
-    private final InterviewSessionRepository interviewSessionRepository;
+    private final InterviewPort interviewPort;
 
     @Override
-    public List<ListInterviewsUseCase.InterviewSummary> execute(UUID userId) {
-        return interviewSessionRepository.findByCandidate_IdOrderByStartedAtDesc(userId).stream()
-                .map(this::mapToSummary)
-                .toList();
+    public List<ListInterviewsUseCase.InterviewSummary> execute(ListInterviewsCommand command) {
+        List<InterviewSession> sessions;
+        if (command.status() != null && !command.status().isEmpty()) {
+            sessions =
+                    interviewPort.findAllByUserIdAndStatus(
+                            command.userId(),
+                            command.status(),
+                            command.limit() != null ? command.limit() : 0);
+        } else {
+            sessions = interviewPort.findByCandidateId(command.userId());
+            if (command.limit() != null && command.limit() > 0) {
+                sessions = sessions.stream().limit(command.limit()).toList();
+            }
+        }
+        return sessions.stream().map(this::mapToSummary).toList();
     }
 
     private ListInterviewsUseCase.InterviewSummary mapToSummary(InterviewSession session) {
         return ListInterviewsUseCase.InterviewSummary.builder()
-                .interviewId(UUID.fromString(session.getSessionUuid()))
+                .interviewId(session.getId())
                 .startedAt(session.getStartedAt())
                 .status(session.getStatus())
                 .domain(session.getDomain())

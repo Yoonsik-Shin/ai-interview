@@ -1,10 +1,5 @@
 package me.unbrdn.core.admin.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -22,35 +17,24 @@ import me.unbrdn.core.common.domain.BaseTimeEntity;
  * <p>보안 규칙: - User 테이블과 완전히 분리하여 권한 혼선 방지 - 2FA(Two-Factor Authentication) 필수 - 모든 활동은 AdminAudit
  * 로그에 기록
  */
-@Entity
-@Table(name = "admin")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Admin extends BaseTimeEntity {
 
-    @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false, length = 255)
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
     private AdminRole role;
 
-    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
-    @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
-    @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
-    @Column(name = "last_login_ip", length = 45)
     private String lastLoginIp;
 
     private Admin(

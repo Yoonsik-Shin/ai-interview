@@ -16,11 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class ListResumesByUserInteractor implements ListResumesByUserUseCase {
 
     private final LoadResumesByUserPort loadResumesByUserPort;
+    private final ResumeVectorService resumeVectorService;
 
     @Override
     @Transactional(readOnly = true)
     public List<ResumeItemDto> execute(UUID userId) {
         List<Resumes> resumes = loadResumesByUserPort.loadResumesByUserId(userId);
+        java.util.Map<UUID, float[]> embeddingMap =
+                resumeVectorService.getEmbeddingsByUserId(userId);
+
         return resumes.stream()
                 .map(
                         r ->
@@ -29,6 +33,7 @@ public class ListResumesByUserInteractor implements ListResumesByUserUseCase {
                                         .title(r.getTitle())
                                         .status(r.getStatus().name())
                                         .createdAt(r.getCreatedAt())
+                                        .embedding(embeddingMap.get(r.getId()))
                                         .build())
                 .collect(Collectors.toList());
     }

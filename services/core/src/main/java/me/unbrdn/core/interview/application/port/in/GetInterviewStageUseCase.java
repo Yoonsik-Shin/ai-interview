@@ -12,7 +12,7 @@ public interface GetInterviewStageUseCase {
     InterviewStageResult execute(GetInterviewStageQuery query);
 
     /** Query DTO */
-    record GetInterviewStageQuery(UUID interviewSessionId) {}
+    record GetInterviewStageQuery(UUID interviewId) {}
 
     /** Result DTO */
     record InterviewStageResult(

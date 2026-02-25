@@ -1,13 +1,5 @@
 package me.unbrdn.core.admin.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,30 +15,20 @@ import me.unbrdn.core.common.domain.BaseTimeEntity;
  *
  * <p>목적: - 관리자의 모든 활동을 추적하여 보안 감사 지원 - 부정 접근, 데이터 변조 등을 탐지 - 규정 준수 (Compliance) 요구사항 충족
  */
-@Entity
-@Table(name = "admin_audit")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AdminAudit extends BaseTimeEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "admin_id", nullable = false)
     private Admin admin;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "action_type", nullable = false, length = 50)
     private AdminActionType actionType;
 
-    @Column(name = "target_table", length = 100)
     private String targetTable;
 
-    @Column(name = "target_id", length = 100)
     private String targetId;
 
-    @Column(length = 1000)
     private String description;
 
-    @Column(name = "ip_address", nullable = false, length = 45)
     private String ipAddress;
 
     private AdminAudit(

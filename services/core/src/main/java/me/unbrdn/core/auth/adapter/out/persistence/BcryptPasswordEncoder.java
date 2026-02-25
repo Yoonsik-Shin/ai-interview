@@ -1,8 +1,8 @@
 package me.unbrdn.core.auth.adapter.out.persistence;
 
 import me.unbrdn.core.auth.domain.service.PasswordEncoder;
-import org.springframework.stereotype.Component;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Component;
 
 /** BCrypt를 사용한 PasswordEncoder 구현체 */
 @Component

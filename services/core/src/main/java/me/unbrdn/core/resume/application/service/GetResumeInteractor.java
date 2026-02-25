@@ -28,7 +28,7 @@ public class GetResumeInteractor implements GetResumeUseCase {
                             String fileUrl =
                                     r.getFilePath() != null
                                             ? generatePresignedUrlPort.generateDownloadUrl(
-                                                    r.getFilePath())
+                                                    r.getFilePath(), false)
                                             : "";
                             return ResumeDetailDto.builder()
                                     .id(r.getId())

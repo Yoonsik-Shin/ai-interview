@@ -60,24 +60,25 @@ public class CreateInterviewInteractor implements CreateInterviewUseCase {
                         .orElse(null);
 
         InterviewType interviewType =
-                command.getType() == null ? InterviewType.PRACTICE : command.getType();
+                command.getType() == null
+                        ? InterviewType.PRACTICE
+                        : InterviewType.valueOf(command.getType());
 
-        // Fallback or use provided
         List<InterviewRole> roles =
                 command.getRoles() == null || command.getRoles().isEmpty()
                         ? List.of(InterviewRole.TECH)
-                        : command.getRoles();
+                        : command.getRoles().stream().map(InterviewRole::valueOf).toList();
 
         InterviewPersonality personality =
                 command.getPersonality() == null
                         ? InterviewPersonality.COMFORTABLE
-                        : command.getPersonality();
+                        : InterviewPersonality.valueOf(command.getPersonality());
 
-        String sessionUuid = UUID.randomUUID().toString();
+        String interviewId = UUID.randomUUID().toString();
 
         InterviewSession interviewSession =
                 InterviewSession.create(
-                        sessionUuid,
+                        interviewId,
                         candidate,
                         resume,
                         roles,

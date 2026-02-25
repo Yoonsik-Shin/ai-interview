@@ -1,13 +1,5 @@
 package me.unbrdn.core.wallet.domain.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,29 +8,19 @@ import me.unbrdn.core.wallet.domain.enums.CreditReferenceType;
 import me.unbrdn.core.wallet.domain.enums.TransactionType;
 
 /** 크레딧 장부 엔티티 크레딧 증감 이력 관리 */
-@Entity
-@Table(name = "credit_transaction")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CreditTransaction extends BaseTimeEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "wallet_id", nullable = false)
     private Wallet wallet;
 
-    @Column(nullable = false)
     private Integer amount;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private TransactionType type;
+    private TransactionType type; // EARNED, SPENT
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reference_type", nullable = false, length = 50)
-    private CreditReferenceType referenceType;
+    private CreditReferenceType referenceType; // PAYMENT, INTERVIEW, SIGNUP
 
-    @Column(name = "reference_id", length = 255)
-    private String referenceId;
+    private String referenceId; // 결제 ID, 인터뷰 ID 등
 
     private CreditTransaction(
             Wallet wallet,

@@ -15,29 +15,48 @@ import org.springframework.stereotype.Component;
 public class InterviewSessionCacheAdapter implements ManageSessionStatePort {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private static final String KEY_PREFIX = "interview:session:";
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private static final String KEY_PREFIX = "interview:";
     private static final String KEY_SUFFIX = ":state";
     private static final long TTL_HOURS = 2;
 
     @Override
-    public void saveState(String sessionId, InterviewSessionState state) {
-        String key = buildKey(sessionId);
+    public void saveState(String interviewId, InterviewSessionState state) {
+        String key = buildKey(interviewId);
         try {
-            redisTemplate.opsForValue().set(key, state, TTL_HOURS, TimeUnit.HOURS);
-            log.debug("Saved interview session state to Redis: {}", sessionId);
+            // ObjectMapper를 사용하여 객체를 Map으로 동적 변환 (하드코딩 제거)
+            java.util.Map<String, Object> map =
+                    objectMapper.convertValue(
+                            state,
+                            new com.fasterxml.jackson.core.type.TypeReference<
+                                    java.util.Map<String, Object>>() {});
+
+            if (map != null && !map.isEmpty()) {
+                // null 값 제거 (Redis Hash에 null을 넣지 않기 위함)
+                map.values().removeIf(java.util.Objects::isNull);
+
+                redisTemplate.opsForHash().putAll(key, map);
+                redisTemplate.expire(key, TTL_HOURS, TimeUnit.HOURS);
+                log.debug("Saved interview session state to Redis HASH: {}", interviewId);
+            }
         } catch (Exception e) {
             log.error("Failed to save interview session state to Redis", e);
         }
     }
 
     @Override
-    public Optional<InterviewSessionState> getState(String sessionId) {
-        String key = buildKey(sessionId);
+    public Optional<InterviewSessionState> getState(String interviewId) {
+        String key = buildKey(interviewId);
         try {
-            Object state = redisTemplate.opsForValue().get(key);
-            if (state instanceof InterviewSessionState) {
-                return Optional.of((InterviewSessionState) state);
+            java.util.Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
+            if (entries.isEmpty()) {
+                return Optional.empty();
             }
+
+            // Map을 다시 POJO로 동적 변환
+            InterviewSessionState state =
+                    objectMapper.convertValue(entries, InterviewSessionState.class);
+            return Optional.ofNullable(state);
         } catch (Exception e) {
             log.error("Failed to get interview session state from Redis", e);
         }
@@ -45,17 +64,30 @@ public class InterviewSessionCacheAdapter implements ManageSessionStatePort {
     }
 
     @Override
-    public void deleteState(String sessionId) {
-        String key = buildKey(sessionId);
+    public void deleteState(String interviewId) {
+        String key = buildKey(interviewId);
         try {
             redisTemplate.delete(key);
-            log.debug("Deleted interview session state from Redis: {}", sessionId);
+            log.debug("Deleted interview session state from Redis: {}", interviewId);
         } catch (Exception e) {
             log.error("Failed to delete interview session state from Redis", e);
         }
     }
 
-    private String buildKey(String sessionId) {
-        return KEY_PREFIX + sessionId + KEY_SUFFIX;
+    @Override
+    public int incrementTurnCount(String interviewId) {
+        String key = buildKey(interviewId);
+        try {
+            Long turnCount = redisTemplate.opsForHash().increment(key, "turnCount", 1L);
+            redisTemplate.expire(key, TTL_HOURS, TimeUnit.HOURS);
+            return turnCount != null ? turnCount.intValue() : 0;
+        } catch (Exception e) {
+            log.error("Failed to increment turn count in Redis", e);
+            return 0;
+        }
+    }
+
+    private String buildKey(String interviewId) {
+        return KEY_PREFIX + interviewId + KEY_SUFFIX;
     }
 }
