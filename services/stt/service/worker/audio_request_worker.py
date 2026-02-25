@@ -133,22 +133,6 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
     # 2. 입력 없음 처리 (오디오 청크가 하나도 없거나 VAD가 말을 감지하지 못했을 때)
     if not audio_chunks or not has_vad_speech:
         log_transcription_complete("none (vad_rejected)", interview_id or "", "", None)
-        
-        # 빈 결과라도 Kafka에 발행하여 백엔드(Core)의 재시도(Retry) 로직이 동작하도록 함
-        if interview_id:
-            empty_payload = {
-                "interviewId": interview_id,
-                "text": "",
-                "isFinal": True,
-                "timestamp": datetime.now().isoformat(),
-                "engine": "none",
-                "isEmpty": True,
-                "traceId": trace_id or "",
-                "userId": user_id or "",
-                "audioReceivedAt": last_chunk_timestamp,
-            }
-            publisher.publish(empty_payload, key=str(interview_id))
-
         return stt_pb2.STTResponse(
             text="",
             interview_id=interview_id or "",
