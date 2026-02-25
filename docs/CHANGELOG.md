@@ -1,5 +1,174 @@
 # Changelog
 
+## [2026-02-26]
+
+### 수정
+
+- **Core: 자기소개 짧은 답변 판별을 시간 기반으로 변경**:
+  - 기존 텍스트 길이 기반(`< 50자`) 체크를 경과 시간 기반(`< 30초`)으로 변경
+  - Socket이 Redis에 저장한 `selfIntroStart`를 `StringRedisTemplate`으로 직접 조회하여 정밀한 시간 계산
+
+- **Core: SELF_INTRO → IN_PROGRESS 전환 시 낙관적 락(Optimistic Lock) 적용**:
+  - `InterviewSessionJpaEntity`에 JPA `@Version` 컬럼 추가
+  - `TransitionInterviewStageInteractor` 및 `ProcessUserAnswerInteractor`에서 `ObjectOptimisticLockingFailureException` catch → 중복 전환 안전 무시
+  - Oracle(V014) / PostgreSQL(V012) Flyway 마이그레이션 스크립트 작성
+
+- **Core: LLM `[면접관 이름]` 할루시네이션 방지**:
+  - `InterviewSequentialIntroListener`의 순차 인트로 프롬프트에 이름 사용 금지 지침 추가
+
+- **Core: `TransitionInterviewStageInteractor`에 Redis STAGE_CHANGE 이벤트 발행 추가**:
+  - Socket에서 호출한 stage 전환이 프론트엔드에 즉시 반영되도록 수정
+
+## [2026-02-18]
+
+### Documentation
+
+- **Architecture Analysis**: `docs/current_architecture_analysis.md` 내 모든 Mermaid 다이어그램을 한글로 번역
+  - 시퀀스 다이어그램 및 플로우차트의 참여자명, 메시지, 노드 텍스트 등을 한글로 현지화하여 가독성 개선.
+
+- **Interview Sequence**: `docs/usecase/interview_sequence.md` 시각화 개선
+  - 면접 세션의 고수준 흐름을 한눈에 파악할 수 있는 아스키 아트(Full Sequence Flow) 추가.
+
+- **Documentation**: `docs/current_architecture_analysis.md` 내 Mermaid 다이어그램 구문 오류 2차 수정
+  - `graph` 블록 내 비표준 화살표 문법(`--(Text)-->`)을 표준(`-->|Text|`)으로 교체.
+  - 특수 문자(`/`, `()`) 및 한글 공백이 포함된 노드 식별자/레이블에 인용구(`""`) 및 별칭을 적용하여 렌더링 오류 해결.
+  - `sequenceDiagram` 내 `participant` 레이블 인용구 처리로 가독성 및 호환성 확보.
+
+- **Documentation**: Mermaid 다이어그램 초안정화(Ultra-Stabilization) 작업 수행
+  - 렌더러 호환성 극대화를 위해 모든 다이어그램 블록의 라벨 및 텍스트에 쌍따옴표(`" "`) 일괄 적용.
+  - 한국어 및 특수 문자가 포함된 모든 구문을 보수적으로 재구조화하여 렌더링 깨짐 현상 원천 차단.
+
+- **Audio Tester**: `AudioTester` 컴포넌트 고도화
+  - 녹음/듣기(Record & Playback) 방식 전면 적용.
+  - 마이크 미사용 시(Disabled) 안내 UI 추가.
+  - 시각적 완성도(UI/UX) 개선: 레벨 미터 정밀도 향상, 녹음 상태 애니메이션, 세련된 디자인 적용.
+  - 불필요한 서버 검증(Server Verification) 로직 및 UI 제거 (Front/Back 전체).
+- **Interview Setup**: 면접 시작 전 최종 확인 모달 도입
+  - 선택된 이력서, 직무, 시간 등을 요약하여 보여주는 프리미엄 컨펌 모달 추가.
+  - 음성 테스트 미완료 시 경고 및 필수 체크리스트 완료 후 면접 시작 가능하도록 제한.
+  - 마이크 장치 변경 시 테스트 상태 자동 초기화 로직 구현.
+  - **UI/UX**: 모달 화면 중앙 고정 로직 강화 (Bulletproof Flex Centering) 및 등장 애니메이션 추가.
+  - **Layout**: 미디어 테스트 섹션의 수직 공백을 최적화하여 한눈에 모든 설정이 들어오도록 개선.
+- **Database**: 누락된 면접 일시중지 관련 컬럼(`paused_at`, `resumed_at`) 추가
+  - PostgreSQL(V011) 및 Oracle(V013) Flyway 마이그레이션 스크립트 작성 및 반영.
+  - JPA 엔티티와 실제 스키마 간의 불일치로 인한 JDBC Exception 해결.
+- **Security**: 백엔드 내부 오류 정보 노출 방지 (Error Masking)
+  - `Core` 서비스: `GlobalGrpcExceptionHandler`에서 예상치 못한 예외 발생 시 상세 메시지 마스킹.
+  - `BFF` & `Socket` 서비스: 전역 예외 필터에서 500번대/Unhandled 에러 메시지를 공통 안내 문구로 마스킹하여 보안 강화.
+- **Cleanup**: 임시 'test-' 오디오 검증 로직 삭제
+  - `Socket` 서비스 및 프론트엔드에 남아있던 초기 서버 사이드 오디오 검증용 `test-` ID 처리 로직을 완전히 제거하고, 실사용(`/debug`) 경로만 유지.
+- **Auth**: Refresh Token 갱신 로직 수정
+  - `BFF` 서비스: `AuthController`에서 `RefreshTokenCommand` 객체 누락으로 인한 타입 에러 수정.
+  - `Frontend`: `HttpOnly` 쿠키로 설정된 리프레시 토큰을 자바스크립트에서 직접 읽으려던 오동작 수정 (브라우저 자동 전송 활용).
+- **UX**: 면접 화면 종료 시 오디오 즉시 중단
+  - 사용자가 면접 화면을 나갈 때(나가기 버튼 클릭 또는 컴포넌트 언마운트 시) 재생 중이던 모든 AI 오디오가 즉시 중단되도록 개선.
+- **Features**: 면접 내역 수동 종료 기능 추가
+  - 면접 내역 확인 페이지에서 진행 중인 면접 항목에 "종료하기" 버튼을 추가하여, 사용자가 직접 세션을 완료 상태로 전환할 수 있도록 구현.
+  - **Fix**: `core` 서비스에서 시작되지 않은(`READY`) 또는 중지된(`PAUSED`) 면접도 종료할 수 있도록 상태 체크 로직을 완화하여 500 에러 해결.
+- **Refactor**: Redis 데이터 구조 개선 및 안정성 강화
+  - `InterviewSessionState`: `STRING` -> `HASH` 구조로 변경 (필드 단위 원자적 업데이트 지원).
+  - Conversation History: `STRING` (JSON List) -> Redis `LIST` 구조로 변경 (`RPUSH` 지원).
+  - Response Tokens: 리스트 내 요소를 JSON "Object" (`{persona, token}`) 형태로 저장하여 데이터 명확성 확보.
+
+## [2026-02-17]
+
+### Fixes
+
+- **Script**: `build-images-local.sh`와 `deploy-local.sh` 간의 순환 참조 문제 해결.
+  - `build-images-local.sh`: `--skip-menu` 플래그 추가 및 인터랙티브 메뉴 조건부 실행 로직 구현.
+  - `deploy-local.sh`: `build-images-local.sh` 호출 시 `--skip-menu` 플래그 전달.
+- **Frontend**: `InterviewSetup` 페이지에서 이력서 업로드 후 목록 자동 갱신 및 선택 기능 추가.
+- **UI/UX**: 데스크탑 화면에서 면접 설정 페이지의 `Media Test` 섹션을 스크롤 시 따라오도록(sticky) 수정.
+- **Frontend**: `InterviewSetup` 페이지에 마이크 Loopback 테스트(내 목소리 듣기)를 위한 `AudioTester` 컴포넌트 추가 및 소음 차단(Noise Suppression), 에코 캔슬링(Echo Cancellation), 자동 게인 제어(Auto Gain Control) 개별 토글 기능 구현.
+- **Debug**: 실시간 STT 테스트를 위한 `/debug` 페이지 및 `debug:test_audio` 소켓 이벤트 추가 (DB 스테이지 우회).
+  - `useAudioRecorder` 훅 적용으로 PCM16/16kHz 녹음 표준화.
+  - `AudioTester` 통합으로 클라이언트 사이드 오디오 검증 제공.
+  - **서버 저장 데이터 검증 기능**: 업로드 완료 시 Redis Pub/Sub을 통해 알림을 받고, 프론트엔드에서 즉시 확인(재생/다운로드) 가능하도록 구현.
+  - STT 서비스: 2바이트 정렬(alignment) 체크 등 오디오 처리 안정성 강화.
+  - Socket 서비스: 디버그 세션용 인터뷰 ID(`debug-`) 지원 및 스테이지 체크 우회.
+
+## [2026-02-15]
+
+### 빌드 에러 수정 및 서비스 장애 복구 (Antigravity)
+
+#### Fixes (Build)
+
+- **BFF**: gRPC 응답 객체(`CompleteUploadResponse`)의 타입 불일치 해결 (`resume` 필드 접근 에러 수정).
+- **Core**: `PGProvider`, `SubscriptionUsage` 등 도메인 엔티티에서 잘못 사용된 JPA 어노테이션 제거 및 `BaseTimeEntity` 상속 시의 필드 중복/타입 불일치 해결.
+- **Core**: `CompleteUploadInteractor`의 누락된 import 추가 및 인터페이스 반환 타입 정합성 확보.
+
+#### Infrastructure & Stability
+
+### 4. 배포 스크립트(`deploy-local.sh`) 수정 및 최적화
+
+- **로컬 경로 오류 해결**: `k8s/infra/redis/helm` 디렉토리에 `Chart.yaml`이 없어 배포에 실패하던 문제를 해결하기 위해, 원격 Bitnami 차트를 사용하고 로컬 `values.yaml`을 참조하도록 수정했습니다.
+- **배포 최적화**: 이미 Redis 포드가 3개 이상 정상 실행 중인 경우 `helm upgrade` 과정을 건너뛰도록 하여 로컬 배포 속도를 개선했습니다.
+- **안정성 강화**: 인프라 준비 상태 확인 로직을 보강하여 서비스 포드들이 인프라 준비 완료 후 시작될 수 있도록 개선했습니다.
+
+## 최종 확인 결과
+
+- **BFF/Core**: 모든 빌드 에러 해결 및 정상 기동 확인.
+- **Redis**: Sentinel 구조(Master 1, Replica 3)로 정상 배포 및 데이터 영속성 확인.
+- **서비스 상태**: `core`, `socket`, `storage`, `tts` 등 모든 서비스가 Redis에 정상 연결됨.
+- **스크립트**: 차후 `./scripts/deploy-local.sh` 실행 시 Redis가 누락되지 않고 정상 배포/유지됨을 보장합니다.
+
+### Added
+
+- **면접 세션 중지/재개 기능 (Phase 1)**:
+  - **Proto**: `InterviewStatusProto`에 `PAUSED` 상태 추가, `PauseInterview` 및 `ResumeInterview` RPC 및 메시지 정의 추가
+  - **Core**: `InterviewSessionStatus` Enum에 `PAUSED` 추가, `InterviewSession` 엔티티에 `pausedAt`, `resumedAt` 필드 및 `pause()`, `resume()` 메서드 추가
+  - **Core**: `PauseInterviewInteractor` 및 `ResumeInterviewInteractor` 구현, `InterviewGrpcController`에 pause/resume gRPC 메서드 추가
+  - **Core**: `ProduceInterviewEventPort`에 `publishInterviewPaused()`, `publishInterviewResumed()` 이벤트 발행 메서드 추가
+  - **BFF**: `PauseInterviewUseCase` 및 `ResumeInterviewUseCase` 구현, `InterviewGrpcService`에 pause/resume 클라이언트 메서드 추가
+  - **BFF**: `InterviewController`에 `POST /v1/interviews/:id/pause` 및 `POST /v1/interviews/:id/resume` REST API 엔드포인트 추가
+  - **BFF**: `InterviewModule`에 Pause/Resume UseCase 등록
+
+- **인프라 배포 병렬화**:
+  - `scripts/deploy-local.sh`: PostgreSQL, MongoDB, Redis, Kafka, MinIO 배포 프로세스를 병렬화하여 로컬 환경 부트스트랩 속도 대폭 개선.
+  - 기존 순차적 실행 방식에서 백그라운드 서브쉘 및 실시간 상태 모니터링 대시보드 적용.
+
+### [2026-02-16]
+
+- [BFF] 이력서 목록 조회 시 `embedding` 속성 누락으로 인한 TypeScript 오류 수정 (gRPC 타입 재생성)
+- [BFF] `CompleteUploadResponse` gRPC 타입 최신화 (이력서 상세 정보 포함)
+- [Frontend] 토스트(Toast) 메시지 위치를 상단 헤더 아래로 이동하고, React Portal을 사용하여 화면(Viewport) 기준 고정 위치 교정
+
+### Fixes
+
+- **BFF**: 불필요한 `MongoModule` 의존성 및 관련 코드 제거.
+- **Core**: `Admin`, `AdminAudit` 엔티티를 POJO로 변환하여 `CrashLoopBackOff` 원인 해결 (JPA Entity 어노테이션 제거).
+- **Storage**: MongoDB 연결 주소를 `mongo.unbrdn.svc.cluster.local`로 수정하고, 인증 정보를 `root` 계정으로 변경하여 연결 실패 해결.
+- **Script**: `deploy-local.sh`에서 Redis가 이미 실행 중인 경우(Pod 3개 이상 Running), `helm upgrade`를 건너뛰도록 개선하여 불필요한 재배포 방지.
+
+### Background
+
+- 브라우저 새로고침, 크래시, 뒤로가기 등의 예기치 않은 중단 상황에서 면접 세션을 복구할 수 있도록 3-Layer Defense System 구현의 첫 단계로 PAUSED 상태 및 중지/재개 API를 구현함
+- 면접 진행 중 의도적인 일시 중지 및 재개가 가능하도록 백엔드 인프라 구축
+
+## [2026-02-14]
+
+### Added
+
+- `services/document` 가이드를 통합 아키텍처 문서에 추가 (Resume Analysis Pipeline)
+- 문서 건강도 관리 가이드 (`docs/architecture/architecture_consolidated.md`) 최신화
+
+### Changed
+
+- `docs/` 디렉토리 구조 개편 (architecture/, ops/, guide/ 서브폴더 도입)
+- 전역 용어 통일 (`Inference` -> `LLM` 오케스트레이션 명칭 변경)
+- `FAILURE_ANALYSIS.md` 및 `coding_convention.md` 최신 서비스 맵 반영 및 최신화
+- `.cursorrules` 내 문서 경로 참조 업데이트
+
+### Removed
+
+- 구버전 및 중복 문서 아카이브 이동 (`archive/docs/`로 5개 파일 이동)
+
+## [2026-02-13]
+
+- **Core 서비스 README.md 작성**:
+  - `services/core` 모듈의 역할, 기술 스택, 헥사고날 아키텍처 구조, 데이터 흐름 패턴 등을 상세히 기술한 README.md 작성 완료.
+  - 최신 Java 21, Spring Boot 3 기반의 기술 스택 정보 반영.
+
 ## [2026-02-12]
 
 - **데이터베이스 마이그레이션 복구 (Core)**:
@@ -171,6 +340,12 @@
   - **Document 서비스**: Python/FastAPI 기반 신규 서비스. PyMuPDF를 이용한 텍스트/이미지 추출 및 Kafka 연동. **Storage 서비스와 포트 충돌 해결(8100)**.
   - **Core 서비스**: 이력서 상태 관리(`PENDING`, `PROCESSING`, `COMPLETED`), **다운로드용 Presigned URL 생성**, Kafka 소비자/생산자 구현.
   - **BFF 서비스**: Presigned URL 및 업로드 완료 REST API 엔드포인트 추가.
+  - [Frontend] `DebugPage` 추가: 실시간 STT 결과 및 서버 저장 오디오(WAV) 검증 기능 구현
+  - [Socket] `StoragePubSubConsumer` 구현: 오디오 저장 완료 시 클라이언트 알림 브릿지
+  - [Socket] **Bug Fix**: 알림 전송 시 룸 이름 불일치 문제 수정 (`interview-session-` 접두사 추가)
+  - [Storage] **Infra Fix**: Redis DB 번호 정렬 (**0** -> **2**) 및 Sentinel 노드 설정 동기화
+  - [STT] **Infra Fix**: Redis DB 번호 정렬 (**0** -> **2**)
+  - [Storage] 진단 로그 강화: Redis 스캔 및 큐 처리 과정 상세 로깅 추가
   - **Socket 서비스**: `resume:processed` 실시간 알림을 위한 Redis Pub/Sub 연동 및 WebSocket 게이트웨이 구현.
   - **Frontend**: 이력서 업로드 UI 개편(Direct S3 Upload) 및 분석 완료 실시간 알림 UI 반영.
   - **K8s**: `document` 서비스 배포를 위한 매니페스트(`deployment`, `service`, `configmap`) 및 `deploy-local.sh` 업데이트.
@@ -454,6 +629,11 @@
 - **타입 시스템 정합성 확보**:
   - 프론트엔드(`useInterviewSocket`, `useAudioRecorder`)와 소켓 서비스(`AudioChunkDto`, `CoreInterviewGrpcService`) 전반에 걸쳐 `interviewSessionId` 타입을 `string`으로 통일
   - gRPC 통신 시 UUID 문자열이 원본 그대로 전달되도록 보장
+- [Infra] STT/Storage 서비스 Redis DB 불일치 수정 (DB 0 -> DB 2)
+- [Infra] Socket 서비스 이벤트 발행 룸 이름 수정 (`interview-session-${id}`)
+- [Frontend] 오디오 처리 로직 통합 및 최적화 (`useAudioRecorder`, `AudioTester`)
+- [Frontend] 면접 설정 화면(/interview/setup) 서버 사이드 오디오 검증 기능 추가
+- [Frontend] 디버그 페이지(/debug) 및 오디오 검증 기능 추가
 - **소켓 룸 관리**:
   - UUID 기반의 고유 룸 이름 생성 (`interview-session-{uuid}`)
 
@@ -1302,6 +1482,42 @@
   - **파일**: `k8s/common/resource-management/resource-quota.yaml`
 
 ### CHANGELOG
+
+## 2026-02-15
+
+### Phase 2-4: 3-Layer Defense System - 프론트엔드 구현
+
+**구현 내역**:
+
+- **Layer 1: useInterviewProtection Hook**
+  - `beforeunload` 이벤트를 통한 브라우저 종료/새로고침 경고
+  - `navigator.sendBeacon`을 통한 best-effort 자동 중지
+  - 사용자 명시적 중지 기능 제공
+
+- **Layer 2: useInterviewSession Hook**
+  - `localStorage`를 통한 세션 정보 추적
+  - 10초마다 자동 업데이트 (interviewId, stage, timestamp)
+  - 면접 완료 시 자동 세션 정리
+  - 24시간 초과 세션 자동 무효화
+
+- **Layer 3: useInterviewRecovery Hook & InterviewRecoveryModal**
+  - 앱 시작 시 활성 세션 자동 체크
+  - 서버 상태 확인 (IN_PROGRESS/PAUSED)
+  - 복구 모달 UI (이어서 진행 / 나중에 하기)
+  - PAUSED 상태인 경우 자동 RESUME API 호출
+
+- **통합**:
+  - `App.tsx`: InterviewRecoveryModal 전역 추가
+  - `Interview.tsx`: useInterviewProtection 및 useInterviewSession 통합
+  - `client.ts`: Axios-like client 객체 export 추가
+
+**빌드 검증**: ✅ Frontend build successful
+
+---
+
+### Phase 1: PAUSED 상태 및 중지/재개 API 구현
+
+### InterviewType & Engine Selection Refactoring
 
 ## 2026-02-01
 
