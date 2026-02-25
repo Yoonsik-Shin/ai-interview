@@ -23,23 +23,24 @@ kubectl logs deployment/core -n unbrdn --tail=80
 kubectl logs deployment/bff -n unbrdn --tail=80
 ```
 
-**최근 수정 (ConfigMap·배포 순서)**  
-- Core: `core-config`에 `datasource-url` 키 추가 (Deployment의 configMapKeyRef와 일치).  
+**최근 수정 (ConfigMap·배포 순서)**
+
+- Core: `core-config`에 `datasource-url` 키 추가 (Deployment의 configMapKeyRef와 일치).
 - `deploy-local.sh`: **common → prod** 적용 순서로 변경 (prod ConfigMap 값이 common을 덮어쓰도록).  
-수정 반영 후 `kubectl apply -f k8s/apps/core/common/ && kubectl apply -f k8s/apps/core/prod/` 그리고 `kubectl rollout restart deployment/core -n unbrdn` 로 Core만 재적용·재시작할 수 있습니다.
+  수정 반영 후 `kubectl apply -f k8s/apps/core/common/ && kubectl apply -f k8s/apps/core/prod/` 그리고 `kubectl rollout restart deployment/core -n unbrdn` 로 Core만 재적용·재시작할 수 있습니다.
 
 ---
 
 ## 1. 가능한 원인 요약
 
-| 서비스 | 유력 원인 | 확인 방법 |
-|--------|-----------|-----------|
-| **core** | ① `postgres-credentials` Secret 없음 ② Postgres/Oracle 불일치 ③ Kafka·Redis 미준비 | `kubectl logs deployment/core -n unbrdn --tail=80` |
-| **bff** | ① Core 미기동으로 gRPC/JWKS 연결 실패 ② **local 배포 없음** → prod 이미지(`${IMAGE_REGISTRY}/...`) 사용 ③ `ocir-secret` 필요 | `kubectl logs deployment/bff -n unbrdn --tail=80` |
-| **socket** | ① Core 미기동 ② Redis Sentinel(`redis-node-2` 등) 연결 실패 ③ **local 없음** → prod 이미지 | `kubectl logs deployment/socket -n unbrdn --tail=80` |
-| **llm** | ① Redis **read-only** 오류(`redis` → replica 연결) ② **local 없음** → prod 이미지 ③ `OPENAI_API_KEY` 등 Secret | `kubectl logs deployment/llm -n unbrdn --tail=80` |
-| **stt** | ① Kafka/Redis 연결 실패 ② **local 없음** → prod 이미지 ③ `OPENAI_API_KEY` | `kubectl logs deployment/stt -n unbrdn --tail=80` |
-| **storage** | ① **MinIO 미배포** → `minio:9000` 연결 실패 ② Kafka/Redis ③ **local 없음** → prod 이미지 | `kubectl logs deployment/storage -n unbrdn --tail=80` |
+| 서비스      | 유력 원인                                                                                                                    | 확인 방법                                             |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **core**    | ① `postgres-credentials` Secret 없음 ② Postgres/Oracle 불일치 ③ Kafka·Redis 미준비                                           | `kubectl logs deployment/core -n unbrdn --tail=80`    |
+| **bff**     | ① Core 미기동으로 gRPC/JWKS 연결 실패 ② **local 배포 없음** → prod 이미지(`${IMAGE_REGISTRY}/...`) 사용 ③ `ocir-secret` 필요 | `kubectl logs deployment/bff -n unbrdn --tail=80`     |
+| **socket**  | ① Core 미기동 ② Redis Sentinel(`redis-node-2` 등) 연결 실패 ③ **local 없음** → prod 이미지                                   | `kubectl logs deployment/socket -n unbrdn --tail=80`  |
+| **llm**     | ① Redis **read-only** 오류(`redis` → replica 연결) ② **local 없음** → prod 이미지 ③ `OPENAI_API_KEY` 등 Secret               | `kubectl logs deployment/llm -n unbrdn --tail=80`     |
+| **stt**     | ① Kafka/Redis 연결 실패 ② **local 없음** → prod 이미지 ③ `OPENAI_API_KEY`                                                    | `kubectl logs deployment/stt -n unbrdn --tail=80`     |
+| **storage** | ① **MinIO 미배포** → `minio:9000` 연결 실패 ② Kafka/Redis ③ **local 없음** → prod 이미지                                     | `kubectl logs deployment/storage -n unbrdn --tail=80` |
 
 ---
 
@@ -89,9 +90,9 @@ kubectl logs deployment/bff -n unbrdn --tail=80
 
 ### 2.6 의존성 순서
 
-- **Core** → Postgres/Oracle, Kafka, Redis  
-- **BFF / Socket** → Core (gRPC, JWKS), Kafka, Redis  
-- **LLM** → Redis, Kafka  
+- **Core** → Postgres/Oracle, Kafka, Redis
+- **BFF / Socket** → Core (gRPC, JWKS), Kafka, Redis
+- **LLM** → Redis, Kafka
 - **STT / Storage** → Kafka, Redis (Storage는 MinIO 추가)
 
 Core가 CrashLoopBackOff 이면 BFF·Socket 도 연쇄 실패할 수 있습니다.
@@ -142,29 +143,29 @@ kubectl get kafka -n kafka         # Strimzi Kafka Ready 여부
 1. **로그로 직접 원인 확인**  
    위 `kubectl logs` / `describe` 로 각 서비스의 에러 메시지(DB 연결, Kafka, Redis, MinIO, Secret 부재 등)를 확인합니다.
 
-2. **Core · Postgres 정리**  
+2. **Core · Postgres 정리**
    - 로컬에서 **Postgres** 를 쓸 거면:
      - `k8s/infra/postgres/local` 복구 후 deploy-local 이 해당 경로를 적용하도록 유지.
      - `postgres-credentials` Secret 을 deploy-local 또는 수동으로 생성.
    - **Oracle** 만 쓸 거면:
      - Core **local** 배포를 Oracle + `oracle-db-credentials` 기준으로 바꾸고, Postgres 관련 설정 제거.
 
-3. **BFF / Socket / LLM / STT / Storage 에 local Deployment 추가**  
+3. **BFF / Socket / LLM / STT / Storage 에 local Deployment 추가**
    - `k8s/apps/{bff,socket,llm,stt,storage}/local/deployment.yaml` 에서:
      - `image: <service>:latest`, `imagePullPolicy: IfNotPresent`
      - `imagePullSecrets` 제거
      - `node-pool: main` (Kind 구성에 맞게)
    - deploy-local 이 **local** 우선 적용하도록 이미 되어 있다면, 위 local 추가만으로 prod 대신 로컬 이미지 사용.
 
-4. **MinIO 배포 (Storage 사용 시)**  
-   - `kubectl apply -f k8s/infra/minio/`  
+4. **MinIO 배포 (Storage 사용 시)**
+   - `kubectl apply -f k8s/infra/minio/`
    - `minio-credentials` Secret 생성 후, Storage ConfigMap의 `OBJECT_STORAGE_*` 와 맞는지 확인.
 
-5. **Redis**  
+5. **Redis**
    - `redis-node-2` 가 실제로 없으면: Redis replica 수 조정하거나, ConfigMap 의 `REDIS_SENTINEL_HOSTS` 를 실제 존재하는 노드만 쓰도록 수정.
    - LLM 등 쓰기 사용처는 `REDIS_HOST` 를 **redis-master** 로 두는 구성을 권장.
 
-6. **Kafka**  
+6. **Kafka**
    - `kubectl get kafka -n kafka`, `kubectl get pods -n kafka` 로 Ready 여부 확인.
    - 미준비 시 Strimzi/Kafka 배포 순서와 리소스(메모리, PVC 등)를 점검.
 
@@ -174,4 +175,4 @@ kubectl get kafka -n kafka         # Strimzi Kafka Ready 여부
 
 - **환경 변수·시크릿**: `docs/environment-variables.md`, `docs/local-secrets-guide.md`
 - **배포 스크립트**: `scripts/deploy-local.sh`, `scripts/README.md`
-- **기존 장애 분석**: `docs/FAILURE_ANALYSIS.md` (Oracle/프로덕션 등)
+- **기존 장애 분석**: `docs/ops/FAILURE_ANALYSIS.md` (Oracle/프로덕션 등)

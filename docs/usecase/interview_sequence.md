@@ -4,6 +4,32 @@
 
 이 문서는 AI 면접 시스템의 **초기 진입 단계(Opening)**와 **마지막 답변 및 종료 단계(Closing)**의 상세 흐름, 사용자 상호작용, 시스템 내부 로직을 설명합니다.
 
+### High-Level Sequence Flow
+
+```text
+       [  WAITING  ]  --- (소켓 연결 및 권한 확인) --->
+             |
+      [   GREETING  ] --- (면접관 환영 인사) --->
+             |
+ [ CANDIDATE_GREETING ] --- (사용자 가벼운 인사) --->
+             |
+ [ INTERVIEWER_INTRO ] --- (면접관 순차 자기소개) --->
+             |
+[ SELF_INTRO_PROMPT ] --- (1분 자기소개 요청) --->
+             |
+    [  SELF_INTRO  ]  --- (사용자 자기소개 진행) --->
+             |
+    [  IN_PROGRESS  ] --- (본 면접 질의응답 사이클) --->
+             |
+[ LAST_QUESTION_PROMPT ] --- (마지막 질문/발언 안내) --->
+             |
+    [  LAST_ANSWER  ] --- (사용자 마지막 답변) --->
+             |
+  [ CLOSING_GREETING ] --- (상호 작별 인사) --->
+             |
+    [  COMPLETED  ]   --- (면접 세션 최종 종료)
+```
+
 ---
 
 ## 1. Opening Sequence (면접 시작 ~ 본격 질의응답 전)

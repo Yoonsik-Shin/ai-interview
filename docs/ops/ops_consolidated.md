@@ -2,7 +2,7 @@
 
 생성일: 2026-01-10
 
-목적: `deployment-guide.md`, `environment-setup.md`, `environment-variables.md`, `HA-ARCHITECTURE-GUIDE.md`, `LOCAL_SETUP_GUIDE.md`, `local-testing-checklist.md`, `https-setup.md`, 각종 Docker 관련 문서들을 한 곳에 요약합니다. 상세 절차와 매니페스트는 원본 문서를 참조하세요.
+목적: 프로젝트의 운영 및 배포 관련 핵심 정보를 한 곳에 요약합니다. 아키텍처와 관련된 상세 내용은 [아키텍처 통합 문서](../architecture/architecture.md)를 참조하세요.
 
 ## 핵심 요약
 
@@ -19,8 +19,7 @@
 
 ## Docker 관련 참고
 
-- 상세 최적화/요약 자료는 모두 `archive/docs/`로 이전되었습니다.
-- 참고 원문: `DOCKER_FINAL_SUMMARY.md`, `DOCKER_IMAGE_OPTIMIZATION.md`, `DOCKER_OPTIMIZATION_SUMMARY.md`, `docker-build-optimization.md`
+상세한 Docker 최적화 기법 및 이미지 빌드 전략은 관련 문서나 아키텍처 문서를 참고하세요.
 
 ## 체크리스트(상태 확인용)
 
@@ -77,4 +76,4 @@ kubectl rollout status deployment/llm -n unbrdn
 - 백업: Kafka 토픽 오프로드, Redis AOF 주기적 백업
 - 보안: TLS(ingress), OCI Vault 또는 sealed-secrets 사용 권장
 
-참고 원본: `deployment-guide.md`, `environment-setup.md`, `LOCAL_SETUP_GUIDE.md`, `HA-ARCHITECTURE-GUIDE.md`, `https-setup.md`, `local-testing-checklist.md`
+참고 원본: [환경 변수 가이드](../guide/environment-variables.md), [아키텍처 통합 문서](../architecture/architecture.md)

@@ -25,7 +25,7 @@
 
 ## 🧠 Core (Domain Service)
 
-### 필수
+### 아키텍처 설정
 
 - `CORE_GRPC_PORT`: gRPC 서버 포트 (기본: `9090`)
 - `LLM_GRPC_URL`: LLM gRPC 서버 URL (기본: `llm:50051`)
@@ -55,14 +55,14 @@
 
 ## 🔌 Socket (Real-time Gateway)
 
-### 필수
+### 핵심 설정
 
 - `STT_GRPC_URL`: STT Worker gRPC 주소 (향후 Fast Path 직접 스트리밍용)
 - `KAFKA_BROKER`: Kafka 브로커 (기본: `kafka:29092`)
 - `REDIS_HOST`: Redis 호스트 (기본: `redis`)
 - `REDIS_PORT`: Redis 포트 (기본: `6379`)
 
-### 선택
+### 기타 설정
 
 - `LLM_GRPC_URL`: LLM gRPC 서버 (기본: `llm:50051`)
 - `PYTHON_WORKER_URL`: LLM HTTP API (기본: `http://llm:8000`)
@@ -72,7 +72,7 @@
 
 ## 🤖 LLM (Orchestration Service)
 
-### 필수
+### 인프라 설정
 
 - `OPENAI_API_KEY`: OpenAI API 키 (TTS/STT용, 시크릿)
 - `GRPC_PORT`: gRPC 서버 포트 (기본: `50051`)
@@ -80,7 +80,7 @@
 - `REDIS_HOST`: Redis 호스트 (기본: `redis`)
 - `REDIS_PORT`: Redis 포트 (기본: `6379`)
 
-### 선택
+### 운영 설정
 
 - `PORT`: HTTP API 포트 (기본: `8000`)
 - `LANGCHAIN_API_KEY`: LangChain 추적용 (선택)
@@ -246,6 +246,5 @@ OBJECT_STORAGE_BUCKET: "interview-prod-archives"
 
 참고:
 
-- 아키텍처: `docs/architecture_consolidated.md`
-- Kafka 토픽: `docs/kafka-topics.md`
-- 배포 가이드: `docs/ops_consolidated.md`
+- 아키텍처: [docs/architecture/architecture.md](../architecture/architecture.md)
+- 운영·배포: [docs/ops/ops_consolidated.md](../ops/ops_consolidated.md)

@@ -9,9 +9,9 @@
 - `core-5749864dfb-hgkfx`: **CrashLoopBackOff** (7회 재시작)
 - `core-5749864dfb-qsmpm`: **CrashLoopBackOff** (7회 재시작)
 - `core-7d989d8d55-shfcg`: **Running** (2회 재시작됨)
-- `inference-74bf7f8bb6-czksc`: **Running** (2회 재시작됨, Liveness probe 실패)
-- `inference-5bd7599c9b-lpccb`: **Pending** (리소스 부족)
-- `inference-74bf7f8bb6-tlwxh`: **Pending** (리소스 부족)
+- `llm-74bf7f8bb6-czksc`: **Running** (2회 재시작됨, Liveness probe 실패)
+- `llm-5bd7599c9b-lpccb`: **Pending** (리소스 부족)
+- `llm-74bf7f8bb6-tlwxh`: **Pending** (리소스 부족)
 
 ---
 
@@ -27,14 +27,12 @@ java.net.SocketException: Connection reset
 ### 원인 분석
 
 1. **ConfigMap 설정 확인됨**
-
    - `core-config` ConfigMap의 `datasource-url`은 실제 값으로 설정되어 있음:
      ```
      jdbc:oracle:thin:@adb.ap-chuncheon-1.oraclecloud.com:1522/gf042308c5c1882_unbrdn0krn0db_high.adb.oraclecloud.com
      ```
 
 2. **Secret 존재 확인됨**
-
    - `oracle-db-credentials` Secret이 존재함
 
 3. **가능한 원인들:**
@@ -97,7 +95,7 @@ spring.datasource.hikari.connection-test-query=SELECT 1 FROM DUAL
 
 ---
 
-## 🔴 문제 2: Inference 서비스 - OPENAI_API_KEY 누락
+## 🔴 문제 2: LLM 서비스 - OPENAI_API_KEY 누락
 
 ### 증상
 
@@ -182,7 +180,6 @@ kubectl exec -n unbrdn $(kubectl get pod -n unbrdn -l app=llm -o jsonpath='{.ite
 ### 원인 분석
 
 1. **노드 리소스 현황**
-
    - 사용 가능한 CPU: 1830m (각 노드당)
    - Core Pod 요청: 3개 × 200m = 600m
    - Inference Pod 요청: 3개 × 200m = 600m
@@ -249,19 +246,18 @@ kubectl top pods -n unbrdn
 
 ---
 
-## 🔴 문제 4: Inference 서비스 Liveness Probe 404 오류
+## 🔴 문제 4: LLM 서비스 Liveness Probe 404 오류
 
 ### 증상
 
-```
+```bash
 Warning  Unhealthy  85s (x8 over 4m25s)   kubelet
-spec.containers{inference}: Liveness probe failed: HTTP probe failed with statuscode: 404
+spec.containers{llm}: Liveness probe failed: HTTP probe failed with statuscode: 404
 ```
 
 ### 원인 분석
 
 1. **코드 확인**
-
    - `main.py`에 `/health` 엔드포인트가 존재함:
      ```python
      @app.get("/health")
@@ -324,7 +320,7 @@ kubectl exec -n unbrdn $POD_NAME -- curl -v http://localhost:8000/health
 
 ## ✅ 종합 해결 순서
 
-### 우선순위 1: Inference Secret 설정 (즉시 해결 가능)
+### 우선순위 1: LLM Secret 설정 (즉시 해결 가능)
 
 ```bash
 # 1. OpenAI API 키로 Secret 생성
@@ -360,11 +356,11 @@ kubectl rollout restart deployment core -n unbrdn
 
 ```bash
 # 1. 이전 Pod 정리
-kubectl get pods -n unbrdn | grep -E "(core|inference)"
+kubectl get pods -n unbrdn | grep -E "(core|llm)"
 kubectl delete pod -n unbrdn <old-pod-name>
 
 # 2. Deployment 스케일 조정 (필요시)
-kubectl scale deployment inference -n unbrdn --replicas=1
+kubectl scale deployment llm -n unbrdn --replicas=1
 kubectl scale deployment core -n unbrdn --replicas=1
 ```
 
@@ -412,14 +408,12 @@ kubectl get secret -n unbrdn
 
 # Deployment 이벤트 확인
 kubectl describe deployment core -n unbrdn
-kubectl describe deployment inference -n unbrdn
+kubectl describe deployment llm -n unbrdn
 ```
 
 ---
 
 ## 📚 참고 문서
 
-- [Oracle DB 설정 가이드](./oracle-db-setup.md)
-- [LLM Secret 설정 가이드](../k8s/apps/llm/README-secret.md)
-- [디버깅 가이드](./DEBUGGING.md)
-- [배포 가이드](./deployment-guide.md)
+- [아키텍처 통합 문서](../architecture/architecture.md)
+- [LLM Secret 설정 가이드](../../services/llm/README-secret.md)

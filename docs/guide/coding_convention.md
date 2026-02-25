@@ -33,14 +33,15 @@ trigger: always_on
 
 ### 🎨 프로젝트 루트 구조
 
-```
+```bash
 ai-interview-project/
 ├── frontend/          # React 클라이언트 앱 (정적 파일)
 ├── services/          # 백엔드 마이크로서비스
 │   ├── bff/          # Backend For Frontend (NestJS)
 │   ├── core/         # Core 비즈니스 로직 (Java)
 │   ├── socket/       # WebSocket 서비스 (NestJS)
-│   ├── llm/          # LLM 서비스 (Python)
+│   ├── llm/          # LLM 오케스트레이션 (Python)
+│   ├── document/     # 이력서 분석/VLM 서비스 (Python)
 │   ├── stt/          # STT 서비스 (Python)
 │   ├── tts/          # TTS 서비스 (Python)
 │   ├── storage/      # Object Storage 서비스 (Python)
@@ -59,14 +60,15 @@ ai-interview-project/
 
 모든 gRPC Proto 파일은 **`services/proto/`** 에 중앙 관리됩니다. 폴리글랏 환경에서 모든 서비스가 공유하는 단일 소스입니다.
 
-```
+```protobuf
 services/proto/                    # 중앙 Proto 정의 (폴리글랏)
 ├── auth.proto                      # Auth Service (Java/Go/etc)
 ├── interview.proto                 # Interview Service (Java)
 ├── resume.proto                    # Resume Service (Java)
-├── llm.proto                       # LLM Service (Python/Node.js)
+├── llm.proto                       # LLM Service (Python)
+├── document.proto                  # Document Service (Python)
 ├── stt.proto                       # STT Worker (Python)
-└── inference.proto                 # Inference Service (Python/GPU)
+└── storage.proto                   # Storage Service (Python)
 ```
 
 **각 서비스별 Proto 컴파일 방식:**
@@ -74,8 +76,9 @@ services/proto/                    # 중앙 Proto 정의 (폴리글랏)
 | 서비스    | 언어    | 컴파일 방법                 | 출력 위치                   |
 | --------- | ------- | --------------------------- | --------------------------- |
 | Core/Auth | Java    | Gradle protobuf plugin      | `build/generated/main/java` |
-| BFF       | Node.js | @grpc/proto-loader (런타임) | `src/grpc/*.ts`             |
+| BFF       | Node.js | @grpc/proto-loader (런타임) | (Runtime Load)              |
 | LLM       | Python  | protoc 커맨드               | `generated/`                |
+| Document  | Python  | protoc 커맨드               | `generated/`                |
 | STT       | Python  | protoc 커맨드               | `generated/`                |
 
 **Proto 파일 작성 규칙:**
