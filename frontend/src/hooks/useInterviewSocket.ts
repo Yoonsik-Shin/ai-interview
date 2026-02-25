@@ -19,7 +19,7 @@ export enum InterviewStage {
 
 export type SttResult = {
   text: string;
-  interviewSessionId: string;
+  interviewId: string;
   isFinal: boolean;
   engine?: string;
 };
@@ -40,9 +40,10 @@ export type AudioChunk = {
   sentenceIndex: number;
   audioData: string;
   duration?: number;
+  persona?: string;
 };
 export type StageChangedEvent = {
-  interviewSessionId: string;
+  interviewId: string;
   previousStage: InterviewStage;
   currentStage: InterviewStage;
 };
@@ -54,7 +55,7 @@ export type InterveneEvent = {
 
 export type AudioAck = {
   chunkId?: string;
-  interviewSessionId: string;
+  interviewId: string;
   isFinal?: boolean;
   timestamp: string;
 };
@@ -129,7 +130,7 @@ export function useInterviewSocket(interviewId: string | null) {
         const token = localStorage.getItem("accessToken");
         cb({ token: token ? `Bearer ${token}` : "" });
       },
-      query: { type: "interview", interviewSessionId: String(interviewId) },
+      query: { type: "INTERVIEW", interviewId: String(interviewId) },
       transports: ["websocket", "polling"],
     });
     socketRef.current = socket;
@@ -189,7 +190,7 @@ export function useInterviewSocket(interviewId: string | null) {
   const sendAudioChunk = useCallback(
     (payload: {
       chunk: string | ArrayBuffer;
-      interviewSessionId: string;
+      interviewId: string;
       isFinal?: boolean;
       format?: string;
       sampleRate?: number;
@@ -204,7 +205,7 @@ export function useInterviewSocket(interviewId: string | null) {
     (stage: InterviewStage) => {
       if (socketRef.current?.connected && interviewId != null) {
         socketRef.current.emit("interview:stage_ready", {
-          interviewSessionId: interviewId,
+          interviewId: interviewId,
           currentStage: stage,
         });
       }
@@ -215,7 +216,7 @@ export function useInterviewSocket(interviewId: string | null) {
   const abortStream = useCallback(() => {
     if (socketRef.current?.connected && interviewId != null) {
       socketRef.current.emit("interview:abort_stream", {
-        interviewSessionId: interviewId,
+        interviewId: interviewId,
       });
     }
   }, [interviewId]);

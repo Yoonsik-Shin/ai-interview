@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./Toast.module.css";
 
 type ToastProps = {
@@ -30,7 +31,7 @@ export function Toast({
     setTimeout(onClose, 250);
   };
 
-  return (
+  return createPortal(
     <div
       className={`${styles.toast} ${styles[type]} ${leaving ? styles.leaving : ""}`}
       role="alert"
@@ -47,6 +48,7 @@ export function Toast({
       >
         ×
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }

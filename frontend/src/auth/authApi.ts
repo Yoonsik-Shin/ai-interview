@@ -39,14 +39,8 @@ export async function register(body: RegisterReq): Promise<RegisterRes> {
 }
 
 export async function refresh(): Promise<{ accessToken: string }> {
-  const refreshToken = document.cookie
-    .split("; ")
-    .find((c) => c.startsWith("refreshToken="))
-    ?.split("=")[1];
-  if (!refreshToken) throw new Error("No refresh token");
   return api<{ accessToken: string }>("/v1/auth/refresh", {
     method: "POST",
-    body: JSON.stringify({ refreshToken }),
     credentials: "include",
   });
 }

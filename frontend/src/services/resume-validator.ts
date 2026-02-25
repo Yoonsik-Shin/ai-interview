@@ -308,7 +308,7 @@ export async function validateResumeFile(
         `[ResumeValidator] Checking duplicates against ${existingResumes.length} existing resumes...`,
       );
 
-      let maxSimilarity = -1;
+      let maxSimilarity = 0;
 
       for (const resume of existingResumes) {
         if (resume.embedding && resume.embedding.length > 0) {

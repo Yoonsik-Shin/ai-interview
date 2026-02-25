@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, Link } from "react-router-dom";
 import {
   createInterview,
@@ -16,6 +17,9 @@ import { Toast } from "@/components/Toast";
 import { ResumeUploadZone } from "@/components/ResumeUploadZone";
 import { PremiumResumeViewer } from "@/components/PremiumResumeViewer";
 import { Skeleton } from "@/components/Skeleton";
+import { AudioTester } from "@/components/AudioTester";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+// import { useInterviewSocket } from "@/hooks/useInterviewSocket"; // Removed
 import styles from "./InterviewSetup.module.css";
 
 export function InterviewSetup() {
@@ -65,6 +69,18 @@ export function InterviewSetup() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [isEditingDuration, setIsEditingDuration] = useState(false);
 
+  // 컨펌 모달 관련 상태
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [hasTestedAudio, setHasTestedAudio] = useState(false);
+  const [checklist, setChecklist] = useState({
+    media: false,
+    resume: false,
+    ready: false,
+  });
+
+  // 오디오 스트림 변경 시 테스트 상태 초기화
+  // (useAudioRecorder 선언 뒤로 이동됨)
+
   const handleFileSelect = (file: File | null) => {
     if (!file) {
       setError("");
@@ -72,23 +88,29 @@ export function InterviewSetup() {
     }
   };
 
-  // 이력서 목록 가져오기
-  useEffect(() => {
-    async function loadResumes() {
-      try {
-        const list = await listResumes();
-        setExistingResumes(list.resumes);
-        if (list.resumes.length === 0) {
-          setIsNewUpload(true);
-        } else {
+  // 이력서 목록 가져오기 함수 분리
+  const loadResumes = async () => {
+    setResumesLoading(true);
+    try {
+      const list = await listResumes();
+      setExistingResumes(list.resumes);
+      if (list.resumes.length === 0) {
+        setIsNewUpload(true);
+      } else {
+        // 새로 업로드한 직후라면 해당 이력서가 선택되도록 로직 추가 가능
+        // 기본적으로는 첫 번째 선택 유지
+        if (!selectedResumeId) {
           setSelectedResumeId(list.resumes[0].id);
         }
-      } catch (err) {
-        console.error("이력서 목록 로드 실패:", err);
-      } finally {
-        setResumesLoading(false);
       }
+    } catch (err) {
+      console.error("이력서 목록 로드 실패:", err);
+    } finally {
+      setResumesLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadResumes();
   }, []);
 
@@ -110,12 +132,19 @@ export function InterviewSetup() {
   };
 
   const streamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationIdRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
 
-  const [audioLevel, setAudioLevel] = useState(0);
+  const {
+    start: startAudio,
+    stop: stopAudio,
+    stream: audioStream,
+  } = useAudioRecorder("setup", () => {}); // Empty callback
+
+  // 오디오 스트림 변경 시 테스트 상태 초기화
+  useEffect(() => {
+    setHasTestedAudio(false);
+  }, [audioStream]);
+
   const [mediaError, setMediaError] = useState("");
   const [devices, setDevices] = useState<{
     cameras: MediaDeviceInfo[];
@@ -129,26 +158,29 @@ export function InterviewSetup() {
     isMountedRef.current = true;
     async function setupMedia() {
       try {
-        // 미디어 권한 요청
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
+        // 미디어 권한 요청 (비디오 위주로 먼저)
+        const videoStream = await navigator.mediaDevices.getUserMedia({
           video: true,
-          audio: true,
+          audio: false,
         });
 
         if (!isMountedRef.current) {
-          mediaStream.getTracks().forEach((track) => track.stop());
+          videoStream.getTracks().forEach((track) => track.stop());
           return;
         }
 
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
         }
-        streamRef.current = mediaStream;
+        streamRef.current = videoStream;
 
         // 비디오 프리뷰 설정
         if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
+          videoRef.current.srcObject = videoStream;
         }
+
+        // 오디오 레코더 시작 (기본 디바이스)
+        const audioStream = await startAudio();
 
         // 디바이스 목록 가져오기
         const deviceList = await navigator.mediaDevices.enumerateDevices();
@@ -158,33 +190,24 @@ export function InterviewSetup() {
         const microphones = deviceList.filter((d) => d.kind === "audioinput");
         setDevices({ cameras, microphones });
 
-        // 현재 사용 중인 디바이스 설정
-        const videoTrack = mediaStream.getVideoTracks()[0];
-        const audioTrack = mediaStream.getAudioTracks()[0];
+        // 현재 사용 중인 비디오 디바이스 설정
+        const videoTrack = videoStream.getVideoTracks()[0];
         if (videoTrack)
           setSelectedCamera(videoTrack.getSettings().deviceId || "");
-        if (audioTrack)
-          setSelectedMicrophone(audioTrack.getSettings().deviceId || "");
 
-        // 오디오 레벨 분석
-        const audioContext = new AudioContext();
-        audioContextRef.current = audioContext;
-        const analyser = audioContext.createAnalyser();
-        analyserRef.current = analyser;
-
-        const source = audioContext.createMediaStreamSource(mediaStream);
-        source.connect(analyser);
-        analyser.fftSize = 256;
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-        function updateAudioLevel() {
-          if (!isMountedRef.current || !analyserRef.current) return;
-          analyserRef.current.getByteFrequencyData(dataArray);
-          const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-          setAudioLevel(average / 255); // 0-1 범위로 정규화
-          animationIdRef.current = requestAnimationFrame(updateAudioLevel);
+        // 현재 사용 중인 오디오 디바이스 설정
+        if (audioStream) {
+          const audioTrack = audioStream.getAudioTracks()[0];
+          if (audioTrack) {
+            const trackId = audioTrack.getSettings().deviceId;
+            // 만약 deviceId가 없으면(Default), 목록에서 'default' 혹은 첫 번째 마이크를 선택
+            if (trackId) {
+              setSelectedMicrophone(trackId);
+            } else if (microphones.length > 0) {
+              setSelectedMicrophone(microphones[0].deviceId);
+            }
+          }
         }
-        updateAudioLevel();
       } catch (err) {
         if (!isMountedRef.current) return;
         console.error("미디어 권한 에러:", err);
@@ -204,109 +227,39 @@ export function InterviewSetup() {
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-      if (animationIdRef.current) {
-        cancelAnimationFrame(animationIdRef.current);
-        animationIdRef.current = null;
-      }
+      stopAudio();
     };
   }, []);
 
   // 디바이스 변경
   async function changeDevice(type: "video" | "audio", deviceId: string) {
     try {
-      // 1. 기존 오디오 관련 리소스 명시적 정리
-      if (animationIdRef.current) {
-        cancelAnimationFrame(animationIdRef.current);
-        animationIdRef.current = null;
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => {});
-        audioContextRef.current = null;
-      }
-      analyserRef.current = null;
-
-      // 2. 계산된 새로운 비디오/오디오 제약조건 설정
-      const newCameraId = type === "video" ? deviceId : selectedCamera;
-      const newMicId = type === "audio" ? deviceId : selectedMicrophone;
-
-      const constraints: MediaStreamConstraints = {
-        video:
-          newCameraId === "none" || !newCameraId
-            ? false
-            : { deviceId: { exact: newCameraId } },
-        audio:
-          newMicId === "none" || !newMicId
-            ? false
-            : { deviceId: { exact: newMicId } },
-      };
-
-      // 3. 둘 다 "none"이면 스트림 정지하고 null 처리
-      if (
-        (newCameraId === "none" || !newCameraId) &&
-        (newMicId === "none" || !newMicId)
-      ) {
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((t) => t.stop());
-          streamRef.current = null;
+      if (type === "video") {
+        if (deviceId === "none") {
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+          }
+          if (videoRef.current) videoRef.current.srcObject = null;
+        } else {
+          const newVideoStream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: deviceId } },
+          });
+          if (streamRef.current)
+            streamRef.current.getTracks().forEach((t) => t.stop());
+          streamRef.current = newVideoStream;
+          if (videoRef.current) videoRef.current.srcObject = newVideoStream;
         }
-        if (videoRef.current) {
-          videoRef.current.srcObject = null;
-        }
-        setAudioLevel(0);
-        // State update
-        if (type === "video") setSelectedCamera("none");
-        else setSelectedMicrophone("none");
-        return;
-      }
-
-      // 4. 새 스트림 요청
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (!isMountedRef.current) {
-        newStream.getTracks().forEach((t) => t.stop());
-        return;
-      }
-
-      // 5. 기존 스트림 정지 (새 스트림 성공 후)
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
-      streamRef.current = newStream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-      }
-
-      // 6. 오디오 분석기 재연결 (오디오가 있는 경우만)
-      if (newMicId !== "none" && newMicId) {
-        const audioContext = new AudioContext();
-        audioContextRef.current = audioContext;
-        const analyser = audioContext.createAnalyser();
-        analyserRef.current = analyser;
-
-        const source = audioContext.createMediaStreamSource(newStream);
-        source.connect(analyser);
-        analyser.fftSize = 256;
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-        function updateAudioLevel() {
-          if (!isMountedRef.current || !analyserRef.current) return;
-          analyserRef.current.getByteFrequencyData(dataArray);
-          const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-          setAudioLevel(average / 255);
-          animationIdRef.current = requestAnimationFrame(updateAudioLevel);
-        }
-        updateAudioLevel();
+        setSelectedCamera(deviceId);
       } else {
-        setAudioLevel(0);
+        // Audio 변경
+        if (deviceId === "none") {
+          stopAudio();
+        } else {
+          await startAudio(deviceId);
+        }
+        setSelectedMicrophone(deviceId);
       }
-
-      // 7. Selection State Update
-      if (type === "video") setSelectedCamera(deviceId);
-      else setSelectedMicrophone(deviceId);
     } catch (err) {
       if (!isMountedRef.current) return;
       console.error("디바이스 변경 에러:", err);
@@ -326,6 +279,40 @@ export function InterviewSetup() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    // 사전 밸리데이션
+    if (isNewUpload) {
+      if (!uploadedResumeId) {
+        setError("이력서를 먼저 업로드해주세요.");
+        return;
+      }
+    } else {
+      if (!selectedResumeId) {
+        setError("이력서를 먼저 선택해주세요.");
+        return;
+      }
+    }
+
+    setShowConfirmModal(true);
+  }
+
+  const handleResumeClickInModal = async () => {
+    const resumeId = isNewUpload ? uploadedResumeId : selectedResumeId;
+    if (!resumeId) return;
+
+    setDetailLoading(true);
+    try {
+      const data = await getResume(resumeId);
+      setDetail(data.resume); // Fixed type access
+    } catch (err) {
+      setError("이력서 정보를 가져오는 데 실패했습니다.");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  async function handleFinalConfirm() {
+    setError("");
     setLoading(true);
     try {
       let resumeId: string | undefined =
@@ -333,11 +320,19 @@ export function InterviewSetup() {
           ? selectedResumeId
           : uploadedResumeId || undefined;
 
-      // 새 업로드인데 업로드가 안 되어 있으면 에러
-      if (isNewUpload && !uploadedResumeId) {
-        setError("이력서를 먼저 업로드해주세요.");
-        setLoading(false);
-        return;
+      // 이력서 유효성 검사 (탭 상태에 따라 메시지 분기)
+      if (isNewUpload) {
+        if (!uploadedResumeId) {
+          setError("이력서를 먼저 업로드해주세요.");
+          setLoading(false);
+          return;
+        }
+      } else {
+        if (!selectedResumeId) {
+          setError("이력서를 먼저 선택해주세요.");
+          setLoading(false);
+          return;
+        }
       }
       const payload: CreateInterviewReq = {
         ...form,
@@ -370,6 +365,7 @@ export function InterviewSetup() {
       setError(err instanceof Error ? err.message : "인터뷰 생성 실패");
     } finally {
       setLoading(false);
+      setShowConfirmModal(false);
     }
   }
 
@@ -401,10 +397,12 @@ export function InterviewSetup() {
               />
             </div>
 
-            <div className={styles.mediaControls}>
-              {/* 카메라 선택 */}
-              <div className={styles.deviceSelect}>
-                <label>카메라</label>
+            <div className={styles.mediaSettingsCard}>
+              {/* 카메라 설정 */}
+              <div className={styles.deviceSelectGroup}>
+                <label>
+                  <span>🎥</span> 카메라 선택
+                </label>
                 <select
                   value={selectedCamera}
                   onChange={(e) => changeDevice("video", e.target.value)}
@@ -419,14 +417,15 @@ export function InterviewSetup() {
                 </select>
               </div>
 
-              {/* 마이크 선택 및 레벨 */}
-              <div className={styles.deviceSelect}>
-                <label>마이크 및 오디오 레벨</label>
+              {/* 마이크 및 오디오 설정 */}
+              <div className={styles.deviceSelectGroup}>
+                <label>
+                  <span>🎙️</span> 마이크 선택
+                </label>
                 <select
                   value={selectedMicrophone}
                   onChange={(e) => changeDevice("audio", e.target.value)}
                   className={styles.select}
-                  style={{ marginBottom: "1rem" }}
                 >
                   <option value="none">사용 안 함</option>
                   {devices.microphones.map((device) => (
@@ -435,12 +434,13 @@ export function InterviewSetup() {
                     </option>
                   ))}
                 </select>
-                <div className={styles.levelBar}>
-                  <div
-                    className={styles.levelFill}
-                    style={{ width: `${audioLevel * 100}%` }}
-                  />
-                </div>
+              </div>
+
+              <div style={{ paddingBottom: "0.25rem" }}>
+                <AudioTester
+                  stream={audioStream}
+                  onTestComplete={() => setHasTestedAudio(true)}
+                />
               </div>
             </div>
           </section>
@@ -500,9 +500,12 @@ export function InterviewSetup() {
                     onError={setError}
                     onSuccess={setSuccess}
                     enableUpload={true}
-                    onUploadComplete={(resumeId) => {
+                    onUploadComplete={async (resumeId) => {
                       setUploadedResumeId(resumeId);
                       setSuccess("이력서가 업로드되었습니다!");
+                      await loadResumes(); // 목록 갱신 대기
+                      setIsNewUpload(false); // 목록 뷰로 전환
+                      setSelectedResumeId(resumeId); // 방금 업로드한 이력서 선택
                     }}
                     existingResumes={existingResumes}
                   />
@@ -749,39 +752,176 @@ export function InterviewSetup() {
       )}
 
       {/* 이력서 상세보기 모달 */}
-      {detail && (
-        <div className={styles.modalOverlay} onClick={closeDetail}>
+      {detail &&
+        createPortal(
+          <div className={styles.modalOverlay} onClick={closeDetail}>
+            <div
+              className={styles.modalContent}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={styles.modalHeader}>
+                <h2>{detail.title}</h2>
+                <button className={styles.closeBtn} onClick={closeDetail}>
+                  ✕
+                </button>
+              </div>
+              <div className={styles.modalBody}>
+                {detailLoading ? (
+                  <div className={styles.detailLoadingSkeleton}>
+                    <Skeleton width="100%" height={24} className={styles.mb1} />
+                    <Skeleton width="90%" height={24} className={styles.mb1} />
+                    <Skeleton width="95%" height={24} className={styles.mb1} />
+                    <Skeleton width="80%" height={24} />
+                  </div>
+                ) : detail.fileUrl ? (
+                  <div className={styles.pdfViewerContainer}>
+                    <PremiumResumeViewer fileUrl={detail.fileUrl} />
+                  </div>
+                ) : (
+                  <div className={styles.loading}>
+                    파일 URL을 찾을 수 없습니다.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {/* 면접 시작 전 최종 확인 모달 */}
+      {showConfirmModal &&
+        createPortal(
           <div
-            className={styles.modalContent}
-            onClick={(e) => e.stopPropagation()}
+            className={styles.modalOverlay}
+            onClick={() => setShowConfirmModal(false)}
           >
-            <div className={styles.modalHeader}>
-              <h2>{detail.title}</h2>
-              <button className={styles.closeBtn} onClick={closeDetail}>
-                ✕
-              </button>
+            <div
+              className={`${styles.modalContent} ${styles.confirmModalContent}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={styles.modalHeader}>
+                <h2>🚀 면접 시작 전 최종 확인</h2>
+                <button
+                  className={styles.closeBtn}
+                  onClick={() => setShowConfirmModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className={styles.confirmBody}>
+                {/* 설정 요약 */}
+                <div className={styles.summarySection}>
+                  <div className={styles.summaryTitle}>설정 요약</div>
+                  <div className={styles.summaryGrid}>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>이력서</span>
+                      <span
+                        className={styles.summaryValueClickable}
+                        onClick={handleResumeClickInModal}
+                        title="클릭하여 확인하기"
+                      >
+                        {existingResumes.find((r) => r.id === selectedResumeId)
+                          ?.title ||
+                          (uploadedResumeId && "새로 업로드된 이력서") ||
+                          "선택된 이력서"}
+                      </span>
+                    </div>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>분야</span>
+                      <span className={styles.summaryValue}>{form.domain}</span>
+                    </div>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>목표 시간</span>
+                      <span className={styles.summaryValue}>
+                        {form.targetDurationMinutes}분
+                      </span>
+                    </div>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>면접 타입</span>
+                      <span className={styles.summaryValue}>
+                        {form.type === "REAL" ? "실전 면접" : "모의 면접"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 음성 체크 상태 */}
+                <div
+                  className={`${styles.audioStatus} ${hasTestedAudio ? styles.tested : styles.pending}`}
+                >
+                  {hasTestedAudio ? (
+                    <>✅ 음성 테스트를 완료했습니다.</>
+                  ) : (
+                    <>⚠️ 아직 음성 테스트를 진행하지 않았습니다. (선택 사항)</>
+                  )}
+                </div>
+
+                {/* 체크리스트 */}
+                <div className={styles.checklistSection}>
+                  <label className={styles.checkItem}>
+                    <input
+                      type="checkbox"
+                      checked={checklist.media}
+                      onChange={(e) =>
+                        setChecklist({ ...checklist, media: e.target.checked })
+                      }
+                    />
+                    <span className={styles.checkText}>
+                      카메라와 마이크가 잘 작동하는지 확인했습니다.
+                    </span>
+                  </label>
+                  <label className={styles.checkItem}>
+                    <input
+                      type="checkbox"
+                      checked={checklist.resume}
+                      onChange={(e) =>
+                        setChecklist({ ...checklist, resume: e.target.checked })
+                      }
+                    />
+                    <span className={styles.checkText}>
+                      선택한 이력서가 본인 것이 맞는지 확인했습니다.
+                    </span>
+                  </label>
+                  <label className={styles.checkItem}>
+                    <input
+                      type="checkbox"
+                      checked={checklist.ready}
+                      onChange={(e) =>
+                        setChecklist({ ...checklist, ready: e.target.checked })
+                      }
+                    />
+                    <span className={styles.checkText}>
+                      면접 준비가 모두 완료되었습니다.
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div className={styles.modalFooter}>
+                <button
+                  className={styles.cancelBtn}
+                  onClick={() => setShowConfirmModal(false)}
+                >
+                  취소
+                </button>
+                <button
+                  className={styles.startFinalBtn}
+                  onClick={handleFinalConfirm}
+                  disabled={
+                    loading ||
+                    !checklist.media ||
+                    !checklist.resume ||
+                    !checklist.ready
+                  }
+                >
+                  {loading ? "면접 생성 중..." : "확인 후 시작하기"}
+                </button>
+              </div>
             </div>
-            <div className={styles.modalBody}>
-              {detailLoading ? (
-                <div className={styles.detailLoadingSkeleton}>
-                  <Skeleton width="100%" height={24} className={styles.mb1} />
-                  <Skeleton width="90%" height={24} className={styles.mb1} />
-                  <Skeleton width="95%" height={24} className={styles.mb1} />
-                  <Skeleton width="80%" height={24} />
-                </div>
-              ) : detail.fileUrl ? (
-                <div className={styles.pdfViewerContainer}>
-                  <PremiumResumeViewer fileUrl={detail.fileUrl} />
-                </div>
-              ) : (
-                <div className={styles.loading}>
-                  파일 URL을 찾을 수 없습니다.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

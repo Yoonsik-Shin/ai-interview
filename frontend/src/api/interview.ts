@@ -44,8 +44,30 @@ export async function createInterview(
   });
 }
 
-export async function getInterviews(): Promise<GetInterviewsRes> {
-  return api<GetInterviewsRes>("/v1/interviews", {
+export type GetInterviewsParams = {
+  status?: string;
+  limit?: number;
+  sort?: string;
+};
+
+export async function getInterviews(
+  params?: GetInterviewsParams,
+): Promise<GetInterviewsRes> {
+  const query = new URLSearchParams();
+  if (params?.status) query.append("status", params.status);
+  if (params?.limit) query.append("limit", params.limit.toString());
+  if (params?.sort) query.append("sort", params.sort);
+
+  const queryString = query.toString();
+  const url = queryString ? `/v1/interviews?${queryString}` : "/v1/interviews";
+
+  return api<GetInterviewsRes>(url, {
     method: "GET",
+  });
+}
+
+export async function completeInterview(interviewId: string): Promise<void> {
+  return api<void>(`/v1/interviews/${interviewId}/complete`, {
+    method: "POST",
   });
 }

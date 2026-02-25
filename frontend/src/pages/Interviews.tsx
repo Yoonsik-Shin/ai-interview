@@ -1,22 +1,52 @@
 import { useNavigate, Link } from "react-router-dom";
 import styles from "./Interviews.module.css";
 import { useEffect, useState } from "react";
-import { getInterviews, InterviewSessionSummary } from "../api/interview";
+import {
+  getInterviews,
+  completeInterview,
+  InterviewSessionSummary,
+} from "../api/interview";
 import { Skeleton } from "../components/Skeleton";
+import { useInterviewRecovery } from "@/hooks/useInterviewRecovery";
 
 export function Interviews() {
+  const { triggerRecoveryCheck } = useInterviewRecovery();
   const navigate = useNavigate();
   const [interviews, setInterviews] = useState<InterviewSessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchInterviews = () => {
+    setLoading(true);
     getInterviews()
       .then((res) => {
         setInterviews(res.interviews || []);
       })
       .catch((err) => console.error("Failed to fetch interviews", err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchInterviews();
   }, []);
+
+  const handleComplete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        "정말 이 면접을 종료하겠습니까? 종료 후에는 더 이상 이어할 수 없습니다.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await completeInterview(id);
+      fetchInterviews();
+    } catch (err) {
+      console.error("Failed to complete interview", err);
+      alert("면접 종료에 실패했습니다.");
+    }
+  };
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "-";
@@ -88,6 +118,14 @@ export function Interviews() {
                 </div>
 
                 <div className={styles.cardAction}>
+                  {item.status !== "COMPLETED" && (
+                    <button
+                      className={`${styles.actionButton} ${styles.btnSecondary}`}
+                      onClick={(e) => handleComplete(e, item.interviewId)}
+                    >
+                      종료하기
+                    </button>
+                  )}
                   <button
                     className={styles.actionButton}
                     onClick={() => navigate(`/interview/${item.interviewId}`)}
@@ -103,7 +141,12 @@ export function Interviews() {
             <p>기록된 면접 내역이 없습니다.</p>
             <button
               className={styles.startButton}
-              onClick={() => navigate("/setup")}
+              onClick={async () => {
+                const hasRecovery = await triggerRecoveryCheck();
+                if (!hasRecovery) {
+                  navigate("/setup");
+                }
+              }}
             >
               첫 면접 시작하기
             </button>

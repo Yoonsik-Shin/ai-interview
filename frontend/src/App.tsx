@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthGuard } from "./auth/AuthGuard";
 import { PageFrame } from "./components/PageFrame";
+import { InterviewRecoveryModal } from "./components/InterviewRecoveryModal";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Landing } from "./pages/Landing";
@@ -9,8 +10,10 @@ import { InterviewSetup } from "./pages/InterviewSetup";
 import { Interview } from "./pages/Interview";
 import { ResumeManage } from "./pages/ResumeManage";
 import { Profile } from "./pages/Profile";
+import { DebugPage } from "./pages/DebugPage";
 import { useEffect } from "react";
 import { preloadModel } from "@/services/resume-validator";
+import { InterviewRecoveryProvider } from "./contexts/InterviewRecoveryContext";
 
 export default function App() {
   useEffect(() => {
@@ -19,80 +22,93 @@ export default function App() {
   }, []);
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <PageFrame>
-            <Login />
-          </PageFrame>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PageFrame>
-            <Register />
-          </PageFrame>
-        }
-      />
-      <Route
-        path="/"
-        element={
-          <PageFrame>
-            <Landing />
-          </PageFrame>
-        }
-      />
-      <Route
-        path="/setup"
-        element={
-          <AuthGuard>
+    <InterviewRecoveryProvider>
+      <InterviewRecoveryModal />
+      <Routes>
+        <Route
+          path="/login"
+          element={
             <PageFrame>
-              <InterviewSetup />
+              <Login />
             </PageFrame>
-          </AuthGuard>
-        }
-      />
-      <Route
-        path="/interviews"
-        element={
-          <AuthGuard>
+          }
+        />
+        <Route
+          path="/register"
+          element={
             <PageFrame>
-              <Interviews />
+              <Register />
             </PageFrame>
-          </AuthGuard>
-        }
-      />
-      <Route
-        path="/resumes"
-        element={
-          <AuthGuard>
+          }
+        />
+        <Route
+          path="/"
+          element={
             <PageFrame>
-              <ResumeManage />
+              <Landing />
             </PageFrame>
-          </AuthGuard>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <AuthGuard>
-            <PageFrame>
-              <Profile />
-            </PageFrame>
-          </AuthGuard>
-        }
-      />
-      <Route
-        path="/interview/:interviewId"
-        element={
-          <AuthGuard>
-            <Interview />
-          </AuthGuard>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+          }
+        />
+        <Route
+          path="/setup"
+          element={
+            <AuthGuard>
+              <PageFrame>
+                <InterviewSetup />
+              </PageFrame>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/interviews"
+          element={
+            <AuthGuard>
+              <PageFrame>
+                <Interviews />
+              </PageFrame>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/resumes"
+          element={
+            <AuthGuard>
+              <PageFrame>
+                <ResumeManage />
+              </PageFrame>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <AuthGuard>
+              <PageFrame>
+                <Profile />
+              </PageFrame>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/interview/:interviewId"
+          element={
+            <AuthGuard>
+              <Interview />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/debug"
+          element={
+            <AuthGuard>
+              <PageFrame>
+                <DebugPage />
+              </PageFrame>
+            </AuthGuard>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </InterviewRecoveryProvider>
   );
 }

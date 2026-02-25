@@ -35,10 +35,10 @@ function floatToPcm16(f32: Float32Array): ArrayBuffer {
 // }
 
 export function useAudioRecorder(
-  interviewSessionId: string,
+  interviewId: string,
   onChunk: (payload: {
     chunk: string | ArrayBuffer;
-    interviewSessionId: string;
+    interviewId: string;
     isFinal?: boolean;
     format?: string;
     sampleRate?: number;
@@ -50,6 +50,7 @@ export function useAudioRecorder(
 ) {
   const [recording, setRecording] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -89,65 +90,59 @@ export function useAudioRecorder(
 
     const resample = resample16k(concat, currentSrcRate);
     const pcm = floatToPcm16(resample);
-    // const b64 = toBase64(pcm); // Removed Base64 encoding
     chunkIdRef.current += 1;
 
     const now = Date.now();
     const chunkId = `c-${now}-${chunkIdRef.current}`;
-    // console.log(`[AudioRecorder] Sending chunk ${chunkId}, size=${pcm.byteLength}, rate=${currentSrcRate}`);
 
     onChunkRef.current({
-      chunk: pcm, // Send ArrayBuffer directly
-      interviewSessionId,
+      chunk: pcm,
+      interviewId: interviewId,
       isFinal: false,
       format: "pcm16",
       sampleRate: TARGET_SAMPLE_RATE,
       chunkId,
     });
-  }, [interviewSessionId]);
+  }, [interviewId]);
 
   const isMountedRef = useRef(true);
 
-  const stop = useCallback(() => {
+  const isStartingRef = useRef(false);
+
+  const stop = useCallback(async () => {
     isMountedRef.current = false;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    sourceRef.current?.disconnect();
     sourceRef.current = null;
+    processorRef.current?.disconnect();
     processorRef.current = null;
-    ctxRef.current?.close().catch(() => {});
-    ctxRef.current = null;
+    if (ctxRef.current) {
+      if (ctxRef.current.state !== "closed") {
+        await ctxRef.current.close().catch(() => {});
+      }
+      ctxRef.current = null;
+    }
     bufferRef.current = [];
     totalRef.current = 0;
+    setStream(null);
     setRecording(false);
   }, []);
 
   const start = useCallback(
     async (deviceId?: string) => {
+      if (isStartingRef.current) return;
+      isStartingRef.current = true;
       isMountedRef.current = true;
       setMicError(null);
 
-      // Cleanup existing resources before starting new one
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
-      if (sourceRef.current) {
-        sourceRef.current.disconnect();
-        sourceRef.current = null;
-      }
-      if (processorRef.current) {
-        processorRef.current.disconnect();
-        processorRef.current = null;
-      }
-      if (ctxRef.current) {
-        ctxRef.current.close().catch(() => {});
-        ctxRef.current = null;
-      }
-
-      chunkIdRef.current = 0;
-      bufferRef.current = [];
-      totalRef.current = 0;
       try {
+        // 기존 리소스 완전히 정리될 때까지 대기
+        await stop();
+        isMountedRef.current = true;
+
         const baseAudioConstraints: MediaTrackConstraints = {
           echoCancellation: true,
           noiseSuppression: true,
@@ -161,33 +156,25 @@ export function useAudioRecorder(
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-        // 비동기 호출 사이에 언마운트되거나 중지 요청이 있었다면 즉시 닫기
         if (!isMountedRef.current) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
 
         streamRef.current = stream;
+        setStream(stream);
 
-        // 시스템 샘플 레이트 자동 감지 (기본값 사용)
-        const ctx = new AudioContext();
+        // 16kHz 강제 지정을 통해 샘플 레이트 불일치 방어
+        const ctx = new (
+          window.AudioContext || (window as any).webkitAudioContext
+        )({ sampleRate: TARGET_SAMPLE_RATE });
+
+        if (ctx.state === "suspended") {
+          await ctx.resume();
+        }
         ctxRef.current = ctx;
         const src = ctx.createMediaStreamSource(stream);
         sourceRef.current = src;
-
-        const srcSamplesNeeded = Math.floor((ctx.sampleRate * CHUNK_MS) / 1000);
-        console.log(
-          `[AudioRecorder] Started. Context SampleRate: ${ctx.sampleRate}, Target Chunk Samples: ${srcSamplesNeeded}`,
-        );
-
-        // Audio Cleaning: Band-pass Filter (300Hz ~ 3400Hz)
-        const highPass = ctx.createBiquadFilter();
-        highPass.type = "highpass";
-        highPass.frequency.value = 300; // Remove low freq noise (rumble, pop)
-
-        const lowPass = ctx.createBiquadFilter();
-        lowPass.type = "lowpass";
-        lowPass.frequency.value = 3400; // Remove high freq noise (hiss)
 
         const processor = ctx.createScriptProcessor(4096, 1, 1);
         processorRef.current = processor;
@@ -208,35 +195,45 @@ export function useAudioRecorder(
           totalRef.current += copy.length;
           flush();
         };
+
         const gain = ctx.createGain();
         gain.gain.value = 0;
 
-        // Connect nodes: Source -> HighPass -> LowPass -> Processor -> Gain -> Dest
-        src.connect(highPass);
-        highPass.connect(lowPass);
-        lowPass.connect(processor);
+        // 원음 중심 연결: 필터 제거 (브라우저의 기본 처리를 신뢰)
+        src.connect(processor);
         processor.connect(gain);
         gain.connect(ctx.destination);
         setRecording(true);
+        return stream;
       } catch (e) {
         setMicError(e instanceof Error ? e.message : "마이크 접근 실패");
+        return undefined;
+      } finally {
+        isStartingRef.current = false;
       }
     },
-    [flush],
+    [flush, options, stop],
   );
 
   const sendFinal = useCallback(() => {
     chunkIdRef.current += 1;
     const chunkId = `c-${Date.now()}-${chunkIdRef.current}-final`;
     onChunkRef.current({
-      chunk: new ArrayBuffer(0), // Empty buffer for final signal
-      interviewSessionId,
+      chunk: new ArrayBuffer(0),
+      interviewId: interviewId,
       isFinal: true,
       format: "pcm16",
       sampleRate: TARGET_SAMPLE_RATE,
       chunkId,
     });
-  }, [interviewSessionId]);
+  }, [interviewId]);
 
-  return { start, stop, sendFinal, recording, micError };
+  return {
+    start,
+    stop,
+    sendFinal,
+    recording,
+    micError,
+    stream,
+  };
 }

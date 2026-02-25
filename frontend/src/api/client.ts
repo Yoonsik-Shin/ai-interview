@@ -112,3 +112,13 @@ export async function api<T>(
   }
   return res.json() as Promise<T>;
 }
+
+// Axios-like client object for convenience
+export const client = {
+  get: <T>(path: string) => api<T>(path, { method: "GET" }),
+  post: <T>(path: string, body?: any) =>
+    api<T>(path, { method: "POST", body: JSON.stringify(body) }),
+  put: <T>(path: string, body?: any) =>
+    api<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+  delete: <T>(path: string) => api<T>(path, { method: "DELETE" }),
+};

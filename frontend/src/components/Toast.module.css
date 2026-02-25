@@ -1,38 +1,43 @@
 .toast {
   position: fixed;
-  top: 1.5rem;
+  top: 4.5rem; /* 헤더 바로 아래에 더 가깝게 배치 */
   left: 50%;
-  transform: translateX(-50%) translateY(-120%);
-  z-index: 1000;
+  transform: translateX(-50%) translateY(-2rem);
+  z-index: 9999; /* 모든 요소(모달 포함) 위에 오도록 설정 */
   max-width: 90vw;
-  width: 380px;
-  padding: 1rem 1.25rem;
-  background: rgba(30, 41, 59, 0.95);
+  width: auto;
+  min-width: 320px;
+  padding: 1rem 1.75rem;
+  background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 20px; /* 더 둥근 모서리 */
   color: #f8fafc;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(20px);
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(24px);
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  align-items: center;
+  gap: 1rem;
+  animation: toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .error {
-  border-color: rgba(248, 113, 113, 0.25);
+  background: rgba(28, 35, 52, 0.95);
+  border: 1px solid rgba(248, 113, 113, 0.2);
   color: #fca5a5;
+  box-shadow: 0 0 40px rgba(248, 113, 113, 0.1);
 }
 
 .success {
-  border-color: rgba(52, 211, 153, 0.25);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(16, 185, 129, 0.2);
   color: #a7f3d0;
 }
 
 .info {
-  border-color: rgba(96, 165, 250, 0.25);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   color: #bfdbfe;
 }
 
@@ -42,28 +47,33 @@
 
 .toastIcon {
   flex-shrink: 0;
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .toastContent {
   flex: 1;
-  padding-right: 0.5rem;
+  padding: 0.125rem 0.5rem 0 0;
+  letter-spacing: -0.01em;
 }
 
 .toastClose {
   flex-shrink: 0;
   background: transparent;
   border: none;
-  color: #94a3b8;
-  font-size: 1.25rem;
+  color: rgba(148, 163, 184, 0.6);
+  font-size: 1.5rem;
   cursor: pointer;
   padding: 0.25rem;
   line-height: 1;
-  border-radius: 6px;
-  transition:
-    color 0.2s,
-    background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
 }
 
 .toastClose:hover {
@@ -71,9 +81,9 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-@keyframes toastSlideIn {
+@keyframes toastSlideDown {
   from {
-    transform: translateX(-50%) translateY(-120%);
+    transform: translateX(-50%) translateY(-2rem);
     opacity: 0;
   }
   to {
@@ -88,7 +98,7 @@
     opacity: 1;
   }
   to {
-    transform: translateX(-50%) translateY(-80%);
+    transform: translateX(-50%) translateY(-1rem);
     opacity: 0;
   }
 }

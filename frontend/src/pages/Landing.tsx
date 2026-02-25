@@ -5,9 +5,10 @@ import { User, getMe } from "../auth/authApi";
 import logo from "../assets/logo.png";
 import heroVisual from "../assets/hero-visual.png";
 import { Skeleton } from "../components/Skeleton";
+import { useInterviewRecovery } from "@/hooks/useInterviewRecovery";
 
 export function Landing() {
-  // ... (existing states and logic) ...
+  const { triggerRecoveryCheck } = useInterviewRecovery();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -171,7 +172,12 @@ export function Landing() {
                 <div className={styles.rightColumn}>
                   <button
                     className={styles.primeStartButton}
-                    onClick={() => navigate("/setup")}
+                    onClick={async () => {
+                      const hasRecovery = await triggerRecoveryCheck();
+                      if (!hasRecovery) {
+                        navigate("/setup");
+                      }
+                    }}
                   >
                     <div className={styles.buttonContent}>
                       <span className={styles.primeLabel}>실전 면접 시작</span>
