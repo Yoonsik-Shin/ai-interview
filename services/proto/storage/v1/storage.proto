@@ -16,8 +16,9 @@ service StorageService {
 
 message GetPresignedUrlRequest {
   string object_key = 1;
-  string method = 2; // "put_object" or "get_object"
+  string method = 2; // "GET", "PUT", "DELETE"
   int32 expiration_sec = 3;
+  bool internal_access = 4;
 }
 
 message GetPresignedUrlResponse {

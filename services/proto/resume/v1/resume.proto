@@ -46,6 +46,7 @@ message CompleteUploadRequest {
 
 message CompleteUploadResponse {
   bool success = 1;
+  optional ResumeDetail resume = 2;
 }
 
 message ListResumesRequest {
@@ -57,6 +58,7 @@ message ResumeItem {
   string title = 2;
   string status = 3;
   string created_at = 4;
+  repeated float embedding = 5;
 }
 
 message ListResumesResponse {

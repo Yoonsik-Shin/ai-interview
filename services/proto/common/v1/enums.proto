@@ -43,6 +43,7 @@ enum InterviewStatusProto {
   INTERVIEW_STATUS_UNSPECIFIED = 0;
   READY = 1;                    // 준비됨
   IN_PROGRESS = 2;              // 진행 중
+  PAUSED = 5;                   // 중지됨
   COMPLETED = 3;                // 완료됨
   CANCELLED = 4;                // 취소됨
 }
