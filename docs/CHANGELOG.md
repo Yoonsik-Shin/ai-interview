@@ -8,6 +8,18 @@
   - 기존 텍스트 길이 기반(`< 50자`) 체크를 경과 시간 기반(`< 30초`)으로 변경
   - Socket이 Redis에 저장한 `selfIntroStart`를 `StringRedisTemplate`으로 직접 조회하여 정밀한 시간 계산
 
+- **Socket: WebSocket Room 이름 불일치 버그 수정 (Critical)**:
+  - `SendTranscriptUseCase`에서 `interview:${id}` → `interview-session-${id}`로 수정
+  - 클라이언트가 join하는 room과 이벤트 발행 room의 불일치로 STAGE_CHANGE, RETRY_ANSWER 이벤트가 프론트엔드에 전달되지 않던 핵심 버그 해결
+
+- **Core: RETRY_ANSWER 이벤트 경로 통일**:
+  - Kafka 중복 발행 제거, Redis Pub/Sub 단일 경로 사용으로 변경
+  - Redis Pub/Sub 발행 타입을 `SELF_INTRO_RETRY` → `RETRY_ANSWER`로 수정하여 Socket의 `SendTranscriptUseCase`에서 올바르게 핸들링
+
+- **Frontend: 자기소개 안내 팝업 UI 추가**:
+  - SELF_INTRO 단계 진입 시 3초간 자기소개 안내 오버레이 표시
+  - 클릭으로 즉시 닫기 가능
+
 - **Core: SELF_INTRO → IN_PROGRESS 전환 시 낙관적 락(Optimistic Lock) 적용**:
   - `InterviewSessionJpaEntity`에 JPA `@Version` 컬럼 추가
   - `TransitionInterviewStageInteractor` 및 `ProcessUserAnswerInteractor`에서 `ObjectOptimisticLockingFailureException` catch → 중복 전환 안전 무시

@@ -56,3 +56,18 @@ Socket의 90초 타이머와 Core의 `ProcessUserAnswerInteractor`가 동시에 
 - **근거**: 외부 인프라(Redis 락) 없이 DB 레벨에서 동시성 제어 가능. 충돌 빈도가 매우 낮으므로 낙관적 전략이 적합.
 - **구현**: `InterviewSessionJpaEntity`에 `@Version Long version` 추가. 두 Interactor에서 `save()` 시 `ObjectOptimisticLockingFailureException` catch → 중복 전환 무시.
 - **대안 기각**: Redis `SETNX` 분산 락 — 추가 인프라 의존, 이 케이스에선 과한 접근.
+
+## 6. RETRY_ANSWER 이벤트 전달 경로: Redis Pub/Sub 단일화 (2026-02-26)
+
+### 문제
+
+자기소개 30초 미만 재시도 로직이 동작하지 않았음. 원인 분석 결과 두 가지 문제 발견:
+
+1. **Room 이름 불일치**: 클라이언트는 `interview-session-${id}` room에 join하지만, `SendTranscriptUseCase`는 `interview:${id}` room으로 emit하고 있어 모든 Redis Pub/Sub 경유 이벤트(STAGE_CHANGE, RETRY_ANSWER)가 전달 불가.
+2. **이벤트 타입 불일치**: Core에서 Kafka로 `RETRY_ANSWER` 타입, Redis Pub/Sub로 `SELF_INTRO_RETRY` 타입을 각각 발행. Socket은 Kafka를 소비하지 않고, `SendTranscriptUseCase`는 `RETRY_ANSWER`만 체크하므로 어느 경로로도 이벤트가 처리되지 않음.
+
+### 선택: Redis Pub/Sub 단일 경로 + Room 이름 통일
+
+- **Room 이름**: `SendTranscriptUseCase`의 room을 `interview-session-${id}`로 수정하여 connection listener와 통일.
+- **이벤트 경로**: Kafka 발행 제거, Redis Pub/Sub에서 `RETRY_ANSWER` 타입으로 발행하여 `SendTranscriptUseCase`에서 올바르게 핸들링.
+- **근거**: Socket 서비스는 Kafka consumer가 없으므로 Redis Pub/Sub가 유일한 실시간 이벤트 전달 경로. 경로를 단일화하여 복잡도 감소.
