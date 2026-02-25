@@ -1,21 +1,28 @@
 package me.unbrdn.core.interview.application.interactor;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.unbrdn.core.interview.application.dto.command.CallLlmCommand;
 import me.unbrdn.core.interview.application.dto.command.ProcessUserAnswerCommand;
+import me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand;
 import me.unbrdn.core.interview.application.port.in.ProcessUserAnswerUseCase;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPort;
+import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.application.port.out.ProduceInterviewEventPort;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
 import me.unbrdn.core.interview.application.port.out.SaveAdjustmentLogPort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
+import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import me.unbrdn.core.interview.domain.model.ConversationHistory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -27,8 +34,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
     private final CallLlmPort callLlmPort;
     private final InterviewPort interviewPort;
     private final PublishTranscriptPort publishTranscriptPort;
-    private final me.unbrdn.core.interview.application.port.out.ManageSessionStatePort
-            sessionStatePort;
+    private final ManageSessionStatePort sessionStatePort;
     private final SaveAdjustmentLogPort saveAdjustmentLogPort;
     private final ProduceInterviewEventPort produceInterviewEventPort;
     private final StringRedisTemplate stringRedisTemplate;
@@ -72,8 +78,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
         updateTurnCount(interviewSession);
 
         // 2-3. Check for SELF_INTRO completion transition
-        if (interviewSession.getStage()
-                == me.unbrdn.core.interview.domain.enums.InterviewStage.SELF_INTRO) {
+        if (interviewSession.getStage() == InterviewStage.SELF_INTRO) {
             long elapsedSeconds = awaitElapsedSeconds(command.getInterviewId());
             int retryCount = getSelfIntroRetryCount(command.getInterviewId());
 
@@ -90,22 +95,17 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                         "SYSTEM",
                         "RETRY_ANSWER",
                         "Self intro too short",
-                        java.util.Collections.emptyMap());
+                        Collections.emptyMap());
 
                 // Publish Stage Change Event (optional, if retry is considered a stage change)
-                me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand
-                        stageEvent =
-                                me.unbrdn.core.interview.application.dto.command
-                                        .PublishTranscriptCommand.builder()
-                                        .interviewId(command.getInterviewId())
-                                        .type("SELF_INTRO_RETRY")
-                                        .currentStage(interviewSession.getStage().name())
-                                        .previousStage(
-                                                me.unbrdn.core.interview.domain.enums.InterviewStage
-                                                        .SELF_INTRO
-                                                        .name())
-                                        .content("Self-introduction too short. Please elaborate.")
-                                        .build();
+                PublishTranscriptCommand stageEvent =
+                        PublishTranscriptCommand.builder()
+                                .interviewId(command.getInterviewId())
+                                .type("SELF_INTRO_RETRY")
+                                .currentStage(interviewSession.getStage().name())
+                                .previousStage(InterviewStage.SELF_INTRO.name())
+                                .content("Self-introduction too short. Please elaborate.")
+                                .build();
                 publishTranscriptPort.publish(stageEvent);
                 return; // Skip LLM call for a retry prompt
             } else {
@@ -113,21 +113,23 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                         "Self intro completed (elapsed={}s) or max retries reached, transitioning to IN_PROGRESS",
                         elapsedSeconds);
                 interviewSession.transitionToInProgress();
-                interviewPort.save(interviewSession);
+                try {
+                    interviewPort.save(interviewSession);
+                } catch (ObjectOptimisticLockingFailureException e) {
+                    log.warn(
+                            "SELF_INTRO->IN_PROGRESS transition skipped (optimistic lock conflict): {}",
+                            e.getMessage());
+                    return;
+                }
 
                 // Publish Stage Change Event
-                me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand
-                        stageEvent =
-                                me.unbrdn.core.interview.application.dto.command
-                                        .PublishTranscriptCommand.builder()
-                                        .interviewId(command.getInterviewId())
-                                        .type("STAGE_CHANGE")
-                                        .currentStage(interviewSession.getStage().name())
-                                        .previousStage(
-                                                me.unbrdn.core.interview.domain.enums.InterviewStage
-                                                        .SELF_INTRO
-                                                        .name())
-                                        .build();
+                PublishTranscriptCommand stageEvent =
+                        PublishTranscriptCommand.builder()
+                                .interviewId(command.getInterviewId())
+                                .type("STAGE_CHANGE")
+                                .currentStage(interviewSession.getStage().name())
+                                .previousStage(InterviewStage.SELF_INTRO.name())
+                                .build();
                 publishTranscriptPort.publish(stageEvent);
             }
         }
@@ -139,10 +141,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
         long totalDurationSeconds = interviewSession.getTargetDurationMinutes() * 60L;
         long elapsed = 0;
         if (interviewSession.getStartedAt() != null) {
-            elapsed =
-                    java.time.Duration.between(
-                                    interviewSession.getStartedAt(), java.time.LocalDateTime.now())
-                            .getSeconds();
+            elapsed = Duration.between(interviewSession.getStartedAt(), Instant.now()).getSeconds();
         }
         long remainingTimeSeconds = Math.max(0, totalDurationSeconds - elapsed);
 
