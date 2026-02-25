@@ -59,11 +59,6 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
     vad_iterator = None  # stage 확인 후 초기화
 
     for chunk in request_iterator:
-        # 빈 청크 무시
-        if not chunk.audio_data:
-            continue
-
-        audio_chunks.append(chunk.audio_data)
         # 최초 청크에서 interview_id 등 메타데이터 추출
         if interview_id is None:
             meta = extract_metadata(chunk)
@@ -84,39 +79,79 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
                 min_silence_ms = 700   # 0.7초 (티키타카)
             
             vad_iterator = vad_engine.get_iterator_with_silence(min_silence_ms)
+
+        if not chunk.audio_data:
+            log_json("stt_empty_chunk_ignored", interview_id=interview_id)
+            continue
         
         # 마지막 청크의 타임스탬프 갱신
         if chunk.timestamp:
             last_chunk_timestamp = chunk.timestamp
 
         # Silero VAD Processing (vad_iterator가 초기화된 후에만 실행)
-        if vad_iterator is not None:
+        if vad_iterator is not None and audio_format == "pcm16":
             # PCM16 bytes -> Float32 Tensor 변환
+            # 방어 코드: 데이터 길이가 2의 배수가 아니면 np.frombuffer에서 ValueError 발생 가능
+            if len(chunk.audio_data) % 2 != 0:
+                log_json("stt_audio_unaligned", interview_id=interview_id, length=len(chunk.audio_data))
+                continue
+                
             audio_int16 = np.frombuffer(chunk.audio_data, dtype=np.int16)
             audio_float32 = torch.from_numpy(audio_int16.astype(np.float32) / 32768.0)
             
-            # VAD 판별 (return_seconds=True이면 초 단위 타임스탬프 반환)
-            speech_dict = vad_iterator(audio_float32, return_seconds=True)
+            # Silero VAD requires chunks of 512 samples for 16kHz
+            VAD_CHUNK_SIZE = 512
+            num_samples = len(audio_float32)
             
-            if speech_dict:
-                if 'start' in speech_dict:
-                    # print(f"Speech start detected: {speech_dict['start']}")
-                    has_vad_speech = True
+            for i in range(0, num_samples, VAD_CHUNK_SIZE):
+                sub_chunk = audio_float32[i:i + VAD_CHUNK_SIZE]
                 
-                if 'end' in speech_dict:
-                    # 발화 종료 감지 -> 자동 Finalize
-                    # print(f"Speech end detected: {speech_dict['end']}")
-                    break
+                # Check if padding is needed for the last chunk
+                if len(sub_chunk) < VAD_CHUNK_SIZE:
+                    padding = torch.zeros(VAD_CHUNK_SIZE - len(sub_chunk))
+                    sub_chunk = torch.cat([sub_chunk, padding])
+                
+                # VAD 판별 (return_seconds=True이면 초 단위 타임스탬프 반환)
+                speech_dict = vad_iterator(sub_chunk, return_seconds=True)
+                
+                if speech_dict:
+                    if 'start' in speech_dict:
+                        log_json("stt_vad_speech_start", interview_id=interview_id, timestamp=speech_dict['start'])
+                        has_vad_speech = True
+                    
+                    if 'end' in speech_dict:
+                        log_json("stt_vad_speech_end", interview_id=interview_id, timestamp=speech_dict['end'])
+                        break
+            
+            # If loop broke due to speech end, break outer loop too
+            if speech_dict and 'end' in speech_dict:
+                break
 
         if chunk.is_final:
             break
 
     # 2. 입력 없음 처리 (오디오 청크가 하나도 없거나 VAD가 말을 감지하지 못했을 때)
     if not audio_chunks or not has_vad_speech:
-        log_transcription_complete("none (vad_rejected)", interview_id or 0, "", None)
+        log_transcription_complete("none (vad_rejected)", interview_id or "", "", None)
+        
+        # 빈 결과라도 Kafka에 발행하여 백엔드(Core)의 재시도(Retry) 로직이 동작하도록 함
+        if interview_id:
+            empty_payload = {
+                "interviewId": interview_id,
+                "text": "",
+                "isFinal": True,
+                "timestamp": datetime.now().isoformat(),
+                "engine": "none",
+                "isEmpty": True,
+                "traceId": trace_id or "",
+                "userId": user_id or "",
+                "audioReceivedAt": last_chunk_timestamp,
+            }
+            publisher.publish(empty_payload, key=str(interview_id))
+
         return stt_pb2.STTResponse(
             text="",
-            interview_id=interview_id or 0,
+            interview_id=interview_id or "",
             user_id=user_id or "",
             is_empty=True,
             engine="none",
@@ -143,7 +178,7 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
 
         # STT 결과 payload (Redis Pub/Sub, Redis Streams, Kafka 공유)
         stt_payload = {
-            "interviewSessionId": interview_id,
+            "interviewId": interview_id,
             "text": final_text,
             "isFinal": True,
             "timestamp": datetime.now().isoformat(),
@@ -160,7 +195,7 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
 
         return stt_pb2.STTResponse(
             text=final_text,
-            interview_id=interview_id or 0,
+            interview_id=interview_id or "",
             user_id=user_id or "",
             is_empty=len(final_text) == 0,
             engine=engine_name,
@@ -172,7 +207,7 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
         log_stt_grpc_error(interview_id, exc)
         return stt_pb2.STTResponse(
             text="",
-            interview_id=interview_id or 0,
+            interview_id=interview_id or "",
             user_id=user_id or "",
             is_empty=True,
             engine="error",

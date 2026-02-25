@@ -10,9 +10,12 @@ import me.unbrdn.core.interview.application.port.in.ProcessUserAnswerUseCase;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPort;
+import me.unbrdn.core.interview.application.port.out.ProduceInterviewEventPort;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
+import me.unbrdn.core.interview.application.port.out.SaveAdjustmentLogPort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
 import me.unbrdn.core.interview.domain.model.ConversationHistory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -26,6 +29,9 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
     private final PublishTranscriptPort publishTranscriptPort;
     private final me.unbrdn.core.interview.application.port.out.ManageSessionStatePort
             sessionStatePort;
+    private final SaveAdjustmentLogPort saveAdjustmentLogPort;
+    private final ProduceInterviewEventPort produceInterviewEventPort;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     public void execute(ProcessUserAnswerCommand command) {
@@ -63,27 +69,67 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                 command.getUserText());
 
         // 2-2. Update Session State (Increment Turn Count)
-        updateTurnCount(command.getInterviewId());
+        updateTurnCount(interviewSession);
 
         // 2-3. Check for SELF_INTRO completion transition
         if (interviewSession.getStage()
                 == me.unbrdn.core.interview.domain.enums.InterviewStage.SELF_INTRO) {
-            log.info("Transitioning from SELF_INTRO to IN_PROGRESS upon user answer.");
-            interviewSession.transitionToInProgress();
-            interviewPort.save(interviewSession);
+            long elapsedSeconds = awaitElapsedSeconds(command.getInterviewId());
+            int retryCount = getSelfIntroRetryCount(command.getInterviewId());
 
-            // Publish Stage Change Event
-            me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand stageEvent =
-                    me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand
-                            .builder()
-                            .interviewId(interviewSession.getSessionUuid())
-                            .type("STAGE_CHANGE")
-                            .currentStage(interviewSession.getStage().name())
-                            .previousStage(
-                                    me.unbrdn.core.interview.domain.enums.InterviewStage.SELF_INTRO
-                                            .name())
-                            .build();
-            publishTranscriptPort.publish(stageEvent);
+            if (elapsedSeconds < 30 && retryCount < 2) {
+                log.info(
+                        "Self intro too short (elapsed={}s), requesting retry (count={})",
+                        elapsedSeconds,
+                        retryCount + 1);
+                incrementSelfIntroRetryCount(command.getInterviewId());
+
+                // Emit RETRY_ANSWER event to Frontend (to play pre-recorded audio)
+                produceInterviewEventPort.produceMessage(
+                        command.getInterviewId(),
+                        "SYSTEM",
+                        "RETRY_ANSWER",
+                        "Self intro too short",
+                        java.util.Collections.emptyMap());
+
+                // Publish Stage Change Event (optional, if retry is considered a stage change)
+                me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand
+                        stageEvent =
+                                me.unbrdn.core.interview.application.dto.command
+                                        .PublishTranscriptCommand.builder()
+                                        .interviewId(command.getInterviewId())
+                                        .type("SELF_INTRO_RETRY")
+                                        .currentStage(interviewSession.getStage().name())
+                                        .previousStage(
+                                                me.unbrdn.core.interview.domain.enums.InterviewStage
+                                                        .SELF_INTRO
+                                                        .name())
+                                        .content("Self-introduction too short. Please elaborate.")
+                                        .build();
+                publishTranscriptPort.publish(stageEvent);
+                return; // Skip LLM call for a retry prompt
+            } else {
+                log.info(
+                        "Self intro completed (elapsed={}s) or max retries reached, transitioning to IN_PROGRESS",
+                        elapsedSeconds);
+                interviewSession.transitionToInProgress();
+                interviewPort.save(interviewSession);
+
+                // Publish Stage Change Event
+                me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand
+                        stageEvent =
+                                me.unbrdn.core.interview.application.dto.command
+                                        .PublishTranscriptCommand.builder()
+                                        .interviewId(command.getInterviewId())
+                                        .type("STAGE_CHANGE")
+                                        .currentStage(interviewSession.getStage().name())
+                                        .previousStage(
+                                                me.unbrdn.core.interview.domain.enums.InterviewStage
+                                                        .SELF_INTRO
+                                                        .name())
+                                        .build();
+                publishTranscriptPort.publish(stageEvent);
+            }
         }
 
         // 3. LLM 호출 (스트리밍)
@@ -103,7 +149,6 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
         CallLlmCommand llmCommand =
                 CallLlmCommand.builder()
                         .interviewId(command.getInterviewId())
-                        .interviewSessionId(interviewSession.getId().toString())
                         .userId(command.getUserId())
                         .userText(command.getUserText())
                         .availableRoles(interviewSession.getRoles())
@@ -122,23 +167,66 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
         callLlmPort.generateResponse(llmCommand);
     }
 
-    private void updateTurnCount(String sessionId) {
+    private void updateTurnCount(InterviewSession session) {
+        String interviewId = session.getId().toString();
         try {
-            me.unbrdn.core.interview.domain.model.InterviewSessionState state =
-                    sessionStatePort
-                            .getState(sessionId)
-                            .orElseGet(
-                                    me.unbrdn.core.interview.domain.model.InterviewSessionState
-                                            ::createDefault);
+            // 1. Redis State Update (Atomic)
+            int newTurnCount = sessionStatePort.incrementTurnCount(interviewId);
 
-            Integer currentTurn = state.getTurnCount() != null ? state.getTurnCount() : 0;
-            state.setTurnCount(currentTurn + 1);
+            // 2. DB Entity Update (Direct)
+            session.incrementTurnCount();
+            interviewPort.save(session);
 
-            sessionStatePort.saveState(sessionId, state);
             log.info(
-                    "Incremented turn count to {} for session {}", state.getTurnCount(), sessionId);
+                    "Incremented turn count to {} (Redis: {}) for session {}",
+                    session.getTurnCount(),
+                    newTurnCount,
+                    interviewId);
         } catch (Exception e) {
             log.error("Failed to update turn count", e);
         }
+    }
+
+    private long awaitElapsedSeconds(String interviewId) {
+        Object startObj =
+                stringRedisTemplate
+                        .opsForHash()
+                        .get("interview:session:" + interviewId, "selfIntroStart");
+        if (startObj != null) {
+            try {
+                long startTime = Long.parseLong(startObj.toString());
+                return (System.currentTimeMillis() - startTime) / 1000;
+            } catch (NumberFormatException e) {
+                log.warn("Failed to parse selfIntroStart from Redis: {}", startObj);
+            }
+        } else {
+            log.warn("selfIntroStart not found in Redis. Socket might not have set it.");
+        }
+        return 0;
+    }
+
+    private int getSelfIntroRetryCount(String interviewId) {
+        return sessionStatePort
+                .getState(interviewId)
+                .map(
+                        state ->
+                                state.getSelfIntroRetryCount() != null
+                                        ? state.getSelfIntroRetryCount()
+                                        : 0)
+                .orElse(0);
+    }
+
+    private void incrementSelfIntroRetryCount(String interviewId) {
+        sessionStatePort
+                .getState(interviewId)
+                .ifPresent(
+                        state -> {
+                            int current =
+                                    state.getSelfIntroRetryCount() != null
+                                            ? state.getSelfIntroRetryCount()
+                                            : 0;
+                            state.setSelfIntroRetryCount(current + 1);
+                            sessionStatePort.saveState(interviewId, state);
+                        });
     }
 }
