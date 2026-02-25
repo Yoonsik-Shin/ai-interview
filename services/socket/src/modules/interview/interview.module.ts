@@ -5,6 +5,7 @@ import { InterviewSttListener } from "./listeners/interview-stt.listener";
 import { TranscriptPubSubConsumer } from "./consumers/transcript-pubsub.consumer";
 import { ThinkingPubSubConsumer } from "./consumers/thinking-pubsub.consumer";
 import { AudioPubSubConsumer } from "./consumers/audio-pubsub.consumer";
+import { StoragePubSubConsumer } from "./consumers/storage-pubsub.consumer";
 import { SttModule } from "../stt/stt.module";
 import { InterviewGrpcService } from "../../infra/grpc/services/interview-grpc.service";
 import { RedisModule } from "../../infra/redis/redis.module";
@@ -42,6 +43,7 @@ import { SendAudioDataUseCase } from "./usecases/send-audio-data.usecase";
         TranscriptPubSubConsumer,
         ThinkingPubSubConsumer,
         AudioPubSubConsumer,
+        StoragePubSubConsumer,
     ],
 })
 export class InterviewModule {}

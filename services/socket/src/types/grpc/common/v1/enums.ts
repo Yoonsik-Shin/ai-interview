@@ -67,6 +67,8 @@ export enum InterviewStatusProto {
   READY = 1,
   /** IN_PROGRESS - 진행 중 */
   IN_PROGRESS = 2,
+  /** PAUSED - 중지됨 */
+  PAUSED = 5,
   /** COMPLETED - 완료됨 */
   COMPLETED = 3,
   /** CANCELLED - 취소됨 */

@@ -28,7 +28,7 @@ export class SttStorageService implements OnModuleInit {
     ) {
         try {
             const redisClient = this.safeRedisClient;
-            const queueKey = `interview:audio:queue:${payload.interviewSessionId}`;
+            const queueKey = `interview:audio:queue:${payload.interviewId}`;
 
             const audioBase64 = Buffer.isBuffer(audioData)
                 ? audioData.toString("base64")
@@ -46,7 +46,7 @@ export class SttStorageService implements OnModuleInit {
 
             if (payload.isFinal) {
                 this.logger.log(client, "audio_chunk_redis_success", {
-                    interviewSessionId: payload.interviewSessionId,
+                    interviewId: payload.interviewId,
                     queueKey,
                     isFinal: true,
                     path: "safe",
@@ -54,7 +54,7 @@ export class SttStorageService implements OnModuleInit {
             }
         } catch (error) {
             this.logger.error(client, "audio_chunk_redis_failed", {
-                interviewSessionId: payload.interviewSessionId,
+                interviewId: payload.interviewId,
                 error: String(error),
                 path: "safe",
             });

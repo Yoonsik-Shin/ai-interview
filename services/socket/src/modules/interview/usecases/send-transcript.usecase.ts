@@ -21,6 +21,16 @@ export class SendTranscriptUseCase {
                 previousStage: payload.previousStage,
                 timestamp: payload.timestamp,
             });
+        } else if (payload.type === "INTERVENE") {
+            server.to(room).emit("interview:intervene", {
+                message: payload.content || "Intervention requested",
+                timestamp: payload.timestamp,
+            });
+        } else if (payload.type === "RETRY_ANSWER") {
+            server.to(room).emit("interview:retry_answer", {
+                message: payload.content || "Please repeat",
+                timestamp: payload.timestamp,
+            });
         } else {
             server.to(room).emit("interview:transcript", {
                 token: payload.token,

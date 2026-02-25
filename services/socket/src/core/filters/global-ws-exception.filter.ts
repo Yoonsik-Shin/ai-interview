@@ -41,7 +41,11 @@ export class GlobalWsExceptionFilter extends BaseWsExceptionFilter {
             return { message: exception.message, status: "warning" };
         }
         if (exception instanceof Error) {
-            return { message: exception.message, status: "error" };
+            return {
+                message:
+                    "서버 내부 오류가 발생했습니다. 담당자에게 문의하거나 로그(TraceID)를 확인해 주세요.",
+                status: "error",
+            };
         }
         return { message: "서버 내부 오류가 발생했습니다.", status: "error" };
     }

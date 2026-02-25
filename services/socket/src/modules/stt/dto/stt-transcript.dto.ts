@@ -1,6 +1,6 @@
 export interface SttTranscriptPayload {
     text: string;
-    interviewSessionId: number;
+    interviewId: string;
     isFinal: boolean;
     timestamp: string;
     engine: string;

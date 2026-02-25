@@ -61,21 +61,19 @@ interface TransitionStageResponse {
 }
 
 interface InterviewServiceGrpc {
-    getInterviewStage(request: {
-        interviewSessionId: string;
-    }): Observable<GetInterviewStageResponse>;
+    getInterviewStage(request: { interviewId: string }): Observable<GetInterviewStageResponse>;
     transitionStage(request: {
-        interviewSessionId: string;
+        interviewId: string;
         newStage: InterviewStageProto;
     }): Observable<TransitionStageResponse>;
     processUserAnswer(request: {
-        interviewSessionId: string;
+        interviewId: string;
         userText: string;
         userId: string;
         timestamp: string;
     }): Observable<void>;
     incrementSelfIntroRetry(request: {
-        interviewSessionId: string;
+        interviewId: string;
     }): Observable<IncrementSelfIntroRetryResponse>;
 }
 
@@ -96,7 +94,7 @@ export class InterviewGrpcService implements OnModuleInit {
     /**
      * 현재 Interview Stage 조회
      */
-    async getStage(interviewSessionId: string | number): Promise<{
+    async getStage(interviewId: string | number): Promise<{
         stage: InterviewStage;
         selfIntroElapsedSeconds: number;
         persona?: string;
@@ -108,7 +106,7 @@ export class InterviewGrpcService implements OnModuleInit {
     }> {
         try {
             const request = {
-                interviewSessionId: interviewSessionId.toString(),
+                interviewId: interviewId.toString(),
             };
 
             const response: GetInterviewStageResponse = await firstValueFrom(
@@ -127,7 +125,7 @@ export class InterviewGrpcService implements OnModuleInit {
             };
         } catch (error) {
             this.logger.error(null, "core_grpc_get_stage_failed", {
-                interviewSessionId,
+                interviewId,
                 error: String(error),
             });
             throw error;
@@ -138,12 +136,12 @@ export class InterviewGrpcService implements OnModuleInit {
      * Interview Stage 전환
      */
     async transitionStage(
-        interviewSessionId: string | number,
+        interviewId: string | number,
         newStage: InterviewStage,
     ): Promise<InterviewStage> {
         try {
             const request = {
-                interviewSessionId: interviewSessionId.toString(),
+                interviewId: interviewId.toString(),
                 newStage: this.mapStageToProto(newStage),
             };
 
@@ -155,7 +153,7 @@ export class InterviewGrpcService implements OnModuleInit {
 
             // The user requested to remove debug logs. This log is being removed.
             // this.logger.log(null, "core_grpc_stage_transitioned", {
-            //     interviewSessionId,
+            //     interviewId,
             //     newStage,
             //     currentStage,
             // });
@@ -163,7 +161,7 @@ export class InterviewGrpcService implements OnModuleInit {
             return currentStage;
         } catch (error) {
             this.logger.error(null, "core_grpc_transition_stage_failed", {
-                interviewSessionId,
+                interviewId,
                 newStage,
                 error: String(error),
             });
@@ -175,13 +173,13 @@ export class InterviewGrpcService implements OnModuleInit {
      * 사용자 답변 처리 요청 (Skip 등에서 텍스트 직접 전송 시 사용)
      */
     async processUserAnswer(
-        interviewSessionId: string | number,
+        interviewId: string | number,
         userText: string,
         userId: string = "user", // Default or passed
     ): Promise<void> {
         try {
             const request = {
-                interviewSessionId: interviewSessionId.toString(),
+                interviewId: interviewId.toString(),
                 userText,
                 userId,
                 timestamp: new Date().toISOString(),
@@ -190,22 +188,22 @@ export class InterviewGrpcService implements OnModuleInit {
             await firstValueFrom(this.grpcService.processUserAnswer(request));
 
             this.logger.log(null, "core_grpc_process_user_answer_sent", {
-                interviewSessionId,
+                interviewId,
                 userText,
             });
         } catch (error) {
             this.logger.error(null, "core_grpc_process_user_answer_failed", {
-                interviewSessionId,
+                interviewId,
                 error: String(error),
             });
             throw error;
         }
     }
 
-    async incrementSelfIntroRetry(interviewSessionId: string | number): Promise<number> {
+    async incrementSelfIntroRetry(interviewId: string | number): Promise<number> {
         try {
             const request = {
-                interviewSessionId: interviewSessionId.toString(),
+                interviewId: interviewId.toString(),
             };
 
             const response: IncrementSelfIntroRetryResponse = await firstValueFrom(
@@ -213,14 +211,14 @@ export class InterviewGrpcService implements OnModuleInit {
             );
 
             this.logger.log(null, "core_grpc_increment_retry_sent", {
-                interviewSessionId,
+                interviewId,
                 newRetryCount: response.newRetryCount,
             });
 
             return response.newRetryCount;
         } catch (error) {
             this.logger.error(null, "core_grpc_increment_retry_failed", {
-                interviewSessionId,
+                interviewId,
                 error: String(error),
             });
             throw error;

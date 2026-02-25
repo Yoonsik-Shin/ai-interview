@@ -50,7 +50,7 @@ export class AudioProcessorService {
             );
         } catch (error) {
             this.logger.error(client, "audio_processing_error", {
-                interviewSessionId: payload.interviewSessionId,
+                interviewId: payload.interviewId,
                 error: String(error),
             });
         }
@@ -66,13 +66,14 @@ export class AudioProcessorService {
 
     private createMetadata(payload: AudioChunkDto, timestamp: string, traceId: string) {
         return {
-            interviewSessionId: payload.interviewSessionId,
-            format: payload.format || "webm",
-            sampleRate: payload.sampleRate || 48000,
-            inputGain: payload.inputGain || 1.0,
+            interview_id: payload.interviewId,
+            format: payload.format || "pcm16", // Storage service expects 'format'
+            audio_format: payload.format || "pcm16", // STT service expects 'audio_format'
+            sample_rate: payload.sampleRate || 16000,
+            input_gain: payload.inputGain || 1.0,
             threshold: payload.threshold || -50,
             timestamp,
-            traceId,
+            trace_id: traceId,
         };
     }
 
@@ -83,13 +84,13 @@ export class AudioProcessorService {
     ): void {
         if (payload.isFinal) {
             this.logger.log(client, "audio_chunk_final_received", {
-                interviewSessionId: payload.interviewSessionId,
+                interviewId: payload.interviewId,
                 userId,
             });
         }
     }
 
-    abortProcessing(interviewSessionId: string) {
-        this.sttGrpcService.abortStream(interviewSessionId);
+    abortProcessing(interviewId: string) {
+        this.sttGrpcService.abortStream(interviewId);
     }
 }

@@ -45,29 +45,29 @@ export class SttGrpcService implements OnModuleInit {
             audioData: audioData,
             isFinal: payload.isFinal || false,
             audioFormat: metadata.format,
-            sampleRate: metadata.sampleRate,
-            inputGain: metadata.inputGain,
+            sampleRate: metadata.sample_rate,
+            inputGain: metadata.input_gain,
             threshold: metadata.threshold,
             timestamp,
             context: {
                 traceId: traceId,
                 mode: mode,
                 interview: {
-                    interviewId: payload.interviewSessionId,
+                    interviewId: payload.interviewId,
                     userId: userId,
                     stage: stage,
                 },
             },
         };
 
-        let streamEntry = this.sttStreams.get(payload.interviewSessionId);
+        let streamEntry = this.sttStreams.get(payload.interviewId);
         if (!streamEntry) {
             const subject = new Subject<AudioChunk>();
             const sttResponse$ = this.sttGrpcService.speechToText(subject.asObservable());
             const subscription = sttResponse$.subscribe({
                 next: (response: STTResponse) => {
                     this.logger.log(client, "stt_response_received", {
-                        interviewSessionId: response.interviewId,
+                        interviewId: response.interviewId,
                         text: response.text,
                         isEmpty: response.isEmpty,
                         engine: response.engine,
@@ -75,11 +75,10 @@ export class SttGrpcService implements OnModuleInit {
 
                     if (response.isEmpty || !response.text || response.text.trim() === "") {
                         this.logger.log(client, "stt_empty_skipping_llm", {
-                            interviewSessionId: response.interviewId,
+                            interviewId: response.interviewId,
                         });
-                        client.emit("interview:retry_answer", {
-                            message: "다시 말씀해 주시겠어요?",
-                        });
+                        // Do NOT emit retry_answer here for every empty response.
+                        // We should only handle this in a turn-based context if needed.
                         return;
                     }
 
@@ -90,24 +89,24 @@ export class SttGrpcService implements OnModuleInit {
                 },
                 error: (err) => {
                     this.logger.log(client, "stt_grpc_stream_failed", {
-                        interviewSessionId: payload.interviewSessionId,
+                        interviewId: payload.interviewId,
                         error: String(err),
                         path: "fast",
                     });
-                    this.cleanupSttStream(payload.interviewSessionId, "error");
+                    this.cleanupSttStream(payload.interviewId, "error");
                 },
                 complete: () => {
                     this.logger.log(client, "stt_grpc_stream_complete", {
-                        interviewSessionId: payload.interviewSessionId,
+                        interviewId: payload.interviewId,
                         path: "fast",
                     });
-                    this.cleanupSttStream(payload.interviewSessionId, "complete");
+                    this.cleanupSttStream(payload.interviewId, "complete");
                 },
             });
             streamEntry = { subject, subscription };
-            this.sttStreams.set(payload.interviewSessionId, streamEntry);
+            this.sttStreams.set(payload.interviewId, streamEntry);
             this.logger.log(client, "stt_grpc_stream_started", {
-                interviewSessionId: payload.interviewSessionId,
+                interviewId: payload.interviewId,
             });
         }
 
@@ -116,30 +115,30 @@ export class SttGrpcService implements OnModuleInit {
         if (payload.isFinal) {
             streamEntry.subject.complete();
             this.logger.log(client, "audio_chunk_grpc_success", {
-                interviewSessionId: payload.interviewSessionId,
+                interviewId: payload.interviewId,
                 isFinal: true,
                 path: "fast",
             });
         }
     }
 
-    abortStream(interviewSessionId: string) {
+    abortStream(interviewId: string) {
         this.logger.log(null, "stt_grpc_stream_aborted", {
-            interviewSessionId,
+            interviewId,
         });
-        this.cleanupSttStream(interviewSessionId, "aborted");
+        this.cleanupSttStream(interviewId, "aborted");
     }
 
-    private cleanupSttStream(interviewSessionId: string, reason: string): void {
-        const entry = this.sttStreams.get(interviewSessionId);
+    private cleanupSttStream(interviewId: string, reason: string): void {
+        const entry = this.sttStreams.get(interviewId);
         if (!entry) {
             return;
         }
         entry.subject.complete();
         entry.subscription.unsubscribe();
-        this.sttStreams.delete(interviewSessionId);
+        this.sttStreams.delete(interviewId);
         this.logger.log(null, "stt_grpc_stream_closed", {
-            interviewSessionId,
+            interviewId,
             reason,
         });
     }

@@ -20,11 +20,11 @@ export class ProcessCandidateGreetingUseCase implements AudioProcessor {
 
         if (payload.isFinal) {
             const nextStage = await this.stageService.transitionStage(
-                payload.interviewSessionId,
+                payload.interviewId,
                 InterviewStage.INTERVIEWER_INTRO,
             );
             client.emit("interview:stage_changed", {
-                interviewSessionId: payload.interviewSessionId,
+                interviewId: payload.interviewId,
                 previousStage: InterviewStage.CANDIDATE_GREETING,
                 currentStage: nextStage,
             });

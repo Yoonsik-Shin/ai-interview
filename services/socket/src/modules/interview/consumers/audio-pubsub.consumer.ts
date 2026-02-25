@@ -35,20 +35,22 @@ export class AudioPubSubConsumer implements OnModuleInit, OnModuleDestroy {
     private handleAudio(message: string) {
         try {
             const payload = JSON.parse(message);
-            const interviewSessionId = payload.interviewSessionId;
+            const interviewId = payload.interviewId;
 
-            if (!interviewSessionId) {
-                this.logger.error("Missing interviewSessionId in TTS payload");
+            if (!interviewId) {
+                this.logger.error("Missing interviewId in TTS payload");
                 return;
             }
 
             void this.sendAudioDataUseCase.execute(
                 new SendAudioDataCommand(
                     this.interviewGateway.server,
-                    interviewSessionId,
+                    interviewId,
                     payload.sentenceIndex,
                     payload.audioData,
                     payload.duration,
+                    payload.persona,
+                    payload.text,
                 ),
             );
         } catch (error) {

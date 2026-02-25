@@ -16,7 +16,7 @@ export class InterviewSttListener {
     @OnEvent("stt.transcript.received")
     handleSttTranscript(payload: { data: SttTranscriptPayload; source: "pubsub" | "stream" }) {
         const { data, source } = payload;
-        const interviewId = data.interviewSessionId?.toString();
+        const interviewId = data.interviewId?.toString();
 
         if (!interviewId) return;
 

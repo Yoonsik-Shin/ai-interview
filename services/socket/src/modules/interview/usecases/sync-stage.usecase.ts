@@ -9,7 +9,7 @@ import { AuthenticatedSocket } from "../../../types/socket.types";
 export class SyncStageCommand {
     constructor(
         public readonly client: AuthenticatedSocket,
-        public readonly interviewSessionId: string,
+        public readonly interviewId: string,
         public readonly currentStage: InterviewStage,
         public readonly targetStage?: InterviewStage, // Explicit target for skip/debug
         public readonly action: "READY" | "SKIP" | "DEBUG_SKIP" = "READY",
@@ -47,7 +47,7 @@ export class SyncStageUseCase {
 
                 const userId = command.client.data.userId || "unknown";
                 await this.stageService.processUserAnswer(
-                    command.interviewSessionId,
+                    command.interviewId,
                     "(자기소개 생략)",
                     userId,
                 );
@@ -61,13 +61,13 @@ export class SyncStageUseCase {
         }
 
         const transitionedStage = await this.stageService.transitionStage(
-            command.interviewSessionId,
+            command.interviewId,
             nextStage,
         );
 
         // Redis Optimization: SELF_INTRO 시작 시 시간 기록
         if (transitionedStage === InterviewStage.SELF_INTRO) {
-            const sessionKey = `interview:session:${command.interviewSessionId}`;
+            const sessionKey = `interview:session:${command.interviewId}`;
             await this.redisClient.hset(sessionKey, "selfIntroStart", Date.now());
             await this.redisClient.expire(sessionKey, 3600);
         }

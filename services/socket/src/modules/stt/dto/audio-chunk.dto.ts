@@ -1,6 +1,6 @@
 export class AudioChunkDto {
     chunk: Buffer | string;
-    interviewSessionId: string;
+    interviewId: string;
     isFinal?: boolean;
     format?: string;
     sampleRate?: number;

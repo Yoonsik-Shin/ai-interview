@@ -31,6 +31,7 @@ export interface CompleteUploadRequest {
 
 export interface CompleteUploadResponse {
   success: boolean;
+  resume?: ResumeDetail | undefined;
 }
 
 export interface ListResumesRequest {
@@ -42,6 +43,7 @@ export interface ResumeItem {
   title: string;
   status: string;
   createdAt: string;
+  embedding: number[];
 }
 
 export interface ListResumesResponse {

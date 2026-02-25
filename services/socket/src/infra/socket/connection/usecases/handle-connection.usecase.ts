@@ -18,17 +18,13 @@ export class HandleConnectionUseCase {
     async execute(command: HandleConnectionCommand): Promise<void> {
         const { client } = command;
 
-        // AuthenticatedSocketAdapter에서 이미 JWT 검증 완료
         if (!client.data.userId) {
             this.logger.log(client, "no_authenticated_user_disconnecting");
             client.disconnect(true);
             return;
         }
 
-        // auth 객체에 traceId를 담아 보내면 그 값을 사용하고 그렇지 않으면 randomUUID()를 사용하여 생성
         client.data.traceId = client.handshake.auth?.traceId || randomUUID();
-
-        // query 객체에 type을 담아 보내면 그 값을 사용
         client.data.query = client.handshake.query;
 
         this.logger.log(client, "session_established", { userId: client.data.userId });

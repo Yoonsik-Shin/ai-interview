@@ -37,14 +37,14 @@ export class InterviewGateway {
     async handleStageReady(
         @ConnectedSocket() client: Socket,
         @MessageBody()
-        payload: { interviewSessionId: string; currentStage: InterviewStage },
+        payload: { interviewId: string; currentStage: InterviewStage },
     ): Promise<void> {
         this.logger.log(client, "stage_ready_received", payload);
 
         const result = await this.syncStageUseCase.execute(
             new SyncStageCommand(
                 client,
-                payload.interviewSessionId,
+                payload.interviewId,
                 payload.currentStage,
                 undefined,
                 "READY",
@@ -53,7 +53,7 @@ export class InterviewGateway {
 
         if (result.currentStage !== payload.currentStage) {
             client.emit("interview:stage_changed", {
-                interviewSessionId: payload.interviewSessionId,
+                interviewId: payload.interviewId,
                 previousStage: result.previousStage,
                 currentStage: result.currentStage,
             });
@@ -63,7 +63,7 @@ export class InterviewGateway {
     @SubscribeMessage("debug:skip_stage")
     async handleDebugSkipStage(
         @ConnectedSocket() client: Socket,
-        @MessageBody() payload: { interviewSessionId: string; currentStage: InterviewStage },
+        @MessageBody() payload: { interviewId: string; currentStage: InterviewStage },
     ): Promise<void> {
         this.logger.log(client, "debug_skip_stage", payload);
         let targetStage: InterviewStage | null = null;
@@ -92,7 +92,7 @@ export class InterviewGateway {
         const result = await this.syncStageUseCase.execute(
             new SyncStageCommand(
                 client,
-                payload.interviewSessionId,
+                payload.interviewId,
                 payload.currentStage,
                 targetStage,
                 "DEBUG_SKIP",
@@ -100,7 +100,7 @@ export class InterviewGateway {
         );
 
         client.emit("interview:stage_changed", {
-            interviewSessionId: payload.interviewSessionId,
+            interviewId: payload.interviewId,
             previousStage: result.previousStage,
             currentStage: result.currentStage,
         });
@@ -112,14 +112,14 @@ export class InterviewGateway {
     @SubscribeMessage("interview:skip_stage")
     async handleSkipStage(
         @ConnectedSocket() client: Socket,
-        @MessageBody() payload: { interviewSessionId: string; currentStage: InterviewStage },
+        @MessageBody() payload: { interviewId: string; currentStage: InterviewStage },
     ): Promise<void> {
         this.logger.log(client, "user_skip_stage", payload);
 
         const result = await this.syncStageUseCase.execute(
             new SyncStageCommand(
                 client,
-                payload.interviewSessionId,
+                payload.interviewId,
                 payload.currentStage,
                 undefined,
                 "SKIP",
@@ -128,7 +128,7 @@ export class InterviewGateway {
 
         if (result.currentStage !== payload.currentStage) {
             client.emit("interview:stage_changed", {
-                interviewSessionId: payload.interviewSessionId,
+                interviewId: payload.interviewId,
                 previousStage: result.previousStage,
                 currentStage: result.currentStage,
             });
@@ -141,6 +141,8 @@ export class InterviewGateway {
         }
     }
 
+    // debug:test_audio handler removed
+
     /**
      * 오디오 청크 처리 - Factory를 통한 프로세서 라우팅
      */
@@ -150,20 +152,25 @@ export class InterviewGateway {
         @MessageBody() payload: AudioChunkDto,
     ): Promise<void> {
         try {
-            const { stage } = await this.stageService.getStage(payload.interviewSessionId);
+            if (!payload || !payload.interviewId) {
+                this.logger.warn(client, "audio_chunk_missing_id", { payload });
+                return;
+            }
+
+            const { stage } = await this.stageService.getStage(payload.interviewId);
             const processor = this.processorFactory.getProcessor(stage);
 
             if (processor) {
                 await processor.execute(new AudioProcessingCommand(client, payload));
             } else {
                 this.logger.warn(client, "audio_chunk_no_processor_for_stage", {
-                    interviewSessionId: payload.interviewSessionId,
+                    interviewId: payload.interviewId,
                     stage,
                 });
             }
         } catch (error) {
             this.logger.error(client, "audio_chunk_processing_failed", {
-                interviewSessionId: payload.interviewSessionId,
+                interviewId: payload.interviewId,
                 error: String(error),
             });
         }
@@ -172,11 +179,11 @@ export class InterviewGateway {
     @SubscribeMessage("interview:abort_stream")
     handleAbortStream(
         @ConnectedSocket() client: Socket,
-        @MessageBody() payload: { interviewSessionId: string },
+        @MessageBody() payload: { interviewId: string },
     ): void {
         this.logger.log(client, "client_requested_abort", {
-            interviewSessionId: payload.interviewSessionId,
+            interviewId: payload.interviewId,
         });
-        this.audioProcessorService.abortProcessing(payload.interviewSessionId);
+        this.audioProcessorService.abortProcessing(payload.interviewId);
     }
 }

@@ -5,7 +5,7 @@ import { SocketLoggingService } from "../../../core/logging/socket-logging.servi
 export class SendSttResultCommand {
     constructor(
         public readonly server: Server,
-        public readonly interviewSessionId: string,
+        public readonly interviewId: string,
         public readonly text: string,
         public readonly isFinal: boolean,
         public readonly engine: string,
@@ -19,21 +19,21 @@ export class SendSttResultUseCase {
     constructor(private readonly logger: SocketLoggingService) {}
 
     async execute(command: SendSttResultCommand): Promise<void> {
-        const { server, interviewSessionId, text, isFinal, engine, source, audioReceivedAt } =
+        const { server, interviewId, text, isFinal, engine, source, audioReceivedAt } =
             command;
-        const roomName = `interview-session-${interviewSessionId}`;
+        const roomName = `interview-session-${interviewId}`;
 
         // 클라이언트에게 보낼 이벤트명: "interview:stt_result"
         server.to(roomName).emit("interview:stt_result", {
             text,
-            interviewSessionId,
+            interviewId,
             timestamp: new Date().toISOString(),
             isFinal,
             engine,
         });
 
         this.logger.log(null, "stt_text_sent_to_client", {
-            interviewSessionId,
+            interviewId,
             textLength: text?.length || 0,
             roomName,
             source,
