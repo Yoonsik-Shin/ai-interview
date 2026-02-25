@@ -2,7 +2,7 @@ package me.unbrdn.core.interview.application.interactor;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
+
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,7 @@ import me.unbrdn.core.interview.application.port.out.CallLlmPort;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPort;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
-import me.unbrdn.core.interview.application.port.out.ProduceInterviewEventPort;
+
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
 import me.unbrdn.core.interview.application.port.out.SaveAdjustmentLogPort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
@@ -36,41 +36,25 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
     private final PublishTranscriptPort publishTranscriptPort;
     private final ManageSessionStatePort sessionStatePort;
     private final SaveAdjustmentLogPort saveAdjustmentLogPort;
-    private final ProduceInterviewEventPort produceInterviewEventPort;
+
     private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     public void execute(ProcessUserAnswerCommand command) {
-        log.info(
-                "Processing user answer: interviewId={}, userId={}",
-                command.getInterviewId(),
-                command.getUserId());
+        log.info("Processing user answer: interviewId={}, userId={}", command.getInterviewId(), command.getUserId());
 
         // 1. InterviewSession 조회하여 InterviewType(mode) 확인
         UUID interviewUuid = UUID.fromString(command.getInterviewId());
-        InterviewSession interviewSession =
-                interviewPort
-                        .loadById(interviewUuid)
-                        .orElseThrow(
-                                () ->
-                                        new IllegalArgumentException(
-                                                "Interview session not found: "
-                                                        + command.getInterviewId()));
+        InterviewSession interviewSession = interviewPort.loadById(interviewUuid).orElseThrow(
+                () -> new IllegalArgumentException("Interview session not found: " + command.getInterviewId()));
 
-        String mode =
-                interviewSession
-                        .getType()
-                        .name()
-                        .toLowerCase(); // REAL -> "real", PRACTICE -> "practice"
+        String mode = interviewSession.getType().name().toLowerCase(); // REAL -> "real", PRACTICE -> "practice"
 
         // 2. 대화 히스토리 로드 (Before adding current user message)
-        List<ConversationHistory> history =
-                conversationHistoryPort.loadHistory(command.getInterviewId());
+        List<ConversationHistory> history = conversationHistoryPort.loadHistory(command.getInterviewId());
 
         // 2-1. Save User Message immediately to avoid data loss
-        conversationHistoryPort.appendUserMessage(
-                command.getInterviewId(),
-                "user", // or command.getInputRole() if
+        conversationHistoryPort.appendUserMessage(command.getInterviewId(), "user", // or command.getInputRole() if
                 // available here? user is standard
                 command.getUserText());
 
@@ -83,53 +67,35 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
             int retryCount = getSelfIntroRetryCount(command.getInterviewId());
 
             if (elapsedSeconds < 30 && retryCount < 2) {
-                log.info(
-                        "Self intro too short (elapsed={}s), requesting retry (count={})",
-                        elapsedSeconds,
+                log.info("Self intro too short (elapsed={}s), requesting retry (count={})", elapsedSeconds,
                         retryCount + 1);
                 incrementSelfIntroRetryCount(command.getInterviewId());
 
-                // Emit RETRY_ANSWER event to Frontend (to play pre-recorded audio)
-                produceInterviewEventPort.produceMessage(
-                        command.getInterviewId(),
-                        "SYSTEM",
-                        "RETRY_ANSWER",
-                        "Self intro too short",
-                        Collections.emptyMap());
-
-                // Publish Stage Change Event (optional, if retry is considered a stage change)
-                PublishTranscriptCommand stageEvent =
-                        PublishTranscriptCommand.builder()
-                                .interviewId(command.getInterviewId())
-                                .type("SELF_INTRO_RETRY")
-                                .currentStage(interviewSession.getStage().name())
-                                .previousStage(InterviewStage.SELF_INTRO.name())
-                                .content("Self-introduction too short. Please elaborate.")
-                                .build();
-                publishTranscriptPort.publish(stageEvent);
+                // Publish RETRY_ANSWER event to Redis Pub/Sub → Socket → Frontend
+                PublishTranscriptCommand retryEvent = PublishTranscriptCommand.builder()
+                        .interviewId(command.getInterviewId()).type("RETRY_ANSWER")
+                        .content("Self intro too short. Please elaborate.")
+                        .currentStage(interviewSession.getStage().name())
+                        .previousStage(InterviewStage.SELF_INTRO.name()).build();
+                publishTranscriptPort.publish(retryEvent);
                 return; // Skip LLM call for a retry prompt
             } else {
-                log.info(
-                        "Self intro completed (elapsed={}s) or max retries reached, transitioning to IN_PROGRESS",
+                log.info("Self intro completed (elapsed={}s) or max retries reached, transitioning to IN_PROGRESS",
                         elapsedSeconds);
                 interviewSession.transitionToInProgress();
                 try {
                     interviewPort.save(interviewSession);
                 } catch (ObjectOptimisticLockingFailureException e) {
-                    log.warn(
-                            "SELF_INTRO->IN_PROGRESS transition skipped (optimistic lock conflict): {}",
+                    log.warn("SELF_INTRO->IN_PROGRESS transition skipped (optimistic lock conflict): {}",
                             e.getMessage());
                     return;
                 }
 
                 // Publish Stage Change Event
-                PublishTranscriptCommand stageEvent =
-                        PublishTranscriptCommand.builder()
-                                .interviewId(command.getInterviewId())
-                                .type("STAGE_CHANGE")
-                                .currentStage(interviewSession.getStage().name())
-                                .previousStage(InterviewStage.SELF_INTRO.name())
-                                .build();
+                PublishTranscriptCommand stageEvent = PublishTranscriptCommand.builder()
+                        .interviewId(command.getInterviewId()).type("STAGE_CHANGE")
+                        .currentStage(interviewSession.getStage().name())
+                        .previousStage(InterviewStage.SELF_INTRO.name()).build();
                 publishTranscriptPort.publish(stageEvent);
             }
         }
@@ -145,23 +111,13 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
         }
         long remainingTimeSeconds = Math.max(0, totalDurationSeconds - elapsed);
 
-        CallLlmCommand llmCommand =
-                CallLlmCommand.builder()
-                        .interviewId(command.getInterviewId())
-                        .userId(command.getUserId())
-                        .userText(command.getUserText())
-                        .availableRoles(interviewSession.getRoles())
-                        .personality(interviewSession.getPersonality())
-                        .history(history)
-                        .mode(mode)
-                        .totalDurationSeconds(totalDurationSeconds)
-                        .remainingTimeSeconds(remainingTimeSeconds)
-                        .currentDifficultyLevel(interviewSession.getCurrentDifficulty())
-                        .lastInterviewerId(interviewSession.getLastInterviewerId())
-                        .stage(interviewSession.getStage())
-                        .interviewerCount(interviewSession.getInterviewerCount())
-                        .domain(interviewSession.getDomain())
-                        .build();
+        CallLlmCommand llmCommand = CallLlmCommand.builder().interviewId(command.getInterviewId())
+                .userId(command.getUserId()).userText(command.getUserText()).availableRoles(interviewSession.getRoles())
+                .personality(interviewSession.getPersonality()).history(history).mode(mode)
+                .totalDurationSeconds(totalDurationSeconds).remainingTimeSeconds(remainingTimeSeconds)
+                .currentDifficultyLevel(interviewSession.getCurrentDifficulty())
+                .lastInterviewerId(interviewSession.getLastInterviewerId()).stage(interviewSession.getStage())
+                .interviewerCount(interviewSession.getInterviewerCount()).domain(interviewSession.getDomain()).build();
 
         callLlmPort.generateResponse(llmCommand);
     }
@@ -176,10 +132,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
             session.incrementTurnCount();
             interviewPort.save(session);
 
-            log.info(
-                    "Incremented turn count to {} (Redis: {}) for session {}",
-                    session.getTurnCount(),
-                    newTurnCount,
+            log.info("Incremented turn count to {} (Redis: {}) for session {}", session.getTurnCount(), newTurnCount,
                     interviewId);
         } catch (Exception e) {
             log.error("Failed to update turn count", e);
@@ -187,10 +140,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
     }
 
     private long awaitElapsedSeconds(String interviewId) {
-        Object startObj =
-                stringRedisTemplate
-                        .opsForHash()
-                        .get("interview:session:" + interviewId, "selfIntroStart");
+        Object startObj = stringRedisTemplate.opsForHash().get("interview:session:" + interviewId, "selfIntroStart");
         if (startObj != null) {
             try {
                 long startTime = Long.parseLong(startObj.toString());
@@ -205,27 +155,15 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
     }
 
     private int getSelfIntroRetryCount(String interviewId) {
-        return sessionStatePort
-                .getState(interviewId)
-                .map(
-                        state ->
-                                state.getSelfIntroRetryCount() != null
-                                        ? state.getSelfIntroRetryCount()
-                                        : 0)
-                .orElse(0);
+        return sessionStatePort.getState(interviewId)
+                .map(state -> state.getSelfIntroRetryCount() != null ? state.getSelfIntroRetryCount() : 0).orElse(0);
     }
 
     private void incrementSelfIntroRetryCount(String interviewId) {
-        sessionStatePort
-                .getState(interviewId)
-                .ifPresent(
-                        state -> {
-                            int current =
-                                    state.getSelfIntroRetryCount() != null
-                                            ? state.getSelfIntroRetryCount()
-                                            : 0;
-                            state.setSelfIntroRetryCount(current + 1);
-                            sessionStatePort.saveState(interviewId, state);
-                        });
+        sessionStatePort.getState(interviewId).ifPresent(state -> {
+            int current = state.getSelfIntroRetryCount() != null ? state.getSelfIntroRetryCount() : 0;
+            state.setSelfIntroRetryCount(current + 1);
+            sessionStatePort.saveState(interviewId, state);
+        });
     }
 }
