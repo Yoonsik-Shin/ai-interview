@@ -28,16 +28,12 @@ public class GetInterviewInteractor implements GetInterviewUseCase {
         return GetInterviewResult.builder()
                 .interviewId(session.getId())
                 .status(session.getStatus())
-                .currentStage(session.getCurrentStage())
                 .type(session.getType())
                 .domain(session.getDomain())
                 .targetDurationMinutes(session.getTargetDurationMinutes())
                 .selfIntroduction(session.getSelfIntroduction())
-                .interviewerRoles(session.getRoles())
                 .personality(session.getPersonality())
-                .interviewerCount(session.getInterviewerCount())
                 .startedAt(session.getStartedAt() != null ? session.getStartedAt() : null)
-                .resumedAt(session.getResumedAt())
                 .build();
     }
 }

@@ -38,6 +38,7 @@ REDIS_HOST = _env("REDIS_HOST", "redis")
 REDIS_PORT = _env_int("REDIS_PORT", 6379)
 REDIS_DB = _env_int("REDIS_DB", 1)
 REDIS_PASSWORD = _env("REDIS_PASSWORD", "") or None
+REDIS_TRACK2_URL = _env("REDIS_TRACK2_URL", "redis://localhost:6379/2")
 
 # Redis Sentinel Configuration
 REDIS_SENTINEL_HOSTS = _env("REDIS_SENTINEL_HOSTS", "")

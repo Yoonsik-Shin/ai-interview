@@ -19,12 +19,10 @@ import me.unbrdn.core.interview.application.port.out.ProduceInterviewEventPort;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
 import me.unbrdn.core.interview.application.port.out.PushTtsQueuePort;
 import me.unbrdn.core.interview.application.port.out.SaveAdjustmentLogPort;
-import me.unbrdn.core.interview.application.port.out.SaveInterviewQnAPort;
+import me.unbrdn.core.interview.application.port.out.SaveSentenceStreamPort;
 import me.unbrdn.core.interview.domain.entity.InterviewAdjustmentLog;
-import me.unbrdn.core.interview.domain.entity.InterviewQnA;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import me.unbrdn.core.interview.domain.model.InterviewSessionState;
-import me.unbrdn.core.interview.domain.model.TokenAccumulator;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -40,11 +38,11 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
     private final InterviewPort interviewPort;
     private final ManageSessionStatePort sessionStatePort;
     private final SaveAdjustmentLogPort saveAdjustmentLogPort;
-    private final SaveInterviewQnAPort saveInterviewQnAPort;
     private final ProduceInterviewEventPort produceInterviewEventPort;
     private final ApplicationEventPublisher eventPublisher;
+    private final SaveSentenceStreamPort saveSentenceStreamPort;
 
-    private final Map<String, TokenAccumulator> accumulators = new ConcurrentHashMap<>();
+    private final Map<String, LlmResponseContext> responseContexts = new ConcurrentHashMap<>();
 
     @Override
     public void execute(ProcessLlmTokenCommand command) {
@@ -56,9 +54,9 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
             persona = "DEFAULT";
         }
 
-        String accumulatorKey = interviewId + ":" + persona;
-        TokenAccumulator accumulator =
-                accumulators.computeIfAbsent(accumulatorKey, k -> new TokenAccumulator());
+        String contextKey = interviewId + ":" + persona;
+        LlmResponseContext context =
+                responseContexts.computeIfAbsent(contextKey, k -> new LlmResponseContext());
 
         // 0. Update Session State (Adaptive Logic)
         if (command.isReduceTotalTime()
@@ -67,30 +65,31 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
                         && !command.getCurrentPersonaId().isEmpty())) {
 
             boolean shouldUpdate = false;
-            if (command.isReduceTotalTime() && !accumulator.isTimeReduced()) {
+            if (command.isReduceTotalTime() && !context.isTimeReduced()) {
                 shouldUpdate = true;
             }
-            if (command.getNextDifficultyLevel() > 0 && !accumulator.isDifficultyUpdated()) {
+            if (command.getNextDifficultyLevel() > 0 && !context.isDifficultyUpdated()) {
                 shouldUpdate = true;
             }
             if ((command.getCurrentPersonaId() != null && !command.getCurrentPersonaId().isEmpty())
-                    && !accumulator.isLastInterviewerUpdated()) {
+                    && !context.isLastInterviewerUpdated()) {
                 shouldUpdate = true;
             }
 
             if (shouldUpdate) {
-                updateSessionStateInCache(command, accumulator);
+                updateSessionStateInCache(command, context);
             }
         }
 
         if (command.isInterviewEndSignal()) {
-            accumulator.setEndSignal(true);
+            context.setEndSignal(true);
         }
 
-        // 1. Redis Cache에 Append
+        // 1. Redis Cache에 Append (문장 버퍼, 전체 응답 버퍼)
         if (command.getToken() != null && !command.getToken().isEmpty()) {
             appendRedisCachePort.appendToken(interviewId, command.getToken(), persona);
-            accumulator.appendToken(command.getToken());
+            appendRedisCachePort.appendSentenceBuffer(interviewId, command.getToken());
+            appendRedisCachePort.appendFullResponseBuffer(interviewId, command.getToken());
         }
 
         // 2. Pub/Sub 발행 (실시간 자막 + THINKING)
@@ -102,34 +101,46 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
                         .build();
         publishTranscriptPort.publish(publishCommand);
 
-        if (command.isSentenceEnd() && accumulator.hasSentence()) {
-            PushTtsQueueCommand ttsCommand =
-                    PushTtsQueueCommand.builder()
-                            .interviewId(interviewId)
-                            .sentence(accumulator.getCurrentSentence())
-                            .sentenceIndex(accumulator.getSentenceIndex())
-                            .mode(command.getMode())
-                            .personaId(persona)
-                            .build();
-            pushTtsQueuePort.push(ttsCommand);
-            accumulator.clearSentence();
+        if (command.isSentenceEnd()) {
+            String sentence = appendRedisCachePort.getAndClearSentenceBuffer(interviewId);
+            if (sentence != null && !sentence.trim().isEmpty()) {
+                saveSentenceStreamPort.publishSentence(
+                        interviewId,
+                        persona,
+                        context.getSentenceIndex(),
+                        sentence,
+                        command.isFinal(),
+                        command.getMode());
 
-            log.info(
-                    "Pushed TTS sentence: interviewId={}, persona={}, sentenceIndex={}",
-                    interviewId,
-                    persona,
-                    accumulator.getSentenceIndex() - 1);
+                PushTtsQueueCommand ttsCommand =
+                        PushTtsQueueCommand.builder()
+                                .interviewId(interviewId)
+                                .sentence(sentence)
+                                .sentenceIndex(context.getSentenceIndex())
+                                .mode(command.getMode())
+                                .personaId(persona)
+                                .build();
+                pushTtsQueuePort.push(ttsCommand);
+
+                log.info(
+                        "Pushed TTS and Streams: interviewId={}, persona={}, sentenceIndex={}",
+                        interviewId,
+                        persona,
+                        context.getSentenceIndex());
+
+                context.incrementSentenceIndex();
+            }
         }
 
         // 4. 최종 완료 시
         if (command.isFinal()) {
-            handleFinalCompletion(command, accumulator);
-            accumulators.remove(accumulatorKey);
+            handleFinalCompletion(command, context);
+            responseContexts.remove(contextKey);
         }
     }
 
     private void updateSessionStateInCache(
-            ProcessLlmTokenCommand command, TokenAccumulator accumulator) {
+            ProcessLlmTokenCommand command, LlmResponseContext context) {
         try {
             String interviewId = command.getInterviewId();
             InterviewSessionState state =
@@ -150,8 +161,8 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
 
             boolean updated = false;
 
-            if (command.isReduceTotalTime() && !accumulator.isTimeReduced()) {
-                accumulator.setTimeReduced(true);
+            if (command.isReduceTotalTime() && !context.isTimeReduced()) {
+                context.setTimeReduced(true);
                 updated = true;
 
                 // 1. DB Update
@@ -194,18 +205,18 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
                     && (state.getCurrentDifficulty() == null
                             || !state.getCurrentDifficulty()
                                     .equals(command.getNextDifficultyLevel()))
-                    && !accumulator.isDifficultyUpdated()) {
+                    && !context.isDifficultyUpdated()) {
                 state.setCurrentDifficulty(command.getNextDifficultyLevel());
-                accumulator.setDifficultyUpdated(true);
+                context.setDifficultyUpdated(true);
                 updated = true;
                 log.info("Updated difficulty (cached) to: {}", command.getNextDifficultyLevel());
             }
 
             if (command.getCurrentPersonaId() != null
                     && !command.getCurrentPersonaId().isEmpty()
-                    && !accumulator.isLastInterviewerUpdated()) {
+                    && !context.isLastInterviewerUpdated()) {
                 state.setLastInterviewerId(command.getCurrentPersonaId());
-                accumulator.setLastInterviewerUpdated(true);
+                context.setLastInterviewerUpdated(true);
                 updated = true;
             }
 
@@ -217,31 +228,14 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
         }
     }
 
-    private void handleFinalCompletion(
-            ProcessLlmTokenCommand command, TokenAccumulator accumulator) {
-        String fullResponse = accumulator.getFullResponse();
+    private void handleFinalCompletion(ProcessLlmTokenCommand command, LlmResponseContext context) {
+        String fullResponse =
+                appendRedisCachePort.getAndClearFullResponseBuffer(command.getInterviewId());
 
         log.info(
                 "LLM response completed: interviewId={}, responseLength={}",
                 command.getInterviewId(),
                 fullResponse.length());
-
-        // Save complete exchange to InterviewQnA instead of InterviewResult
-        try {
-            var sessionOpt =
-                    interviewPort.loadById(java.util.UUID.fromString(command.getInterviewId()));
-            sessionOpt.ifPresent(
-                    session -> {
-                        // Intro나 Closing 단계도 QnA 형식으로 저장하여 피드백 시 활용 가능하게 함
-                        InterviewQnA qna =
-                                InterviewQnA.create(
-                                        session, session.getTurnCount(), command.getUserText());
-                        qna.updateAnswer(fullResponse, command.getUserText());
-                        saveInterviewQnAPort.save(qna);
-                    });
-        } catch (Exception e) {
-            log.error("Failed to save QnA result", e);
-        }
 
         // Only append AI message, as User message was already appended in
         // ProcessUserAnswerInteractor
@@ -259,16 +253,42 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
         try {
             var sessionOpt =
                     interviewPort.loadById(java.util.UUID.fromString(command.getInterviewId()));
+
+            me.unbrdn.core.interview.domain.model.InterviewSessionState state =
+                    sessionStatePort
+                            .getState(command.getInterviewId())
+                            .orElse(
+                                    me.unbrdn.core.interview.domain.model.InterviewSessionState
+                                            .createDefault());
+
+            // Revert state to LISTENING after AI finished speaking
+            state.setStatus(
+                    me.unbrdn.core.interview.domain.model.InterviewSessionState.Status.LISTENING);
+            sessionStatePort.saveState(command.getInterviewId(), state);
+
+            // Publish turn_complete event to Track 1
+            PublishTranscriptCommand turnCompleteCommand =
+                    PublishTranscriptCommand.builder()
+                            .interviewId(command.getInterviewId())
+                            .type("turn_complete")
+                            .turnCount(state.getTurnCount() != null ? state.getTurnCount() : 0)
+                            .build();
+            publishTranscriptPort.publish(turnCompleteCommand);
+
             sessionOpt.ifPresent(
                     session -> {
-                        InterviewStage currentStage = session.getStage();
+                        InterviewStage currentStage = state.getCurrentStage();
 
-                        // CLOSING_GREETING 완료 후 자동으로 COMPLETED로 전환
                         if (currentStage == InterviewStage.CLOSING_GREETING) {
                             log.info(
                                     "Closing greeting completed, transitioning to COMPLETED: interviewId={}",
                                     command.getInterviewId());
-                            session.transitionToCompleted();
+                            session.complete();
+                            state.setCurrentStage(InterviewStage.COMPLETED);
+                            state.setStatus(
+                                    me.unbrdn.core.interview.domain.model.InterviewSessionState
+                                            .Status.COMPLETED);
+                            sessionStatePort.saveState(command.getInterviewId(), state);
                             interviewPort.save(session);
 
                             // Publish INTERVIEW_COMPLETED event
@@ -284,16 +304,17 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
             log.error("Failed to handle stage transition after LLM completion", e);
         }
 
-        if (accumulator.isEndSignal()) {
+        if (context.isEndSignal()) {
             log.info("Interview End Signal received. Transitioning to LAST_QUESTION_PROMPT.");
             try {
-                var sessionOpt =
-                        interviewPort.loadById(java.util.UUID.fromString(command.getInterviewId()));
-                sessionOpt.ifPresent(
-                        session -> {
-                            session.transitionToLastQuestionPrompt();
-                            interviewPort.save(session);
-                        });
+                me.unbrdn.core.interview.domain.model.InterviewSessionState state =
+                        sessionStatePort
+                                .getState(command.getInterviewId())
+                                .orElse(
+                                        me.unbrdn.core.interview.domain.model.InterviewSessionState
+                                                .createDefault());
+                state.setCurrentStage(InterviewStage.LAST_QUESTION_PROMPT);
+                sessionStatePort.saveState(command.getInterviewId(), state);
             } catch (Exception e) {
                 log.error("Failed to transition to LAST_QUESTION_PROMPT", e);
             }
@@ -304,6 +325,54 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
                             .userId(command.getUserId())
                             .mode(command.getMode())
                             .build());
+        }
+    }
+
+    private static class LlmResponseContext {
+        private int sentenceIndex = 0;
+        private boolean endSignal = false;
+        private boolean timeReduced = false;
+        private boolean difficultyUpdated = false;
+        private boolean lastInterviewerUpdated = false;
+
+        public synchronized void incrementSentenceIndex() {
+            sentenceIndex++;
+        }
+
+        public synchronized int getSentenceIndex() {
+            return sentenceIndex;
+        }
+
+        public synchronized boolean isEndSignal() {
+            return endSignal;
+        }
+
+        public synchronized void setEndSignal(boolean endSignal) {
+            this.endSignal = endSignal;
+        }
+
+        public synchronized boolean isTimeReduced() {
+            return timeReduced;
+        }
+
+        public synchronized void setTimeReduced(boolean timeReduced) {
+            this.timeReduced = timeReduced;
+        }
+
+        public synchronized boolean isDifficultyUpdated() {
+            return difficultyUpdated;
+        }
+
+        public synchronized void setDifficultyUpdated(boolean difficultyUpdated) {
+            this.difficultyUpdated = difficultyUpdated;
+        }
+
+        public synchronized boolean isLastInterviewerUpdated() {
+            return lastInterviewerUpdated;
+        }
+
+        public synchronized void setLastInterviewerUpdated(boolean lastInterviewerUpdated) {
+            this.lastInterviewerUpdated = lastInterviewerUpdated;
         }
     }
 }

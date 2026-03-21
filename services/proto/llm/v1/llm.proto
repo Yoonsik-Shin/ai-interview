@@ -46,7 +46,7 @@ message GenerateRequest {
   string interview_id = 1;
   string user_id = 2;
   string user_text = 3;
-  repeated ConversationHistory history = 5;
+  // DEPRECATED: repeated ConversationHistory history = 5; (Removed for Track 2 Checkpointer)
   common.v1.InterviewStageProto stage = 6;
   optional int32 interviewer_count = 7;
   optional string domain = 8;
@@ -59,12 +59,9 @@ message GenerateRequest {
   repeated common.v1.InterviewRoleProto available_roles = 14; 
   common.v1.InterviewPersonalityProto personality = 15;       
   string input_role = 16;                           // "user" (default) or "system"
+  string persona_id = 17;                           // 면접관 페르소나 템플릿 렌더링용 식별자
 }
 
-message ConversationHistory {
-  string role = 1; // "user", "assistant", or "system"
-  string content = 2;
-}
 
 message TokenChunk {
   string token = 1;

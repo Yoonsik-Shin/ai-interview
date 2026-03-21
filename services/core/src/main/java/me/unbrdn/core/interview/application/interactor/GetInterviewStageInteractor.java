@@ -26,19 +26,24 @@ public class GetInterviewStageInteractor implements GetInterviewStageUseCase {
                                         new IllegalArgumentException(
                                                 "Interview not found: " + query.interviewId()));
 
-        Integer retryCount =
-                sessionStatePort
-                        .getState(query.interviewId().toString())
-                        .map(InterviewSessionState::getSelfIntroRetryCount)
-                        .orElse(0);
+        InterviewSessionState state =
+                sessionStatePort.getState(query.interviewId().toString()).orElse(null);
+
+        Integer retryCount = state != null ? state.getSelfIntroRetryCount() : 0;
+
+        java.util.List<me.unbrdn.core.interview.domain.enums.InterviewRole> roles =
+                state != null && state.getParticipatingPersonas() != null
+                        ? state.getParticipatingPersonas().stream()
+                                .map(me.unbrdn.core.interview.domain.enums.InterviewRole::valueOf)
+                                .toList()
+                        : java.util.Collections.emptyList();
+
+        Integer interviewerCount =
+                state != null && state.getParticipatingPersonas() != null
+                        ? state.getParticipatingPersonas().size()
+                        : 1;
 
         return new InterviewStageResult(
-                session.getStage(),
-                session.getSelfIntroElapsedSeconds(),
-                session.getRoles(),
-                session.getPersonality(),
-                session.getInterviewerCount(),
-                session.getDomain(),
-                retryCount);
+                roles, session.getPersonality(), interviewerCount, session.getDomain(), retryCount);
     }
 }

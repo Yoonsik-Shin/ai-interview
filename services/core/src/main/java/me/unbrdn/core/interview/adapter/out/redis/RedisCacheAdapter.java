@@ -34,6 +34,36 @@ public class RedisCacheAdapter implements AppendRedisCachePort {
         }
     }
 
+    @Override
+    public void appendSentenceBuffer(String interviewId, String token) {
+        String key = "interview:llm:sentence:" + interviewId;
+        redisTemplate.opsForValue().append(key, token);
+        redisTemplate.expire(key, Duration.ofMinutes(10));
+    }
+
+    @Override
+    public String getAndClearSentenceBuffer(String interviewId) {
+        String key = "interview:llm:sentence:" + interviewId;
+        String sentence = redisTemplate.opsForValue().get(key);
+        redisTemplate.delete(key);
+        return sentence == null ? "" : sentence;
+    }
+
+    @Override
+    public void appendFullResponseBuffer(String interviewId, String token) {
+        String key = "interview:llm:buffer:" + interviewId;
+        redisTemplate.opsForValue().append(key, token);
+        redisTemplate.expire(key, Duration.ofMinutes(30));
+    }
+
+    @Override
+    public String getAndClearFullResponseBuffer(String interviewId) {
+        String key = "interview:llm:buffer:" + interviewId;
+        String fullResponse = redisTemplate.opsForValue().get(key);
+        redisTemplate.delete(key);
+        return fullResponse == null ? "" : fullResponse;
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

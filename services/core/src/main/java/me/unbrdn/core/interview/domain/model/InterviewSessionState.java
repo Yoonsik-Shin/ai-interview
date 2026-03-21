@@ -15,7 +15,19 @@ import me.unbrdn.core.interview.domain.entity.InterviewSession;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InterviewSessionState implements Serializable {
+    public enum Status {
+        READY,
+        LISTENING,
+        THINKING,
+        SPEAKING,
+        PAUSED,
+        COMPLETED,
+        CANCELLED
+    }
+
     private static final long serialVersionUID = 1L;
+
+    private Status status;
 
     private Integer currentDifficulty;
     private String lastInterviewerId;
@@ -23,6 +35,7 @@ public class InterviewSessionState implements Serializable {
     private Long remainingTimeSeconds;
     private Long startTime; // 면접 시작 시간 (Epoch Memory)
     private Long cumulatedPauseSeconds; // 누적 일시정지 시간
+    private me.unbrdn.core.interview.domain.enums.InterviewStage currentStage;
 
     // Sequential Intro fields
     private List<String> participatingPersonas;
@@ -32,23 +45,23 @@ public class InterviewSessionState implements Serializable {
     public static InterviewSessionState createDefault() {
         return InterviewSessionState.builder()
                 .currentDifficulty(3) // 기본값 3
+                .status(Status.READY)
                 .turnCount(0)
                 .selfIntroRetryCount(0)
+                .currentStage(me.unbrdn.core.interview.domain.enums.InterviewStage.WAITING)
                 .build();
     }
 
     public static InterviewSessionState fromEntity(InterviewSession session) {
         return InterviewSessionState.builder()
-                .currentDifficulty(session.getCurrentDifficulty())
-                .lastInterviewerId(session.getLastInterviewerId())
+                .currentDifficulty(3)
+                .lastInterviewerId("LEADER")
                 .turnCount(session.getTurnCount())
                 .remainingTimeSeconds(session.getTargetDurationMinutes() * 60L)
                 .selfIntroRetryCount(0)
-                .participatingPersonas(
-                        session.getRoles() != null
-                                ? session.getRoles().stream().map(Enum::name).toList()
-                                : Collections.emptyList())
+                .participatingPersonas(Collections.emptyList())
                 .nextPersonaIndex(0)
+                .currentStage(me.unbrdn.core.interview.domain.enums.InterviewStage.WAITING)
                 .build();
     }
 }

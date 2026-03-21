@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ForceStageInteractor implements ForceStageUseCase {
 
     private final InterviewPort interviewPort;
+    private final me.unbrdn.core.interview.application.port.out.ManageSessionStatePort
+            sessionStatePort;
 
     @Override
     @Transactional
@@ -44,21 +46,25 @@ public class ForceStageInteractor implements ForceStageUseCase {
                                         new IllegalArgumentException(
                                                 "Interview not found: " + command.interviewId()));
 
-        // 강제로 단계 변경
         InterviewStage targetStage = InterviewStage.valueOf(command.targetStage());
-        session.forceChangeStage(targetStage);
 
-        // 저장
-        interviewPort.save(session);
+        me.unbrdn.core.interview.domain.model.InterviewSessionState state =
+                sessionStatePort
+                        .getState(command.interviewId())
+                        .orElse(
+                                me.unbrdn.core.interview.domain.model.InterviewSessionState
+                                        .createDefault());
+        state.setCurrentStage(targetStage);
+        sessionStatePort.saveState(command.interviewId(), state);
 
         log.warn(
                 "[DevTool] Stage forcefully changed: interviewId={}, newStage={}",
                 session.getId(),
-                session.getCurrentStage());
+                targetStage);
 
         return new ForceStageResult(
                 session.getId().toString(),
-                session.getCurrentStage(),
+                targetStage,
                 "Stage forcefully changed to " + targetStage);
     }
 }

@@ -36,11 +36,12 @@ public class InterviewSequentialIntroListener {
 
             sessionOpt.ifPresent(
                     session -> {
-                        if (session.getStage() == InterviewStage.INTERVIEWER_INTRO) {
-                            sessionStatePort
-                                    .getState(event.getInterviewId())
-                                    .ifPresent(
-                                            state -> {
+                        sessionStatePort
+                                .getState(event.getInterviewId())
+                                .ifPresent(
+                                        state -> {
+                                            if (state.getCurrentStage()
+                                                    == InterviewStage.INTERVIEWER_INTRO) {
                                                 List<String> personas =
                                                         state.getParticipatingPersonas();
                                                 Integer nextIdx = state.getNextPersonaIndex();
@@ -91,14 +92,16 @@ public class InterviewSequentialIntroListener {
                                                                     .personality(
                                                                             session
                                                                                     .getPersonality())
-                                                                    .history(
-                                                                            java.util.Collections
-                                                                                    .emptyList())
+                                                                    .personaId(
+                                                                            session.getPersonality()
+                                                                                            != null
+                                                                                    ? session.getPersonality()
+                                                                                            .name()
+                                                                                    : "DEFAULT")
                                                                     .mode(event.getMode())
-                                                                    .stage(session.getStage())
+                                                                    .stage(state.getCurrentStage())
                                                                     .interviewerCount(
-                                                                            session
-                                                                                    .getInterviewerCount())
+                                                                            personas.size())
                                                                     .domain(session.getDomain())
                                                                     .totalDurationSeconds(
                                                                             totalDurationSeconds)
@@ -106,20 +109,10 @@ public class InterviewSequentialIntroListener {
                                                                             remainingTimeSeconds)
                                                                     .currentDifficultyLevel(
                                                                             state
-                                                                                                    .getCurrentDifficulty()
-                                                                                            != null
-                                                                                    ? state
-                                                                                            .getCurrentDifficulty()
-                                                                                    : session
-                                                                                            .getCurrentDifficulty())
+                                                                                    .getCurrentDifficulty())
                                                                     .lastInterviewerId(
                                                                             state
-                                                                                                    .getLastInterviewerId()
-                                                                                            != null
-                                                                                    ? state
-                                                                                            .getLastInterviewerId()
-                                                                                    : session
-                                                                                            .getLastInterviewerId())
+                                                                                    .getLastInterviewerId())
                                                                     .build();
 
                                                     callLlmPort.generateResponse(llmCommand);
@@ -131,11 +124,15 @@ public class InterviewSequentialIntroListener {
                                                 } else {
                                                     log.info(
                                                             "All interviewers introduced. Transitioning to SELF_INTRO_PROMPT.");
-                                                    session.transitionToSelfIntroPrompt();
-                                                    interviewPort.save(session);
+                                                    state.setCurrentStage(
+                                                            InterviewStage.SELF_INTRO_PROMPT);
+                                                    sessionStatePort.saveState(
+                                                            event.getInterviewId(), state);
+                                                    // Trigger transit logic maybe? Handled by a
+                                                    // separate command or left to the client
                                                 }
-                                            });
-                        }
+                                            }
+                                        });
                     });
         } catch (Exception e) {
             log.error("Failed to handle sequential interviewer intro via event", e);

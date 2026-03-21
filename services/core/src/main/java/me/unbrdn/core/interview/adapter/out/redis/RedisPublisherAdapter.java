@@ -15,10 +15,11 @@ public class RedisPublisherAdapter implements PublishTranscriptPort {
 
     @Override
     public void publish(PublishTranscriptCommand command) {
-        String channel = "interview:transcript:" + command.getInterviewId();
+        String channel = "interview:llm:pubsub:" + command.getInterviewId();
 
         java.util.Map<String, Object> message = new java.util.HashMap<>();
         message.put("interviewId", command.getInterviewId());
+        message.put("type", command.getType() != null ? command.getType() : "token");
         message.put("token", command.getToken() != null ? command.getToken() : "");
         message.put("thinking", command.getThinking() != null ? command.getThinking() : "");
         message.put("reduceTotalTime", command.isReduceTotalTime());
@@ -27,13 +28,13 @@ public class RedisPublisherAdapter implements PublishTranscriptPort {
                 "currentPersonaId",
                 command.getCurrentPersonaId() != null ? command.getCurrentPersonaId() : "");
         message.put("timestamp", Instant.now().toString());
-        message.put("type", command.getType() != null ? command.getType() : "TRANSCRIPT");
         message.put(
                 "currentStage", command.getCurrentStage() != null ? command.getCurrentStage() : "");
         message.put(
                 "previousStage",
                 command.getPreviousStage() != null ? command.getPreviousStage() : "");
         message.put("content", command.getContent() != null ? command.getContent() : "");
+        message.put("turnCount", command.getTurnCount() != null ? command.getTurnCount() : 0);
 
         // GenericJacksonJsonRedisSerializer will handle the serialization
         redisTemplate.convertAndSend(channel, message);

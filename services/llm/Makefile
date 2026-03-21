@@ -8,9 +8,9 @@ proto:
 		-I../proto \
 		--python_out=generated \
 		--grpc_python_out=generated \
-		../proto/llm.proto
-	python -c "import sys; content = open('generated/llm_pb2_grpc.py').read(); open('generated/llm_pb2_grpc.py', 'w').write(content.replace('import llm_pb2 as llm__pb2', 'from . import llm_pb2 as llm__pb2'))"
-	touch generated/__init__.py
+		../proto/llm/v1/llm.proto ../proto/common/v1/enums.proto
+	mkdir -p generated/llm/v1 generated/common/v1
+	touch generated/__init__.py generated/llm/__init__.py generated/llm/v1/__init__.py generated/common/__init__.py generated/common/v1/__init__.py
 	@echo "✅ Proto compilation done!"
 
 # 생성된 proto 파일 삭제
@@ -24,7 +24,7 @@ clean:
 # Proto 컴파일 후 서버 실행
 run: proto
 	@echo "🚀 Starting LLM gRPC server..."
-	python grpc_server.py
+	python main.py
 
 # 개발 모드 (supervisord로 FastAPI + gRPC + Kafka 동시 실행)
 dev: proto

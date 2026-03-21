@@ -39,7 +39,9 @@ REDIS_TCP_KEEPINTVL = _get_int('REDIS_TCP_KEEPINTVL', 10)
 REDIS_TCP_KEEPCNT = _get_int('REDIS_TCP_KEEPCNT', 3)
 REDIS_BLOCKING_TIMEOUT = _get_int('REDIS_BLOCKING_TIMEOUT', 5)
 
-TTS_INPUT_QUEUE = os.getenv('TTS_INPUT_QUEUE', 'tts:sentence:queue')
+TTS_SENTENCE_STREAM = os.getenv('TTS_SENTENCE_STREAM', 'interview:sentence:stream')
+TTS_CONSUMER_GROUP = os.getenv('TTS_CONSUMER_GROUP', 'CG_TTS')
+TTS_CONSUMER_NAME = os.getenv('TTS_CONSUMER_NAME', 'tts_worker_1')
 TTS_PUBSUB_CHANNEL_TEMPLATE = os.getenv('TTS_PUBSUB_CHANNEL_TEMPLATE', 'interview:audio:{interviewId}')
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')

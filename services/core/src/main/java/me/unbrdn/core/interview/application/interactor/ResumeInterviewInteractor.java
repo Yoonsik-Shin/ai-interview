@@ -43,8 +43,6 @@ public class ResumeInterviewInteractor implements ResumeInterviewUseCase {
         log.info("Interview resumed successfully: {}", session.getId().toString());
 
         return new ResumeInterviewResult(
-                session.getId().toString(),
-                session.getStatus().name(),
-                session.getResumedAt() != null ? session.getResumedAt().toString() : null);
+                session.getId().toString(), session.getStatus().name(), null);
     }
 }

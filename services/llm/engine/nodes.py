@@ -2,8 +2,9 @@
 
 import json
 import random
-from typing import List, Dict, Any, TypedDict, Optional, Union
+from typing import List, Dict, Any, TypedDict, Optional, Union, Annotated
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
+from langgraph.graph.message import add_messages
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 
@@ -11,7 +12,7 @@ from engine.prompts import ANALYZER_PROMPT, ROLE_PROMPTS, PERSONALITY_PROMPTS, S
 
 class InterviewState(TypedDict):
     # Input
-    history: List[BaseMessage]
+    history: Annotated[List[BaseMessage], add_messages]
     user_input: str
     available_roles: List[str] # List of Role names (e.g. "TECH", "HR")
     personality: str           # e.g. "PRESSURE", "COMFORTABLE"

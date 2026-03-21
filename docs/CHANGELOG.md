@@ -1,5 +1,23 @@
 # Changelog
 
+## [2026-03-22]
+
+### 추가 및 변경 (Phase 6: LLM Track 2 분리)
+
+- **Proto (`services/proto/llm/v1/llm.proto`)**:
+  - `GenerateRequest` 메시지에서 파드 통신 부하를 유발하던 `history` 배열 배제.
+  - LLM 서버 내에서 자체적으로 프롬프트를 렌더링하기 위해 `persona_id` 필드 신규 추가.
+
+- **Core 서버**:
+  - `ProcessUserAnswerInteractor` 등에서 DB의 전체 대화 기록을 `loadHistory`로 불러오던 로직 전면 삭제 (페이로드 경량화).
+  - 응답 생성 시 `history` 생략 및 `personaId` 전송.
+
+- **LLM 서버 인프라 (Track 2)**:
+  - `.env`에 `REDIS_TRACK2_URL` 신설 및 `RedisSaver` 설정 적용 (세션용 Track 2 단독 연결 확보).
+  - LangGraph(checkpointer) 엔진을 도입하여 면접 진행 State와 통신 기록을 LLM 서버에서 스스로 캐싱하고 유지보수하도록 개편 (SSOT).
+  - 기존 하드코딩되어 있던 시스템, 페르소나, 스테이지 프롬프트들을 `services/llm/prompts/` 내의 YAML 설정 파일들(roles.yaml, stages.yaml 등)로 모듈화하여 관리 주권 확보.
+  - Python 구문분석 버그 및 RedisSaver 초기화 인자 컴파일 오류 핫픽스 수정 완료.
+
 ## [2026-02-26]
 
 ### 수정

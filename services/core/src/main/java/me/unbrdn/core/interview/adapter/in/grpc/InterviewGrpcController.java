@@ -163,10 +163,7 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
 
         InterviewStageResult result = getInterviewStageUseCase.execute(query);
 
-        GetInterviewStageResponse.Builder responseBuilder =
-                GetInterviewStageResponse.newBuilder()
-                        .setStage(mapper.toProtoInterviewStage(result.stage()))
-                        .setSelfIntroElapsedSeconds(result.selfIntroElapsedSeconds());
+        GetInterviewStageResponse.Builder responseBuilder = GetInterviewStageResponse.newBuilder();
 
         if (result.roles() != null) {
             responseBuilder.addAllInterviewerRoles(
@@ -206,9 +203,7 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
         InterviewStageResult result = getInterviewStageUseCase.execute(query);
 
         TransitionStageResponse response =
-                TransitionStageResponse.newBuilder()
-                        .setCurrentStage(mapper.toProtoInterviewStage(result.stage()))
-                        .build();
+                TransitionStageResponse.newBuilder().setCurrentStage(request.getNewStage()).build();
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();

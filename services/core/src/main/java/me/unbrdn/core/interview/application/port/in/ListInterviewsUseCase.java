@@ -21,6 +21,5 @@ public interface ListInterviewsUseCase {
             InterviewSessionStatus status,
             String domain,
             InterviewType type,
-            int targetDurationMinutes,
-            int interviewerCount) {}
+            int targetDurationMinutes) {}
 }

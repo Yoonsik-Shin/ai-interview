@@ -54,37 +54,36 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
             throw new IllegalArgumentException("Unknown stage: " + command.newStage());
         }
 
-        InterviewStage previousStage = session.getStage();
+        InterviewSessionState state =
+                sessionStatePort
+                        .getState(session.getId().toString())
+                        .orElseGet(() -> InterviewSessionState.fromEntity(session));
+        InterviewStage previousStage = state.getCurrentStage();
 
-        // Domain logic - Entity의 transition 메서드 호출
+        state.setCurrentStage(stageEnum);
+        sessionStatePort.saveState(session.getId().toString(), state);
+
+        // Domain logic - Trigger specific events based on stage
         switch (stageEnum) {
-            case GREETING -> session.transitionToGreeting();
-            case CANDIDATE_GREETING -> session.transitionToCandidateGreeting();
             case INTERVIEWER_INTRO -> {
-                session.transitionToInterviewerIntro();
                 // INTERVIEWER_INTRO 단계 진입 시 면접관 소개 자동 발화 트리거
-                triggerInterviewerIntro(session);
+                triggerInterviewerIntro(session, state);
             }
-            case SELF_INTRO_PROMPT -> session.transitionToSelfIntroPrompt();
-            case SELF_INTRO -> session.transitionToSelfIntro();
             case IN_PROGRESS -> {
-                session.transitionToInProgress();
                 // Trigger the first question when entering IN_PROGRESS stage
-                triggerFirstQuestion(session);
+                triggerFirstQuestion(session, state);
             }
-            case LAST_QUESTION_PROMPT -> session.transitionToLastQuestionPrompt();
-            case LAST_ANSWER -> session.transitionToLastAnswer();
             case CLOSING_GREETING -> {
-                session.transitionToClosingGreeting();
                 // CLOSING_GREETING 단계 진입 시 마무리 인사 자동 발화 트리거
-                triggerClosingGreeting(session);
+                triggerClosingGreeting(session, state);
             }
             case COMPLETED -> {
-                session.transitionToCompleted();
+                session.complete();
                 flushSessionStateToRdb(session);
             }
             case WAITING -> throw new IllegalArgumentException(
                     "Cannot transition back to WAITING stage");
+            default -> {} // other stages don't need explicit triggers
         }
 
         try {
@@ -110,11 +109,11 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
                         .interviewId(session.getId().toString())
                         .type("STAGE_CHANGE")
                         .currentStage(command.newStage())
-                        .previousStage(previousStage.name())
+                        .previousStage(previousStage != null ? previousStage.name() : "WAITING")
                         .build());
     }
 
-    private void triggerInterviewerIntro(InterviewSession session) {
+    private void triggerInterviewerIntro(InterviewSession session, InterviewSessionState state) {
         String interviewId = session.getId().toString();
         String userId = session.getCandidate().getId().toString();
         List<ConversationHistory> history = manageConversationHistoryPort.loadHistory(interviewId);
@@ -124,36 +123,31 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
         long remainingTimeSeconds = totalDurationSeconds;
 
         // Determine participating roles
-        List<InterviewRole> roles = session.getRoles();
-        if (roles == null || roles.isEmpty()) {
+        List<String> participatingPersonas = state.getParticipatingPersonas();
+        if (participatingPersonas == null || participatingPersonas.isEmpty()) {
             log.warn("No interview roles configured for session: {}", interviewId);
             return;
         }
 
         // 중복 역할이 있다면 한 번만 소개되도록 정규화
-        List<InterviewRole> distinctRoles = roles.stream().distinct().toList();
-        if (distinctRoles.size() != roles.size()) {
+        List<String> distinctPersonas = participatingPersonas.stream().distinct().toList();
+        if (distinctPersonas.size() != participatingPersonas.size()) {
             log.info(
-                    "Deduplicated interview roles for session {}: original={}, distinct={}",
+                    "Deduplicated interview personas for session {}: original={}, distinct={}",
                     interviewId,
-                    roles,
-                    distinctRoles);
+                    participatingPersonas,
+                    distinctPersonas);
         }
 
-        // Update session state with participating roles (names) for sequential control
-        InterviewSessionState state =
-                sessionStatePort
-                        .getState(session.getId().toString())
-                        .orElseGet(() -> InterviewSessionState.fromEntity(session));
-
         state.setRemainingTimeSeconds(remainingTimeSeconds);
-        state.setParticipatingPersonas(distinctRoles.stream().map(Enum::name).toList());
+        state.setParticipatingPersonas(distinctPersonas);
         // 첫 번째 소개는 여기서 처리하므로, 다음 소개부터 listener에서 1,2,... 순서로 사용
         state.setNextPersonaIndex(1);
         sessionStatePort.saveState(session.getId().toString(), state);
 
         // Trigger ONLY the FIRST role explicitly
-        InterviewRole firstRole = distinctRoles.get(0);
+        String firstRoleName = distinctPersonas.get(0);
+        InterviewRole firstRole = InterviewRole.valueOf(firstRoleName);
 
         CallLlmCommand llmCommand =
                 CallLlmCommand.builder()
@@ -164,21 +158,24 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
                         .inputRole("system")
                         .availableRoles(List.of(firstRole))
                         .personality(session.getPersonality())
-                        .history(history)
+                        .personaId(
+                                session.getPersonality() != null
+                                        ? session.getPersonality().name()
+                                        : "DEFAULT")
                         .mode(session.getType().name())
-                        .stage(session.getStage())
-                        .interviewerCount(session.getInterviewerCount())
+                        .stage(state.getCurrentStage())
+                        .interviewerCount(distinctPersonas.size())
                         .domain(session.getDomain())
                         .totalDurationSeconds(totalDurationSeconds)
                         .remainingTimeSeconds(remainingTimeSeconds)
-                        .currentDifficultyLevel(getCurrentDifficulty(session))
-                        .lastInterviewerId(getLastInterviewerId(session))
+                        .currentDifficultyLevel(state.getCurrentDifficulty())
+                        .lastInterviewerId(state.getLastInterviewerId())
                         .build();
 
         callLlmPort.generateResponse(llmCommand);
     }
 
-    private void triggerFirstQuestion(InterviewSession session) {
+    private void triggerFirstQuestion(InterviewSession session, InterviewSessionState state) {
         String interviewId = session.getId().toString();
 
         // Increment turn count to avoid duplicate key in InterviewQnA
@@ -198,13 +195,14 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
         long remainingTimeSeconds = Math.max(0, totalDurationSeconds - elapsed);
 
         // QnA 첫 질문은 반드시 리드 면접관(또는 첫 번째 역할)이 진행하도록 roles를 제한
-        List<InterviewRole> roles = session.getRoles();
+        List<String> personas = state.getParticipatingPersonas();
         List<InterviewRole> availableRoles;
-        if (roles != null && roles.contains(InterviewRole.LEADER)) {
+        if (personas != null && personas.contains("LEADER")) {
             availableRoles = List.of(InterviewRole.LEADER);
+        } else if (personas != null && !personas.isEmpty()) {
+            availableRoles = personas.stream().map(InterviewRole::valueOf).toList();
         } else {
-            // LEADER가 없으면 기존 roles 전체를 사용
-            availableRoles = roles;
+            availableRoles = List.of(InterviewRole.TECH);
         }
 
         CallLlmCommand llmCommand =
@@ -215,21 +213,24 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
                         .inputRole("system")
                         .availableRoles(availableRoles)
                         .personality(session.getPersonality())
-                        .history(history)
+                        .personaId(
+                                session.getPersonality() != null
+                                        ? session.getPersonality().name()
+                                        : "DEFAULT")
                         .mode(session.getType().name())
-                        .stage(session.getStage())
-                        .interviewerCount(session.getInterviewerCount())
+                        .stage(state.getCurrentStage())
+                        .interviewerCount(personas != null ? personas.size() : 1)
                         .domain(session.getDomain())
                         .totalDurationSeconds(totalDurationSeconds)
                         .remainingTimeSeconds(remainingTimeSeconds)
-                        .currentDifficultyLevel(getCurrentDifficulty(session))
-                        .lastInterviewerId(getLastInterviewerId(session))
+                        .currentDifficultyLevel(state.getCurrentDifficulty())
+                        .lastInterviewerId(state.getLastInterviewerId())
                         .build();
 
         callLlmPort.generateResponse(llmCommand);
     }
 
-    private void triggerClosingGreeting(InterviewSession session) {
+    private void triggerClosingGreeting(InterviewSession session, InterviewSessionState state) {
         String interviewId = session.getId().toString();
 
         // Increment turn count to avoid duplicate key in InterviewQnA
@@ -249,12 +250,14 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
         long remainingTimeSeconds = Math.max(0, totalDurationSeconds - elapsed);
 
         // 마무리 인사는 리드 면접관(LEADER)이 진행하도록 roles를 제한
-        List<InterviewRole> roles = session.getRoles();
+        List<String> personas = state.getParticipatingPersonas();
         List<InterviewRole> availableRoles;
-        if (roles != null && roles.contains(InterviewRole.LEADER)) {
+        if (personas != null && personas.contains("LEADER")) {
             availableRoles = List.of(InterviewRole.LEADER);
+        } else if (personas != null && !personas.isEmpty()) {
+            availableRoles = personas.stream().map(InterviewRole::valueOf).toList();
         } else {
-            availableRoles = roles;
+            availableRoles = List.of(InterviewRole.TECH); // fallback
         }
 
         CallLlmCommand llmCommand =
@@ -265,32 +268,21 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
                         .inputRole("system")
                         .availableRoles(availableRoles)
                         .personality(session.getPersonality())
-                        .history(history)
+                        .personaId(
+                                session.getPersonality() != null
+                                        ? session.getPersonality().name()
+                                        : "DEFAULT")
                         .mode(session.getType().name())
-                        .stage(session.getStage())
-                        .interviewerCount(session.getInterviewerCount())
+                        .stage(state.getCurrentStage())
+                        .interviewerCount(personas != null ? personas.size() : 1)
                         .domain(session.getDomain())
                         .totalDurationSeconds(totalDurationSeconds)
                         .remainingTimeSeconds(remainingTimeSeconds)
-                        .currentDifficultyLevel(getCurrentDifficulty(session))
-                        .lastInterviewerId(getLastInterviewerId(session))
+                        .currentDifficultyLevel(state.getCurrentDifficulty())
+                        .lastInterviewerId(state.getLastInterviewerId())
                         .build();
 
         callLlmPort.generateResponse(llmCommand);
-    }
-
-    private int getCurrentDifficulty(InterviewSession session) {
-        return sessionStatePort
-                .getState(session.getId().toString())
-                .map(state -> state.getCurrentDifficulty())
-                .orElse(session.getCurrentDifficulty());
-    }
-
-    private String getLastInterviewerId(InterviewSession session) {
-        return sessionStatePort
-                .getState(session.getId().toString())
-                .map(state -> state.getLastInterviewerId())
-                .orElse(session.getLastInterviewerId());
     }
 
     private void flushSessionStateToRdb(InterviewSession session) {
@@ -298,12 +290,6 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
                 .getState(session.getId().toString())
                 .ifPresent(
                         state -> {
-                            if (state.getCurrentDifficulty() != null) {
-                                session.updateDifficulty(state.getCurrentDifficulty());
-                            }
-                            if (state.getLastInterviewerId() != null) {
-                                session.updateLastInterviewer(state.getLastInterviewerId());
-                            }
                             if (state.getTurnCount() != null) {
                                 // DB turnCount는 도메인 규칙에 따라 sync
                                 while (session.getTurnCount() < state.getTurnCount()) {

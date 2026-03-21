@@ -34,22 +34,12 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             log_json(
                 "llm_request_start",
                 interviewId=request.interview_id,
-                textLength=len(request.user_text),
             )
 
             # 1. Construct State
-            # Map Proto history to LangChain messages
-            from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-            history = []
-            for h in request.history:
-                role_lower = h.role.lower()
-                if role_lower == "user":
-                    history.append(HumanMessage(content=h.content))
-                elif role_lower == "system":
-                    history.append(SystemMessage(content=h.content))
-                else:
-                    history.append(AIMessage(content=h.content))
-
+            # (Phase 6) History is now managed by LangGraph Checkpointer (Track 2 Redis),
+            # so we only receive the latest user text.
+            
             # Map Proto Roles (Enum) to Strings
             roles = []
             for r in request.available_roles:
@@ -65,7 +55,6 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                     personality = p_name
 
             state = {
-                "history": history,
                 "user_input": request.user_text,
                 "available_roles": roles,
                 "personality": personality,
@@ -81,9 +70,10 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                 "analysis_result": {}
             }
 
-            # 2. Run Graph (Decision Making)
+            # 2. Run Graph (Decision Making) with Checkpoint Config
             log_json("llm_graph_invoke_start")
-            final_state = self.graph.invoke(state)
+            config = {"configurable": {"thread_id": request.interview_id}}
+            final_state = self.graph.invoke(state, config=config)
             log_json("llm_graph_invoke_end", 
                      next_speaker=final_state.get("next_speaker_id"),
                      next_diff=final_state.get("next_difficulty"))
@@ -131,6 +121,16 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                 is_sentence_end=False,
                 current_persona_id=persona_id
             )
+            
+            # 5. Persist History via Checkpointer Update
+            from langchain_core.messages import HumanMessage, AIMessage
+            log_json("llm_updating_stateful_history", interviewId=request.interview_id)
+            new_history = []
+            if request.user_text:
+                new_history.append(HumanMessage(content=request.user_text))
+            new_history.append(AIMessage(content=accumulated))
+            
+            self.graph.update_state(config, {"history": new_history})
             
             log_json("llm_request_completed")
 

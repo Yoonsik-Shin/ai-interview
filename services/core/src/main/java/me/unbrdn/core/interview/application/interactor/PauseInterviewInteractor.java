@@ -43,8 +43,6 @@ public class PauseInterviewInteractor implements PauseInterviewUseCase {
         log.info("Interview paused: interviewId={}", session.getId());
 
         return new PauseInterviewResult(
-                session.getId().toString(),
-                session.getStatus().name(),
-                session.getPausedAt() != null ? session.getPausedAt().toString() : null);
+                session.getId().toString(), session.getStatus().name(), null);
     }
 }

@@ -7,7 +7,6 @@ import lombok.Getter;
 import me.unbrdn.core.interview.domain.enums.InterviewPersonality;
 import me.unbrdn.core.interview.domain.enums.InterviewRole;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
-import me.unbrdn.core.interview.domain.model.ConversationHistory;
 
 @Getter
 @Builder
@@ -16,7 +15,7 @@ public class CallLlmCommand {
     private final String userId;
     private final String userText;
     private final String inputRole; // "user" or "system"
-    private final List<ConversationHistory> history;
+    private final String personaId;
     private final String mode; // "real" | "practice"
     private final InterviewStage stage;
     private final int interviewerCount;

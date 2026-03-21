@@ -7,7 +7,6 @@ import me.unbrdn.core.interview.application.port.in.CompleteInterviewUseCase;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.application.port.out.ProduceInterviewEventPort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
-import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,10 +36,7 @@ public class CompleteInterviewInteractor implements CompleteInterviewUseCase {
         // 2. Complete the interview
         session.complete(); // Status: IN_PROGRESS → COMPLETED
 
-        // 3. Ensure stage is also COMPLETED
-        if (session.getStage() != InterviewStage.COMPLETED) {
-            session.transitionToCompleted();
-        }
+        // 3. Stage transition removed (handled in Track 3 if needed)
 
         // 4. Save
         interviewPort.save(session);

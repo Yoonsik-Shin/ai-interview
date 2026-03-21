@@ -31,15 +31,31 @@ export class SendTranscriptUseCase {
                 message: payload.content || "Please repeat",
                 timestamp: payload.timestamp,
             });
-        } else {
+        } else if (payload.type === "token" || payload.type === "TRANSCRIPT" || !payload.type) {
             server.to(room).emit("interview:transcript", {
-                token: payload.token,
+                type: "token",
+                content: payload.content || payload.token,
                 thinking: payload.thinking,
                 reduceTotalTime: payload.reduceTotalTime,
                 nextDifficulty: payload.nextDifficulty,
                 currentPersonaId: payload.currentPersonaId,
                 timestamp: payload.timestamp,
             });
+        } else if (payload.type === "clear_turn") {
+            server.to(room).emit("interview:transcript", {
+                type: "clear_turn",
+                turn_count: payload.turnCount || payload.turn_count,
+                timestamp: payload.timestamp,
+            });
+        } else if (payload.type === "turn_complete") {
+            server.to(room).emit("interview:transcript", {
+                type: "turn_complete",
+                turn_count: payload.turnCount || payload.turn_count,
+                timestamp: payload.timestamp,
+            });
+        } else {
+            // 기타 알 수 없는 이벤트들은 그대로 통과
+            server.to(room).emit("interview:transcript", payload);
         }
     }
 }

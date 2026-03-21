@@ -29,8 +29,8 @@ export class TranscriptPubSubConsumer implements OnModuleInit, OnModuleDestroy {
             this.handleTranscript(message);
         });
 
-        // 패턴 구독: interview:transcript:*
-        await this.subscriber.psubscribe("interview:transcript:*");
+        // 패턴 구독: interview:llm:pubsub:*
+        await this.subscriber.psubscribe("interview:llm:pubsub:*");
 
         this.logger.log("Transcript PubSub Consumer started");
     }

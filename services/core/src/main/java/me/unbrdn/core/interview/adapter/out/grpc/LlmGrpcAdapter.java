@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.unbrdn.core.grpc.common.v1.InterviewPersonalityProto;
 import me.unbrdn.core.grpc.common.v1.InterviewRoleProto;
 import me.unbrdn.core.grpc.common.v1.InterviewStageProto;
-import me.unbrdn.core.grpc.llm.v1.ConversationHistory;
+// Removed ConversationHistory import
 import me.unbrdn.core.grpc.llm.v1.GenerateRequest;
 import me.unbrdn.core.grpc.llm.v1.LlmServiceGrpc;
 import me.unbrdn.core.grpc.llm.v1.TokenChunk;
@@ -99,7 +99,6 @@ public class LlmGrpcAdapter implements CallLlmPort {
                 // Deprecated
                 .addAllAvailableRoles(toProtoRoles(command.getAvailableRoles()))
                 .setPersonality(toProtoPersonality(command.getPersonality()))
-                .addAllHistory(toProtoHistory(command.getHistory()))
                 .setStage(toProtoInterviewStage(command.getStage()))
                 .setInterviewerCount(command.getInterviewerCount())
                 .setDomain(command.getDomain())
@@ -111,6 +110,7 @@ public class LlmGrpcAdapter implements CallLlmPort {
                                 ? "LEADER"
                                 : command.getLastInterviewerId())
                 .setInputRole(command.getInputRole() == null ? "user" : command.getInputRole())
+                .setPersonaId(command.getPersonaId() != null ? command.getPersonaId() : "DEFAULT")
                 .build();
     }
 
@@ -193,19 +193,6 @@ public class LlmGrpcAdapter implements CallLlmPort {
         }
     }
 
-    private List<ConversationHistory> toProtoHistory(
-            List<me.unbrdn.core.interview.domain.model.ConversationHistory> history) {
-        return history.stream()
-                .map(
-                        h ->
-                                ConversationHistory.newBuilder()
-                                        .setRole(h.getRole())
-                                        .setContent(h.getContent())
-                                        .build())
-                .collect(Collectors.toList());
-    }
-
-    /** LLM 스트리밍 응답 Observer Proto → Command 변환만 수행하고 Use Case로 위임 */
     private class LlmStreamObserver implements StreamObserver<TokenChunk> {
         private final CallLlmCommand command;
         private final LlmServiceGrpc.LlmServiceStub stub;

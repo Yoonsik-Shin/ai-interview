@@ -81,7 +81,6 @@ public class InterviewGrpcMapper {
                 .setDomain(summary.domain())
                 .setType(toProtoInterviewType(summary.type()))
                 .setTargetDurationMinutes(summary.targetDurationMinutes())
-                .setInterviewerCount(summary.interviewerCount())
                 .build();
     }
 
@@ -97,26 +96,11 @@ public class InterviewGrpcMapper {
                 me.unbrdn.core.grpc.interview.v1.GetInterviewResponse.newBuilder()
                         .setInterviewId(result.interviewId().toString())
                         .setStatus(toProtoInterviewStatus(result.status()))
-                        .setCurrentStage(toProtoInterviewStage(result.currentStage()))
                         .setType(toProtoInterviewType(result.type()))
                         .setDomain(result.domain())
                         .setTargetDurationMinutes(result.targetDurationMinutes())
                         .setSelfIntroduction(result.selfIntroduction())
-                        .setPersonality(toProtoInterviewPersonality(result.personality()))
-                        .setInterviewerCount(result.interviewerCount());
-
-        if (result.interviewerRoles() != null) {
-            builder.addAllInterviewerRoles(
-                    result.interviewerRoles().stream().map(this::toProtoInterviewRole).toList());
-        }
-
-        if (result.createdAt() != null) {
-            builder.setCreatedAt(result.createdAt().toString());
-        }
-
-        if (result.resumedAt() != null) {
-            builder.setResumedAt(result.resumedAt().toString());
-        }
+                        .setPersonality(toProtoInterviewPersonality(result.personality()));
 
         return builder.build();
     }

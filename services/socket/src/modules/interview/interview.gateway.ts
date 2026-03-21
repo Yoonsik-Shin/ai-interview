@@ -16,6 +16,7 @@ import { SocketLoggingService } from "../../core/logging/socket-logging.service"
 import { SyncStageUseCase, SyncStageCommand } from "./usecases/sync-stage.usecase";
 import { AudioProcessorFactory } from "./usecases/audio-processor.factory";
 import { AudioProcessingCommand } from "./usecases/audio-processor.interface";
+import { RedisClient } from "../../infra/redis/redis.clients";
 
 @WebSocketGateway({ cors: { origin: "*" } })
 export class InterviewGateway {
@@ -28,6 +29,7 @@ export class InterviewGateway {
         private readonly syncStageUseCase: SyncStageUseCase,
         private readonly audioProcessorService: AudioProcessorService,
         private readonly processorFactory: AudioProcessorFactory,
+        private readonly redisClient: RedisClient,
     ) {}
 
     /**
@@ -154,6 +156,16 @@ export class InterviewGateway {
         try {
             if (!payload || !payload.interviewId) {
                 this.logger.warn(client, "audio_chunk_missing_id", { payload });
+                return;
+            }
+
+            // [Phase 2: 1차 방어벽] Track 3 상태 검증
+            const status = await this.redisClient.hget(`interview:${payload.interviewId}:state`, "status");
+            if (status !== "LISTENING") {
+                this.logger.warn(client, "audio_chunk_dropped_wrong_status", { 
+                    interviewId: payload.interviewId, 
+                    currentStatus: status 
+                });
                 return;
             }
 

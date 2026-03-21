@@ -11,10 +11,12 @@ import me.unbrdn.core.interview.application.port.in.CreateInterviewUseCase;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.application.port.out.LoadResumePort;
 import me.unbrdn.core.interview.application.port.out.LoadUserPort;
+import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
 import me.unbrdn.core.interview.domain.enums.InterviewPersonality;
 import me.unbrdn.core.interview.domain.enums.InterviewRole;
 import me.unbrdn.core.interview.domain.enums.InterviewType;
+import me.unbrdn.core.interview.domain.model.InterviewSessionState;
 import me.unbrdn.core.resume.domain.entity.Resumes;
 import me.unbrdn.core.user.domain.entity.Candidate;
 import me.unbrdn.core.user.domain.entity.User;
@@ -28,6 +30,7 @@ public class CreateInterviewInteractor implements CreateInterviewUseCase {
     private final LoadUserPort loadUserPort;
     private final LoadResumePort loadResumePort;
     private final InterviewPort interviewPort;
+    private final ManageSessionStatePort sessionStatePort;
 
     @Override
     @Transactional
@@ -81,15 +84,25 @@ public class CreateInterviewInteractor implements CreateInterviewUseCase {
                         interviewId,
                         candidate,
                         resume,
-                        roles,
                         personality,
                         interviewType,
                         command.getDomain(),
-                        command.getInterviewerCount(),
                         command.getTargetDurationMinutes(),
                         command.getSelfIntroduction());
 
         InterviewSession savedSession = interviewPort.save(interviewSession);
+
+        InterviewSessionState initialState =
+                InterviewSessionState.builder()
+                        .currentDifficulty(3)
+                        .lastInterviewerId("LEADER")
+                        .turnCount(0)
+                        .remainingTimeSeconds(command.getTargetDurationMinutes() * 60L)
+                        .selfIntroRetryCount(0)
+                        .participatingPersonas(roles.stream().map(Enum::name).toList())
+                        .nextPersonaIndex(0)
+                        .build();
+        sessionStatePort.saveState(savedSession.getId().toString(), initialState);
 
         return CreateInterviewResult.builder()
                 .interviewId(savedSession.getId())

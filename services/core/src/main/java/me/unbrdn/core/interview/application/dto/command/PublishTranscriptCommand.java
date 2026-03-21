@@ -20,4 +20,5 @@ public class PublishTranscriptCommand {
     private final String currentStage;
     private final String previousStage;
     private final String content;
+    private final Integer turnCount;
 }

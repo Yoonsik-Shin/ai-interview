@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.UUID;
 import me.unbrdn.core.interview.domain.enums.InterviewPersonality;
 import me.unbrdn.core.interview.domain.enums.InterviewRole;
-import me.unbrdn.core.interview.domain.enums.InterviewStage;
 
 /** 면접 세션의 현재 Stage 조회 UseCase */
 public interface GetInterviewStageUseCase {
@@ -14,10 +13,7 @@ public interface GetInterviewStageUseCase {
     /** Query DTO */
     record GetInterviewStageQuery(UUID interviewId) {}
 
-    /** Result DTO */
     record InterviewStageResult(
-            InterviewStage stage,
-            Long selfIntroElapsedSeconds,
             List<InterviewRole> roles,
             InterviewPersonality personality,
             Integer interviewerCount,

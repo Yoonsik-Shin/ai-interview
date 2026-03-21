@@ -3,6 +3,9 @@ from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
 
 from engine.nodes import InterviewState, InterviewNodes
+from langgraph.checkpoint.redis import RedisSaver
+import redis
+from config import REDIS_TRACK2_URL
 
 def create_interview_graph(model_name: str = "gpt-4o-mini", openai_api_key: str = None):
     llm = ChatOpenAI(model=model_name, api_key=openai_api_key, streaming=True)
@@ -53,4 +56,8 @@ def create_interview_graph(model_name: str = "gpt-4o-mini", openai_api_key: str 
     # 3. Request Handler uses `nodes.get_prompt_messages(state)` to get messages.
     # 4. Handler calls LLM.stream(messages).
     
-    return workflow.compile()
+    # Setup Track 2 Checkpointer
+    redis_conn = redis.Redis.from_url(REDIS_TRACK2_URL)
+    saver = RedisSaver(redis_client=redis_conn)
+    
+    return workflow.compile(checkpointer=saver)
