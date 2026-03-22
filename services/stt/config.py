@@ -52,18 +52,18 @@ OPENAI_REALTIME_MODEL = _env(
     "OPENAI_REALTIME_MODEL", "gpt-4o-realtime-preview-2024-12-17"
 )
 
-WHISPER_MODEL_SIZE = _env("WHISPER_MODEL_SIZE", "small")
-WHISPER_DEVICE = _env("WHISPER_DEVICE", "cpu")
+WHISPER_MODEL_SIZE = _env("WHISPER_MODEL_SIZE", "large-v3")
+WHISPER_DEVICE = _env("WHISPER_DEVICE", "cuda") # Changed default to cuda assuming T4
 WHISPER_COMPUTE_TYPE = _env("WHISPER_COMPUTE_TYPE", "int8")
-WHISPER_BEAM_SIZE = _env_int("WHISPER_BEAM_SIZE", 10)
+WHISPER_BEAM_SIZE = _env_int("WHISPER_BEAM_SIZE", 5) # Reduced beam size for speed with large-v3
 WHISPER_BEST_OF = _env_int("WHISPER_BEST_OF", 5)
 WHISPER_TEMPERATURE = _env_float("WHISPER_TEMPERATURE", 0.0)
 NO_SPEECH_THRESHOLD = _env_float("NO_SPEECH_THRESHOLD", 0.3)
 COMPRESSION_RATIO_THRESHOLD = _env_float("COMPRESSION_RATIO_THRESHOLD", 2.4)
 VAD_ENABLED = _env_bool("VAD_ENABLED", True)
-VAD_MIN_SPEECH_MS = _env_int("VAD_MIN_SPEECH_MS", 250)
-VAD_MIN_SILENCE_MS = _env_int("VAD_MIN_SILENCE_MS", 300)
-VAD_SPEECH_PAD_MS = _env_int("VAD_SPEECH_PAD_MS", 30)
+VAD_MIN_SPEECH_MS = _env_int("VAD_MIN_SPEECH_MS", 300)   # More strict min speech
+VAD_MIN_SILENCE_MS = _env_int("VAD_MIN_SILENCE_MS", 500) # Prevents mid-word splitting
+VAD_SPEECH_PAD_MS = _env_int("VAD_SPEECH_PAD_MS", 50)    # Better padding padding for large model
 
 SAMPLE_RATE = _env_int("SAMPLE_RATE", 16000)
 
@@ -71,10 +71,10 @@ SERVER_VAD_SILENCE_THRESHOLD = _env_float("SERVER_VAD_SILENCE_THRESHOLD", 0.01) 
 SERVER_VAD_SILENCE_DURATION_SEC = _env_float("SERVER_VAD_SILENCE_DURATION_SEC", 0.5) # Reduced from 0.8
 SERVER_VAD_MIN_SPEECH_SEC = _env_float("SERVER_VAD_MIN_SPEECH_SEC", 0.25)
 
-# Silero VAD Settings
+# Silero VAD Settings (For potential backend use if not directly via faster-whisper)
 SILERO_VAD_THRESHOLD = _env_float("SILERO_VAD_THRESHOLD", 0.6)
 SILERO_VAD_MIN_SILENCE_DURATION_MS = _env_int("SILERO_VAD_MIN_SILENCE_DURATION_MS", 500)
-SILERO_VAD_SPEECH_PAD_MS = _env_int("SILERO_VAD_SPEECH_PAD_MS", 30)
+SILERO_VAD_SPEECH_PAD_MS = _env_int("SILERO_VAD_SPEECH_PAD_MS", 50)
 
 KAFKA_BROKER = _env("KAFKA_BROKER", "kafka:29092")
 KAFKA_ENABLED = _env_bool("KAFKA_ENABLED", False)

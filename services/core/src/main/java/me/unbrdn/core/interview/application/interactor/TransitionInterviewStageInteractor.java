@@ -11,14 +11,14 @@ import me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand
 import me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
-import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPort;
+
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.application.port.out.ProduceInterviewEventPort;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
 import me.unbrdn.core.interview.domain.enums.InterviewRole;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
-import me.unbrdn.core.interview.domain.model.ConversationHistory;
+
 import me.unbrdn.core.interview.domain.model.InterviewSessionState;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
@@ -31,7 +31,7 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
 
     private final InterviewPort interviewPort;
     private final CallLlmPort callLlmPort;
-    private final ManageConversationHistoryPort manageConversationHistoryPort;
+
     private final ManageSessionStatePort sessionStatePort;
     private final ProduceInterviewEventPort produceInterviewEventPort;
     private final PublishTranscriptPort publishTranscriptPort;
@@ -116,7 +116,6 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
     private void triggerInterviewerIntro(InterviewSession session, InterviewSessionState state) {
         String interviewId = session.getId().toString();
         String userId = session.getCandidate().getId().toString();
-        List<ConversationHistory> history = manageConversationHistoryPort.loadHistory(interviewId);
 
         // Calc time
         long totalDurationSeconds = session.getTargetDurationMinutes() * 60L;
@@ -184,7 +183,6 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
         interviewPort.save(session);
 
         String userId = session.getCandidate().getId().toString();
-        List<ConversationHistory> history = manageConversationHistoryPort.loadHistory(interviewId);
 
         // Calc time
         long totalDurationSeconds = session.getTargetDurationMinutes() * 60L;
@@ -239,7 +237,6 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
         interviewPort.save(session);
 
         String userId = session.getCandidate().getId().toString();
-        List<ConversationHistory> history = manageConversationHistoryPort.loadHistory(interviewId);
 
         // Calc time
         long totalDurationSeconds = session.getTargetDurationMinutes() * 60L;

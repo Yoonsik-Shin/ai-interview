@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { MicVAD } from "@ricky0123/vad-web";
 
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_MS = 1010; // 1000ms보다 약간 여유를 두어 4096 블록 정합성 유도
@@ -59,6 +60,9 @@ export function useAudioRecorder(
   const bufferRef = useRef<Float32Array[]>([]);
   const totalRef = useRef(0);
   const onChunkRef = useRef(onChunk);
+  const vadRef = useRef<MicVAD | null>(null);
+  const isSpeechActiveRef = useRef(false);
+  const lastPcmRef = useRef<ArrayBuffer | null>(null);
   onChunkRef.current = onChunk;
 
   const flush = useCallback(() => {
@@ -93,16 +97,30 @@ export function useAudioRecorder(
     chunkIdRef.current += 1;
 
     const now = Date.now();
-    const chunkId = `c-${now}-${chunkIdRef.current}`;
 
-    onChunkRef.current({
-      chunk: pcm,
-      interviewId: interviewId,
-      isFinal: false,
-      format: "pcm16",
-      sampleRate: TARGET_SAMPLE_RATE,
-      chunkId,
-    });
+    if (isSpeechActiveRef.current) {
+      if (lastPcmRef.current) {
+        onChunkRef.current({
+          chunk: lastPcmRef.current,
+          interviewId,
+          isFinal: false,
+          format: "pcm16",
+          sampleRate: TARGET_SAMPLE_RATE,
+          chunkId: `c-${now}-${chunkIdRef.current}-hist`,
+        });
+        lastPcmRef.current = null;
+      }
+      onChunkRef.current({
+        chunk: pcm,
+        interviewId,
+        isFinal: false,
+        format: "pcm16",
+        sampleRate: TARGET_SAMPLE_RATE,
+        chunkId: `c-${now}-${chunkIdRef.current}`,
+      });
+    } else {
+      lastPcmRef.current = pcm;
+    }
   }, [interviewId]);
 
   const isMountedRef = useRef(true);
@@ -127,6 +145,12 @@ export function useAudioRecorder(
     }
     bufferRef.current = [];
     totalRef.current = 0;
+    lastPcmRef.current = null;
+    isSpeechActiveRef.current = false;
+    if (vadRef.current) {
+      vadRef.current.pause();
+      vadRef.current = null;
+    }
     setStream(null);
     setRecording(false);
   }, []);
@@ -163,6 +187,30 @@ export function useAudioRecorder(
 
         streamRef.current = stream;
         setStream(stream);
+
+        try {
+          vadRef.current = await MicVAD.new({
+            getStream: () => Promise.resolve(stream),
+            pauseStream: () => Promise.resolve(),
+            resumeStream: () => Promise.resolve(stream),
+            redemptionMs: 2500, // 2.5초 무음 감지
+            positiveSpeechThreshold: 0.7,
+            negativeSpeechThreshold: 0.3,
+            onSpeechStart: () => {
+              console.log("VAD: Speech Started");
+              isSpeechActiveRef.current = true;
+            },
+            onSpeechEnd: () => {
+              console.log("VAD: Speech Ended");
+              isSpeechActiveRef.current = false;
+            },
+          });
+          vadRef.current.start();
+        } catch (vadErr) {
+          console.error("VAD initialization failed", vadErr);
+          // VAD 연동 실패 시 항상 전송 모드로 Fallback
+          isSpeechActiveRef.current = true;
+        }
 
         // 16kHz 강제 지정을 통해 샘플 레이트 불일치 방어
         const ctx = new (
