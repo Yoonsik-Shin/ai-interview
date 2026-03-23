@@ -124,8 +124,11 @@ export const PremiumResumeViewer: React.FC<PremiumResumeViewerProps> = ({
   );
 
   useEffect(() => {
-    // Effect 시작 시 mounted 상태로 재설정
+    // isMountedRef는 글로벌 mounted 상태 (다른 용도로만 사용)
     isMountedRef.current = true;
+    // cancelled: 이 effect 호출 전용 취소 플래그
+    // isMountedRef 재사용 시 remount가 true로 덮어써서 stale loadFile이 계속 실행되는 버그 방지
+    let cancelled = false;
 
     const detectFileType = () => {
       const url = fileUrl.toLowerCase();
@@ -157,8 +160,10 @@ export const PremiumResumeViewer: React.FC<PremiumResumeViewerProps> = ({
 
           console.log("[PDF Debug] PDF loaded, pages:", pdf.numPages);
 
-          if (!isMountedRef.current) {
-            console.log("[PDF Debug] Component unmounted, aborting");
+          // isMountedRef 대신 로컬 cancelled 플래그 사용
+          // (remount 시 isMountedRef가 true로 재설정되어 stale loadFile이 통과하는 버그 방지)
+          if (cancelled) {
+            console.log("[PDF Debug] Effect cancelled, aborting");
             return;
           }
 
@@ -168,18 +173,23 @@ export const PremiumResumeViewer: React.FC<PremiumResumeViewerProps> = ({
           console.log("[PDF Debug] Calling renderPage...");
           await renderPage(pdf, 1, scale, 0);
           console.log("[PDF Debug] renderPage completed");
+
+          if (cancelled) return;
         } else if (type === "docx") {
           const response = await fetch(fileUrl);
+          if (cancelled) return;
           const arrayBuffer = await response.arrayBuffer();
           const result = await mammoth.convertToHtml({ arrayBuffer });
+          if (cancelled) return;
           setDocxHtml(result.value);
         }
-        if (isMountedRef.current) {
+        if (!cancelled) {
           setLoading(false);
           initialLoadDoneRef.current = true;
         }
       } catch (err: any) {
         if (err?.name === "RenderingCancelledException") return;
+        if (cancelled) return;
         console.error("File load error:", err);
         setError("문서를 불러오는 중 오류가 발생했습니다.");
         setLoading(false);
@@ -190,6 +200,7 @@ export const PremiumResumeViewer: React.FC<PremiumResumeViewerProps> = ({
     loadFile();
 
     return () => {
+      cancelled = true; // 이 effect 호출 무효화
       isMountedRef.current = false;
       if (renderTaskRef.current) {
         renderTaskRef.current.cancel();
@@ -198,9 +209,10 @@ export const PremiumResumeViewer: React.FC<PremiumResumeViewerProps> = ({
       isRenderingRef.current = false;
       initialLoadDoneRef.current = false;
     };
-  }, [fileUrl, renderPage]); // renderPage 의존성 추가
+  }, [fileUrl, renderPage]);
 
   // Separate effect for scale, page, and rotation changes - only run after initial load
+  // loading은 의존성에서 제외: setLoading(false) 시 불필요한 재렌더 방지 (레이스 컨디션 원인)
   useEffect(() => {
     if (
       pdfDoc &&
@@ -210,7 +222,8 @@ export const PremiumResumeViewer: React.FC<PremiumResumeViewerProps> = ({
     ) {
       renderPage(pdfDoc, pageNumber, scale, rotation);
     }
-  }, [scale, pageNumber, rotation, pdfDoc, loading, fileType, renderPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scale, pageNumber, rotation, pdfDoc, fileType, renderPage]);
 
   const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.1, 3.0));
   const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.1, 0.5));

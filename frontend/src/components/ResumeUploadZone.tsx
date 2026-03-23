@@ -17,7 +17,6 @@ interface ResumeUploadZoneProps {
   validationResult?: ValidationResult | null; // 외부에서 검증 결과 제어
   enableUpload?: boolean; // 업로드 버튼 활성화 (기본: false)
   onUploadComplete?: (resumeId: string) => void; // 업로드 완료 콜백
-  enableServerVerify?: boolean; // 서버 검증 버튼 활성화 (기본: true)
   existingResumes?: import("../api/resumes").ResumeItem[]; // 기존 이력서 목록
 }
 
@@ -33,7 +32,6 @@ export function ResumeUploadZone({
   validationResult: externalValidationResult,
   enableUpload = false,
   onUploadComplete,
-  enableServerVerify = true,
   existingResumes,
 }: ResumeUploadZoneProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -143,55 +141,6 @@ export function ResumeUploadZone({
     [],
   );
 
-  // 서버 검증 함수
-  const handleServerVerify = useCallback(async () => {
-    if (!selectedFile) return;
-    setValidating(true);
-
-    try {
-      const result = await validateResumeFile(
-        selectedFile,
-        {
-          forceServer: true,
-        },
-        existingResumes,
-      );
-      setAiScore(result.score ?? null);
-      setValidationSource("server");
-      onAnalyzeEnd?.(result);
-      setCurrentValidationResult(result);
-      if (result.validationText) {
-        setCapturedValidationText(result.validationText);
-      }
-      if (result.embedding) {
-        setCapturedEmbedding(result.embedding);
-      }
-
-      // 중복 처리 확인
-      const processed = await processValidationResult(result);
-      if (processed) return;
-
-      if (!result.isResume) {
-        onError?.(
-          result.reason || "서버 검증에서도 이력서로 판단되지 않았습니다.",
-        );
-      } else {
-        onSuccess?.(`서버 검증 완료 (${(result.score * 100).toFixed(1)}%)`);
-      }
-    } catch (e) {
-      console.error("Server validation error:", e);
-      onError?.("서버 검증 중 오류가 발생했습니다.");
-    } finally {
-      setValidating(false);
-    }
-  }, [
-    selectedFile,
-    onAnalyzeEnd,
-    onError,
-    onSuccess,
-    existingResumes,
-    processValidationResult,
-  ]);
 
   // 업로드 함수
   const handleUpload = useCallback(async () => {
@@ -253,10 +202,7 @@ export function ResumeUploadZone({
     setError(""); // setError는 ResumeUploadZone의 state로 추가됨
 
     try {
-      // Force server-side validation
-      const result = await validateResumeFile(selectedFile, {
-        forceServer: true,
-      });
+      const result = await validateResumeFile(selectedFile);
       setValidationResult(result);
 
       if (result.isResume) {
@@ -517,24 +463,6 @@ export function ResumeUploadZone({
           )}
 
         {/* 서버 검증 버튼 (로컬 AI < 60% && 서버 검증 안 함) */}
-        {enableServerVerify &&
-          selectedFile &&
-          aiScore !== null &&
-          aiScore < 0.6 &&
-          validationSource === "local" &&
-          !validating && (
-            <button
-              className={styles.serverVerifyButton}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleServerVerify();
-              }}
-              disabled={validating}
-            >
-              <span style={{ fontSize: "1.25rem" }}>🔍</span>
-              <span>{validating ? "검증 중..." : "서버로 재검증하기"}</span>
-            </button>
-          )}
 
         {/* 업로드 버튼 그룹 */}
         {selectedFile && aiScore !== null && !validating && !uploading && (

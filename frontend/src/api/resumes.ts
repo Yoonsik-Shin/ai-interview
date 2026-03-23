@@ -110,3 +110,9 @@ export const deleteResume = async (id: string): Promise<DeleteResumeRes> => {
     method: "DELETE",
   });
 };
+
+export const retryResumeProcessing = async (id: string): Promise<{ success: boolean }> => {
+  return api<{ success: boolean }>(`/v1/resumes/${id}/retry`, {
+    method: "POST",
+  });
+};

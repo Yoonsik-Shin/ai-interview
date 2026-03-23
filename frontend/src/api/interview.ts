@@ -11,6 +11,7 @@ export type InterviewPersona = InterviewRole | InterviewPersonality;
 
 export type CreateInterviewReq = {
   resumeId?: string; // optional - 이력서 없이도 면접 가능
+  companyName?: string;
   domain: string;
   type: InterviewType;
   interviewerRoles: InterviewRole[];

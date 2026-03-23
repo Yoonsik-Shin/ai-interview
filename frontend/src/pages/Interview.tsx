@@ -989,7 +989,7 @@ export function Interview() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [currentStage, timeLeft]);
+  }, [currentStage, timeLeft, stopRecording]);
 
   if (id == null)
     return <div className={styles.wrap}>유효하지 않은 인터뷰입니다.</div>;

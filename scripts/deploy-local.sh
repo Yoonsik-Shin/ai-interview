@@ -10,7 +10,7 @@ KAFKA_NAMESPACE="kafka"
 MONITORING_NAMESPACE="monitoring"
 
 # 서비스 목록 정의 및 인자 처리 (최상단으로 이동)
-ALL_APP_SERVICES=("llm" "stt" "tts" "storage" "document" "core" "bff" "socket")
+ALL_APP_SERVICES=("llm" "stt" "tts" "storage" "document" "auth" "interview" "payment" "resume" "bff" "socket")
 SELECTED_SERVICES=()
 
 if [ $# -gt 0 ]; then

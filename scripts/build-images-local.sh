@@ -13,8 +13,20 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
 # 서비스 목록
-ALL_SERVICES=("bff" "core" "llm" "socket" "stt" "tts" "storage" "document")
-ALL_SERVICE_PATHS=("services/bff" "services/core" "services/llm" "services/socket" "services/stt" "services/tts" "services/storage" "services/document")
+ALL_SERVICES=("bff" "auth" "interview" "payment" "resume" "llm" "socket" "stt" "tts" "storage" "document")
+ALL_SERVICE_PATHS=(
+    "services/gateways/bff"
+    "services/domains"
+    "services/domains"
+    "services/domains"
+    "services/domains"
+    "services/infra/llm"
+    "services/gateways/socket"
+    "services/infra/stt"
+    "services/infra/tts"
+    "services/infra/storage"
+    "services/infra/document"
+)
 
 # 기본 설정
 TAG="latest"
@@ -361,10 +373,10 @@ for i in "${!SERVICES[@]}"; do
     SERVICE_PATH=${SERVICE_PATHS[$i]}
     IMAGE_NAME="${SERVICE}:${TAG}"
     
-    # Core 서비스의 경우 빌드 프로파일 설정
+    # 도메인 서비스의 경우 빌드 모듈 설정
     BUILD_ARGS=""
-    if [ "$SERVICE" == "core" ]; then
-        BUILD_ARGS="--build-arg BUILD_PROFILE=local"
+    if [[ "$SERVICE" =~ ^(auth|interview|payment|resume)$ ]]; then
+        BUILD_ARGS="--build-arg MODULE_NAME=${SERVICE}"
     fi
     
     # 백그라운드로 빌드 실행

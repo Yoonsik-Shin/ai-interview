@@ -204,6 +204,7 @@
   gap: 0.5rem;
   max-height: 500px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
 }
 
@@ -266,6 +267,26 @@
 .resumeCardMeta {
   font-size: 0.8125rem;
   color: #94a3b8;
+}
+
+.retryButton {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fcd34d;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.retryButton:hover {
+  background: rgba(251, 191, 36, 0.25);
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #ffffff;
+  transform: scale(1.05);
 }
 
 .deleteButton {

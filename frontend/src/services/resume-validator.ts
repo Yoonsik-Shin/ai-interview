@@ -32,23 +32,21 @@ export interface ValidationResult {
 
 // 싱글톤으로 파이프라인 인스턴스 관리
 let embeddingPromise: Promise<any> | null = null;
-// const MODEL_NAME = "Xenova/paraphrase-multilingual-MiniLM-L12-v2";
-// Using a slightly smaller/faster model for browser if possible,
-// but sticking to the requested verified model.
 const MODEL_NAME = "Xenova/paraphrase-multilingual-MiniLM-L12-v2";
 
 /**
- * 모델 로딩 (최초 1회 수행)
+ * 임베딩 모델 로딩 (최초 1회 수행, 중복 검사용)
  */
 export async function preloadModel() {
   if (!embeddingPromise) {
     console.log(`[ResumeValidator] Loading model: ${MODEL_NAME}...`);
     embeddingPromise = pipeline("feature-extraction", MODEL_NAME, {
-      quantized: false, // Use full precision to match Python
+      quantized: false,
     });
   }
   return embeddingPromise;
 }
+
 
 /**
  * 코사인 유사도 계산
@@ -73,52 +71,6 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return similarity;
 }
 
-// 이력서 판단 기준 앵커 텍스트 (실제 이력서 형식에 가까운 샘플로 변경)
-const ANCHOR_TEXT = `
-이력서
-
-[경력]
-소프트웨어 엔지니어, ABC 회사, 2020-2023
-- 웹 애플리케이션 개발 및 유지보수
-- React, Node.js, TypeScript 등을 활용한 프로젝트 수행
-
-[학력]
-컴퓨터공학과, XYZ 대학교, 2016-2020
-
-[프로젝트]
-AI 면접 시스템 개발 (2023)
-- 기술 스택: Python, FastAPI, React, PostgreSQL
-- 음성 인식 및 자연어 처리 기술 활용
-
-[기술 스택]
-- 프로그래밍 언어: Python, JavaScript, TypeScript, Java
-- 프레임워크: React, Node.js, Spring Boot
-- 데이터베이스: PostgreSQL, MongoDB, Redis
-
-Resume Curriculum Vitae Experience Education Skills Projects
-`;
-
-let anchorEmbedding: number[] | null = null;
-
-async function getAnchorEmbedding(extractor: any): Promise<number[]> {
-  if (anchorEmbedding) return anchorEmbedding;
-
-  console.log(
-    `[ResumeValidator] Generating anchor embedding from text (${ANCHOR_TEXT.length} chars)...`,
-  );
-  // Normalize anchor text to match the input text logic
-  const normalizedAnchor = normalizeText(ANCHOR_TEXT);
-  const output = await extractor(normalizedAnchor, {
-    pooling: "mean",
-    normalize: true,
-  });
-  anchorEmbedding = Array.from(output.data);
-  console.log(
-    `[ResumeValidator] Anchor embedding generated: ${anchorEmbedding.length} dimensions`,
-  );
-  return anchorEmbedding!;
-}
-
 /**
  * PDF 텍스트 정규화 (한글 사이 공백 제거)
  */
@@ -127,12 +79,7 @@ function normalizeText(text: string): string {
   return (
     text
       .normalize("NFC")
-      // Remove all spaces between Korean characters (e.g., '가 나 다' -> '가나다')
-      .replace(/(?<=[가-힣])\s+(?=[가-힣])/g, "")
-      // Add single space between Korean and English/Numbers
-      .replace(/([가-힣])\s+([a-zA-Z0-9])/g, "$1 $2")
-      .replace(/([a-zA-Z0-9])\s+([가-힣])/g, "$1 $2")
-      // Collapse all other whitespaces into a single space
+      // Collapse all whitespaces into a single space
       .replace(/\s+/g, " ")
       .trim()
   );
@@ -144,14 +91,19 @@ function normalizeText(text: string): string {
 export function maskPII(text: string): string {
   let masked = text;
   // Email
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  masked = masked.replace(emailRegex, "[EMAIL]");
-  // Phone: 010-1234-5678, 010.1234.5678, 010 1234 5678, 01012345678 etc
-  const phoneRegex = /(\d{2,3})[-.\s]?(\d{3,4})[-.\s]?(\d{4})/g;
-  masked = masked.replace(phoneRegex, "[PHONE]");
-  // SSN: 000000-0000000
-  const ssnRegex = /[0-9]{6}-[0-9]{7}/g;
-  masked = masked.replace(ssnRegex, "[SSN]");
+  masked = masked.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[EMAIL]");
+  // SSN / 외국인등록번호: 000000-0000000 (전화번호보다 먼저 처리)
+  masked = masked.replace(/[0-9]{6}-[0-9]{7}/g, "[SSN]");
+  // Phone: 010-1234-5678, 010.1234.5678, 010 1234 5678 등
+  masked = masked.replace(/(\d{2,3})[-.\s]?(\d{3,4})[-.\s]?(\d{4})/g, "[PHONE]");
+  // 생년월일: "1996년 05월 04일" 또는 PDF 추출 시 공백 끼는 "1996 년 05 월 04 일" 형태 모두 처리
+  masked = masked.replace(/\d{4}\s*년\s*\d{1,2}\s*월\s*\d{1,2}\s*일/g, "[DOB]");
+  // 한국 주소: 시/도로 시작하는 주소
+  masked = masked.replace(/(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)[^\n,]{5,40}/g, "[ADDRESS]");
+  // 여권번호: 영문 1자 + 숫자 8자리
+  masked = masked.replace(/\b[A-Z][0-9]{8}\b/g, "[PASSPORT]");
+  // 운전면허번호: 12-35-123456-78
+  masked = masked.replace(/\d{2}-\d{2}-\d{6}-\d{2}/g, "[DRIVER_LICENSE]");
   return masked;
 }
 
@@ -163,7 +115,7 @@ async function extractTextFromPDF(file: File): Promise<string> {
   // CMap 설정 추가 (한글 등 특수문자 깨짐 방지)
   const pdf = await pdfjsLib.getDocument({
     data: arrayBuffer,
-    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/",
+    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.624/cmaps/",
     cMapPacked: true,
   }).promise;
   let fullText = "";
@@ -189,31 +141,16 @@ async function extractTextFromDOCX(file: File): Promise<string> {
 }
 
 /**
- * 파일이 이력서인지 로컬 AI로 판별 (임베딩 유사도 방식)
+ * 파일이 이력서인지 LLM 서버로 판별
  * @param file 검증할 파일 객체
- * @param options 옵션 (forceServer 등)
- */
-
-/**
- * 파일이 이력서인지 로컬 AI로 판별 (임베딩 유사도 방식)
- * @param file 검증할 파일 객체
- * @param options 옵션 (forceServer 등)
- * @param existingResumes 기존 이력서 목록 (중복 검사용)
- */
-// ... (imports and setups unchanged)
-
-/**
- * 파일이 이력서인지 로컬 AI로 판별 (임베딩 유사도 방식)
- * @param file 검증할 파일 객체
- * @param options 옵션 (forceServer 등)
  * @param existingResumes 기존 이력서 목록 (중복 검사용)
  */
 export async function validateResumeFile(
   file: File,
-  options?: { forceServer?: boolean },
+  _options?: unknown,
   existingResumes?: ResumeItem[],
 ): Promise<ValidationResult> {
-  console.log(`[ResumeValidator] Validating file: ${file.name}`, options);
+  console.log(`[ResumeValidator] Validating file: ${file.name}`);
 
   let text = "";
 
@@ -222,24 +159,20 @@ export async function validateResumeFile(
     const fileExt = file.name.split(".").pop()?.toLowerCase();
     const validTypes = ["pdf", "docx", "txt"];
     if (!validTypes.includes(fileExt || "")) {
-      if (!options?.forceServer) {
-        return {
-          isResume: false,
-          score: 0,
-          reason: "지원하지 않는 파일 형식입니다. (PDF, DOCX, TXT 지원)",
-          source: "local",
-        };
-      }
+      return {
+        isResume: false,
+        score: 0,
+        reason: "지원하지 않는 파일 형식입니다. (PDF, DOCX, TXT 지원)",
+        source: "local",
+      };
     }
 
     if (fileExt === "pdf") {
       text = await extractTextFromPDF(file);
     } else if (fileExt === "docx") {
       text = await extractTextFromDOCX(file);
-    } else if (fileExt === "txt") {
+    } else {
       text = await file.text();
-    } else if (options?.forceServer) {
-      throw new Error("지원하지 않는 파일 형식입니다.");
     }
 
     // 2. 텍스트 정규화
@@ -355,34 +288,14 @@ export async function validateResumeFile(
       );
     }
 
-    // 5. 서버 유효성 검증 (중복이 아닌 경우에만 진행)
-    if (options?.forceServer) {
-      console.log("[ResumeValidator] Executing server-side validation...");
-      const { validateContent } = await import("../api/resumes");
-      const result = await validateContent(text);
-
-      return {
-        ...result,
-        source: "server",
-        embedding,
-        validationText: inputPreview,
-        maxDuplicateSimilarity,
-      };
-    }
-
-    // 6. 로컬 이력서 판단 (서버 검증 안 한 경우)
-    const anchorVec = await getAnchorEmbedding(extractor);
-    const similarity = cosineSimilarity(embedding, anchorVec);
-    const THRESHOLD = 0.6;
-    const isResume = similarity >= THRESHOLD;
+    // 5. 서버 LLM 검증 (마스킹된 텍스트 사용)
+    console.log("[ResumeValidator] Executing server-side validation...");
+    const { validateContent } = await import("../api/resumes");
+    const result = await validateContent(maskedText);
 
     return {
-      isResume,
-      score: similarity,
-      reason: isResume
-        ? undefined
-        : `이력서 양식이 아닌 것 같습니다. (유사도: ${(similarity * 100).toFixed(1)}%)`,
-      source: "local",
+      ...result,
+      source: "server",
       embedding,
       validationText: inputPreview,
       maxDuplicateSimilarity,
@@ -402,4 +315,3 @@ export async function validateResumeFile(
     };
   }
 }
-// End of function // End of function

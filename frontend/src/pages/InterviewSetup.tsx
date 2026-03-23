@@ -10,6 +10,7 @@ import {
 import {
   listResumes,
   getResume,
+  retryResumeProcessing,
   type ResumeItem,
   type ResumeDetail,
 } from "@/api/resumes";
@@ -37,6 +38,7 @@ export function InterviewSetup() {
   const [form, setForm] = useState<
     Omit<CreateInterviewReq, "resumeId" | "interviewerRoles" | "personality">
   >({
+    companyName: "",
     domain: "프론트엔드",
     type: "PRACTICE",
     targetDurationMinutes: 30,
@@ -74,9 +76,12 @@ export function InterviewSetup() {
   const [hasTestedAudio, setHasTestedAudio] = useState(false);
   const [checklist, setChecklist] = useState({
     media: false,
-    resume: false,
     ready: false,
+    resumeRisk: false,
   });
+  const [confirmResumeStatus, setConfirmResumeStatus] = useState<string | null>(null);
+  const [statusRefreshing, setStatusRefreshing] = useState(false);
+  const [retryingResumeId, setRetryingResumeId] = useState<string | null>(null);
 
   // 오디오 스트림 변경 시 테스트 상태 초기화
   // (useAudioRecorder 선언 뒤로 이동됨)
@@ -280,21 +285,48 @@ export function InterviewSetup() {
     e.preventDefault();
     setError("");
 
-    // 사전 밸리데이션
-    if (isNewUpload) {
-      if (!uploadedResumeId) {
-        setError("이력서를 먼저 업로드해주세요.");
-        return;
+    const rid = isNewUpload ? uploadedResumeId : selectedResumeId;
+    if (rid) {
+      try {
+        const data = await getResume(rid);
+        setConfirmResumeStatus(data.resume.status);
+      } catch {
+        setConfirmResumeStatus(existingResumes.find((r) => r.id === rid)?.status ?? null);
       }
     } else {
-      if (!selectedResumeId) {
-        setError("이력서를 먼저 선택해주세요.");
-        return;
-      }
+      setConfirmResumeStatus(null);
     }
-
     setShowConfirmModal(true);
   }
+
+  // 이력서 상태 폴링 (모달 열림 + PROCESSING/PENDING일 때만 3초 간격)
+  useEffect(() => {
+    if (!showConfirmModal) return;
+    if (confirmResumeStatus !== "PROCESSING" && confirmResumeStatus !== "PENDING") return;
+
+    const rid = isNewUpload ? uploadedResumeId : selectedResumeId;
+    if (!rid) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const data = await getResume(rid);
+        setConfirmResumeStatus(data.resume.status);
+      } catch { /* silent */ }
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [showConfirmModal, confirmResumeStatus, isNewUpload, uploadedResumeId, selectedResumeId]);
+
+  const handleRefreshStatus = async () => {
+    const rid = isNewUpload ? uploadedResumeId : selectedResumeId;
+    if (!rid) return;
+    setStatusRefreshing(true);
+    try {
+      const data = await getResume(rid);
+      setConfirmResumeStatus(data.resume.status);
+    } catch { /* silent */ }
+    finally { setStatusRefreshing(false); }
+  };
 
   const handleResumeClickInModal = async () => {
     const resumeId = isNewUpload ? uploadedResumeId : selectedResumeId;
@@ -514,13 +546,24 @@ export function InterviewSetup() {
                 <div className={styles.resumeListArea}>
                   <div className={styles.uploadHeader}>
                     <h3>내 이력서 목록</h3>
-                    <button
-                      type="button"
-                      className={styles.addBtn}
-                      onClick={() => setIsNewUpload(true)}
-                    >
-                      + 새 이력서 추가
-                    </button>
+                    <div className={styles.uploadHeaderActions}>
+                      <button
+                        type="button"
+                        className={styles.refreshListBtn}
+                        disabled={resumesLoading}
+                        onClick={() => loadResumes()}
+                        title="목록 새로고침"
+                      >
+                        ↻
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.addBtn}
+                        onClick={() => setIsNewUpload(true)}
+                      >
+                        + 새 이력서 추가
+                      </button>
+                    </div>
                   </div>
                   <div className={styles.resumeGrid}>
                     {existingResumes.map((resume) => (
@@ -539,12 +582,34 @@ export function InterviewSetup() {
                             </div>
                             <div className={styles.resumeCardDate}>
                               {new Date(resume.createdAt).toLocaleDateString()}
+                              <span className={styles.resumeStatusBadge} data-status={resume.status}>
+                                {resume.status}
+                              </span>
                             </div>
                           </div>
                           {selectedResumeId === resume.id && (
                             <div className={styles.checkIcon}>✓</div>
                           )}
                         </div>
+                        {resume.status === "FAILED" && (
+                          <button
+                            type="button"
+                            className={styles.retryBtn}
+                            disabled={retryingResumeId === resume.id}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              setRetryingResumeId(resume.id);
+                              try {
+                                await retryResumeProcessing(resume.id);
+                                await loadResumes();
+                              } finally {
+                                setRetryingResumeId(null);
+                              }
+                            }}
+                          >
+                            {retryingResumeId === resume.id ? "재처리 중..." : "재처리"}
+                          </button>
+                        )}
                         <button
                           type="button"
                           className={styles.viewDetailBtn}
@@ -565,7 +630,19 @@ export function InterviewSetup() {
             <h2 className={styles.formTitle}>면접 상세 설정</h2>
             <form onSubmit={handleSubmit} className={styles.form}>
               <div className={styles.field}>
-                <label htmlFor="domain">도메인</label>
+                <label htmlFor="companyName">회사명 (선택)</label>
+                <input
+                  id="companyName"
+                  type="text"
+                  value={form.companyName ?? ""}
+                  onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+                  className={styles.input}
+                  placeholder="예: 네이버, 카카오, 토스"
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="domain">직무</label>
                 <input
                   id="domain"
                   type="text"
@@ -793,7 +870,7 @@ export function InterviewSetup() {
         createPortal(
           <div
             className={styles.modalOverlay}
-            onClick={() => setShowConfirmModal(false)}
+            onClick={() => { setShowConfirmModal(false); setConfirmResumeStatus(null); }}
           >
             <div
               className={`${styles.modalContent} ${styles.confirmModalContent}`}
@@ -803,7 +880,7 @@ export function InterviewSetup() {
                 <h2>🚀 면접 시작 전 최종 확인</h2>
                 <button
                   className={styles.closeBtn}
-                  onClick={() => setShowConfirmModal(false)}
+                  onClick={() => { setShowConfirmModal(false); setConfirmResumeStatus(null); }}
                 >
                   ✕
                 </button>
@@ -814,21 +891,46 @@ export function InterviewSetup() {
                 <div className={styles.summarySection}>
                   <div className={styles.summaryTitle}>설정 요약</div>
                   <div className={styles.summaryGrid}>
+                    {(selectedResumeId || uploadedResumeId) && (
                     <div className={styles.summaryItem}>
                       <span className={styles.summaryLabel}>이력서</span>
-                      <span
-                        className={styles.summaryValueClickable}
-                        onClick={handleResumeClickInModal}
-                        title="클릭하여 확인하기"
-                      >
-                        {existingResumes.find((r) => r.id === selectedResumeId)
-                          ?.title ||
-                          (uploadedResumeId && "새로 업로드된 이력서") ||
-                          "선택된 이력서"}
-                      </span>
+                      <div className={styles.resumeSummaryValue}>
+                        <span
+                          className={styles.summaryValueClickable}
+                          onClick={handleResumeClickInModal}
+                          title="클릭하여 확인하기"
+                        >
+                          {existingResumes.find((r) => r.id === selectedResumeId)
+                            ?.title ||
+                            (uploadedResumeId && "새로 업로드된 이력서") ||
+                            "선택된 이력서"}
+                        </span>
+                        <div className={styles.resumeStatusRow}>
+                          {confirmResumeStatus && (
+                            <span className={styles.resumeStatusBadge} data-status={confirmResumeStatus}>
+                              {confirmResumeStatus}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleRefreshStatus}
+                            className={styles.refreshStatusBtn}
+                            title="상태 새로고침"
+                          >
+                            {statusRefreshing ? "…" : "↻"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
+                    )}
+                    {form.companyName && (
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>회사</span>
+                        <span className={styles.summaryValue}>{form.companyName}</span>
+                      </div>
+                    )}
                     <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>분야</span>
+                      <span className={styles.summaryLabel}>직무</span>
                       <span className={styles.summaryValue}>{form.domain}</span>
                     </div>
                     <div className={styles.summaryItem}>
@@ -857,6 +959,19 @@ export function InterviewSetup() {
                   )}
                 </div>
 
+                {/* 이력서 상태 안내 */}
+                {(confirmResumeStatus === "PROCESSING" || confirmResumeStatus === "PENDING") && (
+                  <div className={styles.statusWarningBlock}>
+                    <span className={styles.statusSpinner} />
+                    이력서를 분석 중입니다. 완료 전 시작하면 이력서 기반 질문이 제한될 수 있습니다.
+                  </div>
+                )}
+                {confirmResumeStatus === "FAILED" && (
+                  <div className={styles.statusErrorBlock}>
+                    ⚠️ 이력서 처리에 실패했습니다. 지금 시작하면 이력서 없이 면접이 진행됩니다.
+                  </div>
+                )}
+
                 {/* 체크리스트 */}
                 <div className={styles.checklistSection}>
                   <label className={styles.checkItem}>
@@ -871,18 +986,23 @@ export function InterviewSetup() {
                       카메라와 마이크가 잘 작동하는지 확인했습니다.
                     </span>
                   </label>
-                  <label className={styles.checkItem}>
-                    <input
-                      type="checkbox"
-                      checked={checklist.resume}
-                      onChange={(e) =>
-                        setChecklist({ ...checklist, resume: e.target.checked })
-                      }
-                    />
-                    <span className={styles.checkText}>
-                      선택한 이력서가 본인 것이 맞는지 확인했습니다.
-                    </span>
-                  </label>
+                  {((!isNewUpload && !selectedResumeId) || (!uploadedResumeId && isNewUpload) ||
+                    (confirmResumeStatus !== null && confirmResumeStatus !== "COMPLETED")) && (
+                    <label className={styles.checkItem}>
+                      <input
+                        type="checkbox"
+                        checked={checklist.resumeRisk}
+                        onChange={(e) =>
+                          setChecklist({ ...checklist, resumeRisk: e.target.checked })
+                        }
+                      />
+                      <span className={styles.checkText}>
+                        {(!isNewUpload && !selectedResumeId) || (!uploadedResumeId && isNewUpload)
+                          ? "선택된 이력서가 없습니다. 이력서 없이 면접을 시작합니다."
+                          : "이력서 처리가 완료되지 않은 상태에서 면접을 시작합니다."}
+                      </span>
+                    </label>
+                  )}
                   <label className={styles.checkItem}>
                     <input
                       type="checkbox"
@@ -901,7 +1021,7 @@ export function InterviewSetup() {
               <div className={styles.modalFooter}>
                 <button
                   className={styles.cancelBtn}
-                  onClick={() => setShowConfirmModal(false)}
+                  onClick={() => { setShowConfirmModal(false); setConfirmResumeStatus(null); }}
                 >
                   취소
                 </button>
@@ -911,8 +1031,11 @@ export function InterviewSetup() {
                   disabled={
                     loading ||
                     !checklist.media ||
-                    !checklist.resume ||
-                    !checklist.ready
+                    !checklist.ready ||
+                    (((!isNewUpload && !selectedResumeId) ||
+                      (!uploadedResumeId && isNewUpload) ||
+                      (confirmResumeStatus !== null && confirmResumeStatus !== "COMPLETED")) &&
+                      !checklist.resumeRisk)
                   }
                 >
                   {loading ? "면접 생성 중..." : "확인 후 시작하기"}

@@ -349,6 +349,39 @@
   margin-bottom: 1rem;
 }
 
+.uploadHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.refreshListBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.refreshListBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.refreshListBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .addBtn,
 .textBtn {
   background: none;
@@ -436,6 +469,30 @@
   background: rgba(255, 255, 255, 0.1);
   color: #f8fafc;
   border-color: #10b981;
+}
+
+.retryBtn {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.retryBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #f87171;
+  color: #fca5a5;
+}
+
+.retryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .formTitle {
@@ -824,4 +881,99 @@
 .startFinalBtn:not(:disabled):hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.resumeSummaryValue {
+  text-align: right;
+}
+
+.resumeStatusRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.resumeStatusBadge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.4rem;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+.resumeStatusBadge[data-status="COMPLETED"] { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.resumeStatusBadge[data-status="PROCESSING"] { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.resumeStatusBadge[data-status="PENDING"] { background: rgba(251, 191, 36, 0.15); color: #fcd34d; }
+.resumeStatusBadge[data-status="FAILED"] { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+.refreshStatusBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #64748b;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  line-height: 1;
+  font-family: inherit;
+}
+.refreshStatusBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #94a3b8;
+}
+
+.statusWarningBlock {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+  font-size: 0.8125rem;
+}
+
+.statusSpinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  border-top-color: #f59e0b;
+  animation: statusSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes statusSpin {
+  to { transform: rotate(360deg); }
+}
+
+.statusErrorBlock {
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.checkItemWarning {
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.05);
+  padding: 0.5rem 0.75rem;
+}
+
+.checkTextWarning {
+  color: #fbbf24;
 }

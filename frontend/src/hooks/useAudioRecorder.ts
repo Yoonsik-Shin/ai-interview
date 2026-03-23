@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { MicVAD } from "@ricky0123/vad-web";
+import * as ort from "onnxruntime-web";
 
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_MS = 1010; // 1000ms보다 약간 여유를 두어 4096 블록 정합성 유도
@@ -189,10 +190,16 @@ export function useAudioRecorder(
         setStream(stream);
 
         try {
+          // ort 전역 플래그 주입 (Vite 빌드/로드 인코딩 우회)
+          ort.env.wasm.wasmPaths = "/"; 
+          ort.env.wasm.numThreads = 1; // 멀티스레드 워커(.mjs) 로드 충돌 방지 단일 스레드화
+          
           vadRef.current = await MicVAD.new({
             getStream: () => Promise.resolve(stream),
             pauseStream: () => Promise.resolve(),
             resumeStream: () => Promise.resolve(stream),
+            baseAssetPath: "/", // static assets path 설정
+            onnxWASMBasePath: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/", // Vite ?import 충돌 우회용 CDN 설정
             redemptionMs: 2500, // 2.5초 무음 감지
             positiveSpeechThreshold: 0.7,
             negativeSpeechThreshold: 0.3,
