@@ -22,7 +22,16 @@ data:
   CORE_GRPC_HOST: "core.unbrdn.svc.cluster.local"
   CORE_GRPC_PORT: "9090"
 
-  JWT_JWKS_URI: "http://core.unbrdn.svc.cluster.local:8081/.well-known/jwks.json"
+  AUTH_GRPC_HOST: "auth.unbrdn.svc.cluster.local"
+  AUTH_GRPC_PORT: "9090"
+  INTERVIEW_GRPC_HOST: "interview.unbrdn.svc.cluster.local"
+  INTERVIEW_GRPC_PORT: "9090"
+  PAYMENT_GRPC_HOST: "payment.unbrdn.svc.cluster.local"
+  PAYMENT_GRPC_PORT: "9090"
+  RESUME_GRPC_HOST: "resume.unbrdn.svc.cluster.local"
+  RESUME_GRPC_PORT: "9090"
+
+  JWT_JWKS_URI: "http://auth.unbrdn.svc.cluster.local:8081/.well-known/jwks.json"
   JWT_JWKS_CACHE_MAX_AGE_MS: "300000"
   JWT_JWKS_REQUESTS_PER_MINUTE: "10"
   JWT_JWKS_TIMEOUT_MS: "30000"

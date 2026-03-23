@@ -25,7 +25,7 @@ spec:
             - "--kafka.server=$(KAFKA_SERVER)"
           env:
             - name: KAFKA_SERVER
-              value: "kafka-cluster-kafka-bootstrap.kafka:9092"
+              value: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
           ports:
             - name: http
               containerPort: 9308

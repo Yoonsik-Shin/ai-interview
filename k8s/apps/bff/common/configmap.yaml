@@ -17,7 +17,7 @@ data:
   REDIS_SENTINEL_PORT: "26379"
   REDIS_SENTINEL_NAME: "mymaster"
 
-  JWT_JWKS_URI: "http://core.unbrdn.svc.cluster.local:8081/.well-known/jwks.json"
+  JWT_JWKS_URI: "http://auth.unbrdn.svc.cluster.local:8081/.well-known/jwks.json"
   JWT_JWKS_CACHE_MAX_AGE_MS: "300000"
   JWT_JWKS_REQUESTS_PER_MINUTE: "10"
   JWT_JWKS_TIMEOUT_MS: "30000"
@@ -26,5 +26,14 @@ data:
 
   CORE_GRPC_HOST: "core"
   CORE_GRPC_PORT: "9090"
+
+  AUTH_GRPC_HOST: "auth"
+  AUTH_GRPC_PORT: "9090"
+  INTERVIEW_GRPC_HOST: "interview"
+  INTERVIEW_GRPC_PORT: "9090"
+  PAYMENT_GRPC_HOST: "payment"
+  PAYMENT_GRPC_PORT: "9090"
+  RESUME_GRPC_HOST: "resume"
+  RESUME_GRPC_PORT: "9090"
   LLM_GRPC_HOST: "llm"
   LLM_GRPC_PORT: "50051"
