@@ -71,3 +71,23 @@ Socket의 90초 타이머와 Core의 `ProcessUserAnswerInteractor`가 동시에 
 - **Room 이름**: `SendTranscriptUseCase`의 room을 `interview-session-${id}`로 수정하여 connection listener와 통일.
 - **이벤트 경로**: Kafka 발행 제거, Redis Pub/Sub에서 `RETRY_ANSWER` 타입으로 발행하여 `SendTranscriptUseCase`에서 올바르게 핸들링.
 - **근거**: Socket 서비스는 Kafka consumer가 없으므로 Redis Pub/Sub가 유일한 실시간 이벤트 전달 경로. 경로를 단일화하여 복잡도 감소.
+
+---
+
+## 7. 데이터베이스 연결 URL과 스키마 자동 생성 충돌 방지 (2026-03-24)
+
+### 배경
+`resume` 서비스 배포 시 `org.postgresql.util.PSQLException: ERROR: schema "resume" does not exist` 에러와 함께 `CrashLoopBackOff` 현상이 발생했습니다. 
+Application 설정(`deployment.yaml`)에 `SPRING_FLYWAY_CREATE_SCHEMAS: "true"`가 설정되어 있음에도 Flyway 가 작동하지 못했습니다.
+
+### 원인 분석 (닭이 먼저냐 달걀이 먼저냐)
+1. **JDBC URL 설정**: `SPRING_DATASOURCE_URL`에 `?currentSchema=resume,public`이 포함되어 있었습니다.
+2. **연결 실패**: PostgreSQL 드라이버는 연결 수립 시 해당 스키마로 `search_path`를 설정하려 합니다. 하지만 스키마가 존재하지 않으므로 드라이버 레벨에서 연결이 거부됩니다.
+3. **Flyway 불발**: 데이터베이스 연결(HikariCP)이 성립되지 않아 Flyway가 스키마를 생성하는 로직을 실행하지 못했습니다.
+
+### 결정 사항
+- **JDBC URL 옵션 제거**: `k8s/apps/resume/local/deployment.yaml`의 `SPRING_DATASOURCE_URL`에서 `?currentSchema=resume,public` 옵션을 제거합니다.
+- **JPA 기본 스키마 설정**: Hibernate가 쿼리 시 `resume` 스키마를 기본으로 사용할 수 있도록 `SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA=resume` 환경 변수를 추가하여 대체합니다.
+
+### 기대 효과
+- 최초 배포 시에도 Flyway 가 정상적으로 데이터베이스에 연결하여 `resume` 스키마를 자동 생성하고 마이그레이션을 수행할 수 있게 됩니다.
