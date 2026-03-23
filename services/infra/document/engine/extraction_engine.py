@@ -94,7 +94,7 @@ class ExtractionEngine:
             opendataloader_pdf.convert(
                 input_path=temp_pdf_path,
                 output_dir=output_folder,
-                format=['md', 'json'],
+                format=['markdown', 'json'],
                 image_output="external"
             )
             log_json("opendataloader_completed", resume_id=resume_id)
@@ -102,7 +102,7 @@ class ExtractionEngine:
             # 3. Read Extracted Data
             full_text = ""
             json_files = [f for f in os.listdir(output_folder) if f.endswith(".json")]
-            md_files = [f for f in os.listdir(output_folder) if f.endswith(".md")]
+            md_files = [f for f in os.listdir(output_folder) if f.endswith(".md") or f.endswith(".markdown")]
 
             if md_files:
                 md_path = os.path.join(output_folder, md_files[0])
