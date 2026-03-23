@@ -9,7 +9,6 @@ dependencies {
     // JPA & Databases
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'org.postgresql:postgresql'
-    runtimeOnly 'com.oracle.database.jdbc:ojdbc11:23.3.0.23.09'
 
     // Security & JWT
     implementation 'org.springframework.security:spring-security-crypto'
