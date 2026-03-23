@@ -1,1 +1,0 @@
-# Storage Worker Package
