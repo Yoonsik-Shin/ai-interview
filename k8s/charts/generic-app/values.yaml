@@ -1,0 +1,39 @@
+# Default values for generic-app.
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 8080 # 기본 Spring Boot 포트
+
+env: [] # 환경 변수가 있다면 values 에서 매핑
+
+nodeSelector:
+  role: app
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+probes:
+  liveness:
+    path: /actuator/health
+    initialDelaySeconds: 40
+   readiness:
+    path: /actuator/health
+    initialDelaySeconds: 20
+  startup:
+    path: /actuator/health
+    initialDelaySeconds: 10
+    failureThreshold: 30
