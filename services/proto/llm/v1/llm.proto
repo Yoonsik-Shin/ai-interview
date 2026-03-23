@@ -46,20 +46,19 @@ message GenerateRequest {
   string interview_id = 1;
   string user_id = 2;
   string user_text = 3;
-  // DEPRECATED: repeated ConversationHistory history = 5; (Removed for Track 2 Checkpointer)
+  repeated string participating_personas = 4;
   common.v1.InterviewStageProto stage = 6;
-  optional int32 interviewer_count = 7;
   optional string domain = 8;
   
   int64 remaining_time_seconds = 10;
-  int64 total_duration_seconds = 11;
+  int32 scheduled_duration_minutes = 11;
   int32 current_difficulty_level = 12;
   string last_interviewer_id = 13;
   
-  repeated common.v1.InterviewRoleProto available_roles = 14; 
-  common.v1.InterviewPersonalityProto personality = 15;       
+  string company_name = 14;
   string input_role = 16;                           // "user" (default) or "system"
   string persona_id = 17;                           // 면접관 페르소나 템플릿 렌더링용 식별자
+  string resume_id = 18;                            // 이력서 IDe
 }
 
 

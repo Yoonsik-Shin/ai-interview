@@ -24,6 +24,9 @@ service ResumeService {
 
   // 이력서 판별 (Valid / Invalid)
   rpc ValidateResume (ValidateResumeRequest) returns (ValidateResumeResponse);
+
+  // 이력서 청크 조회 (RAG 용)
+  rpc GetResumeChunks (GetResumeChunksRequest) returns (GetResumeChunksResponse);
 }
 
 message GetUploadUrlRequest {
@@ -100,4 +103,13 @@ message ValidateResumeResponse {
   bool is_resume = 1;
   string reason = 2;
   float score = 3;
+}
+
+message GetResumeChunksRequest {
+  string resume_id = 1;
+  int32 limit = 2;
+}
+
+message GetResumeChunksResponse {
+  repeated string chunks = 1;
 }

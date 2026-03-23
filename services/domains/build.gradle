@@ -1,0 +1,61 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.0.1' apply false
+	id 'io.spring.dependency-management' version '1.1.7' apply false
+	id 'com.google.protobuf' version '0.9.4' apply false
+	id "com.diffplug.spotless" version "6.23.3" apply false
+}
+
+allprojects {
+	group = 'me.unbrdn'
+	version = '0.0.1-SNAPSHOT'
+}
+
+subprojects {
+	apply plugin: 'java'
+	apply plugin: 'org.springframework.boot'
+	apply plugin: 'io.spring.dependency-management'
+	apply plugin: 'com.diffplug.spotless'
+
+	java {
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(21)
+		}
+	}
+
+	configurations {
+		compileOnly {
+			extendsFrom annotationProcessor
+		}
+	}
+
+	repositories {
+		mavenCentral()
+		maven { url 'https://repo.spring.io/milestone' }
+	}
+
+	dependencies {
+		// 글로벌 공통 의존성 (Lombok)
+		compileOnly 'org.projectlombok:lombok'
+		annotationProcessor 'org.projectlombok:lombok'
+		testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	}
+
+	tasks.named('test') {
+		useJUnitPlatform()
+	}
+
+	spotless {
+		java {
+			target '**/*.java'
+			googleJavaFormat().aosp()
+			removeUnusedImports()
+			trimTrailingWhitespace()
+			endWithNewline()
+		}
+	}
+}
+
+// 각 서브모듈의 고유 의존성은 각 모듈의 build.gradle 에서 주입하는 것이 정석이나,
+// 한 번에 소스코드를 옮기기 전까지 루트에서 관리할 수도 있습니다.
+// 여기서는 플랜에 맞춰 각 모듈이 고유 의존성을 갖도록 분리 구성합니다.

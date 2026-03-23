@@ -1,0 +1,56 @@
+apply plugin: 'com.google.protobuf'
+
+dependencies {
+    implementation project(':common')
+
+    // Web
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // JPA & Databases
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'com.oracle.database.jdbc:ojdbc11:23.3.0.23.09'
+
+    // Security & JWT
+    implementation 'org.springframework.security:spring-security-crypto'
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // Redis (Refresh Token)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // gRPC
+    implementation 'net.devh:grpc-server-spring-boot-starter:2.15.0.RELEASE'
+    implementation 'net.devh:grpc-client-spring-boot-starter:2.15.0.RELEASE'
+    compileOnly 'jakarta.annotation:jakarta.annotation-api:1.3.5'
+}
+
+protobuf {
+	protoc {
+		artifact = "com.google.protobuf:protoc:3.24.0"
+	}
+	plugins {
+		grpc {
+			artifact = "io.grpc:protoc-gen-grpc-java:1.58.0"
+		}
+	}
+	generateProtoTasks {
+		all().configureEach { task ->
+			task.builtins {
+				java {}
+			}
+			task.plugins {
+				grpc {}
+			}
+		}
+	}
+}
+
+sourceSets {
+	main {
+		proto {
+			srcDir '../../proto'
+		}
+	}
+}
