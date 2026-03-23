@@ -1,0 +1,41 @@
+.PHONY: proto clean run dev help
+
+# Proto 파일 컴파일
+proto:
+	@echo "🔨 Compiling proto files..."
+	mkdir -p generated
+	python -m grpc_tools.protoc \
+		-I../../proto \
+		--python_out=generated \
+		--grpc_python_out=generated \
+		../../proto/llm/v1/llm.proto ../../proto/common/v1/enums.proto ../../proto/resume/v1/resume.proto
+	mkdir -p generated/llm/v1 generated/common/v1 generated/resume/v1
+	touch generated/__init__.py generated/llm/__init__.py generated/llm/v1/__init__.py generated/common/__init__.py generated/common/v1/__init__.py generated/resume/__init__.py generated/resume/v1/__init__.py
+	@echo "✅ Proto compilation done!"
+
+# 생성된 proto 파일 삭제
+clean:
+	@echo "🧹 Cleaning generated proto files..."
+	rm -rf generated
+	rm -f llm_pb2.py llm_pb2_grpc.py
+	rm -rf __pycache__
+	@echo "✅ Clean done!"
+
+# Proto 컴파일 후 서버 실행
+run: proto
+	@echo "🚀 Starting LLM gRPC server..."
+	python main.py
+
+# 개발 모드 (supervisord로 FastAPI + gRPC + Kafka 동시 실행)
+dev: proto
+	@echo "🚀 Starting all services with Supervisor..."
+	supervisord -c supervisord.conf
+
+# 도움말
+help:
+	@echo "LLM Service Makefile Commands:"
+	@echo "  make proto    - Compile proto files from ../proto/llm.proto"
+	@echo "  make clean    - Remove generated proto files"
+	@echo "  make run      - Compile proto and run gRPC server"
+	@echo "  make dev      - Compile proto and start all services (FastAPI + gRPC + Kafka)"
+	@echo "  make help     - Show this help message"

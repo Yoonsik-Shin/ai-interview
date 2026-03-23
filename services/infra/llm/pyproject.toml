@@ -1,0 +1,28 @@
+[project]
+name = "llm-service"
+version = "0.1.0"
+description = "AI Interview LLM Service (gRPC)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "openai==2.14.0",
+    "redis>=5.2.1",
+    "grpcio>=1.68.0",
+    "grpcio-tools>=1.68.0",
+    "grpcio-health-checking>=1.68.0",
+    "protobuf>=5.28.0",
+    "python-dotenv==1.0.0",
+    "edge-tts>=6.1.12",
+    "langchain>=1.2.8",
+    "langgraph>=1.0.7",
+    "langchain-openai>=1.1.7",
+    "langchain-community>=0.2.7",
+    "langchain-postgres>=0.0.12",
+    "psycopg2-binary>=2.9.9",
+    "tavily-python>=0.3.3",
+    "pgvector>=0.3.2",
+    "langgraph-checkpoint-redis",
+]
+
+[tool.uv]
+package = false

@@ -1,0 +1,13 @@
+[project]
+name = "tts-service"
+version = "0.1.0"
+description = "TTS worker for Redis queue consumption and audio publishing"
+requires-python = ">=3.11"
+dependencies = [
+    "edge-tts>=7.2.7",
+    "grpcio>=1.76.0",
+    "grpcio-health-checking>=1.76.0",
+    "openai>=2.15.0",
+    "python-dotenv>=1.2.1",
+    "redis>=7.1.0",
+]
