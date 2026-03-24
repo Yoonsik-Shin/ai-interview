@@ -1,6 +1,8 @@
 name: 🔐 Deploy Auth Service
 
 on:
+  workflow_dispatch: # 수동 가동 지원
+
   push:
     branches: [ main, dev ]
     # 💡 auth 서비스 디렉토리 하위의 코드 변경 시에만 가동 (모노레포 정적 필터링)

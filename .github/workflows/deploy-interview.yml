@@ -1,6 +1,8 @@
 name: 🔐 Deploy Interview Service
 
 on:
+  workflow_dispatch: # 수동 가동 지원
+
   push:
     branches: [ main, dev ]
     paths:
