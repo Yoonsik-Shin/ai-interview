@@ -49,7 +49,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "gpupool" {
   name                  = "gpupool"
   kubernetes_cluster_id = local.aks_id
   vm_size               = "Standard_NC4as_T4_v3"
-  node_count            = 1
+  node_count            = 2
   node_labels           = { role = "inference" }
   spot_max_price        = -1
   eviction_policy       = "Deallocate"

@@ -2,6 +2,7 @@
 # Track 1 Redis: Sentinel Mode (Bitnami)
 # ===============================
 redis:
+  fullnameOverride: "redis"
   image:
     tag: "7.2"
   global:
