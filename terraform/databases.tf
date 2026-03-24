@@ -1,7 +1,7 @@
 # 🐘 Azure Database for PostgreSQL (Flexible Server)
 
 resource "azurerm_postgresql_flexible_server" "db" {
-  name                   = "unbrdn-postgres-server-kc"
+  name                   = "unbrdn-postgres"
   resource_group_name    = local.rg_name
   location               = "Korea Central"
   version                = "15"
