@@ -1,0 +1,18 @@
+name: 🔐 Deploy LLM Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'services/infra/llm/**'
+      - '.github/workflows/deploy-llm.yml'
+
+jobs:
+  call-builder:
+    uses: ./.github/workflows/reusable-build-push.yml
+    with:
+      service_name: "llm"
+      service_path: "./services/infra/llm"
+      helm_values_path: "./k8s/apps/llm/values.yaml"
+    secrets:
+      inherit

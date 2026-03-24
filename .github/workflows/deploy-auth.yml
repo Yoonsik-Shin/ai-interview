@@ -1,0 +1,19 @@
+name: 🔐 Deploy Auth Service
+
+on:
+  push:
+    branches: [ main ]
+    # 💡 auth 서비스 디렉토리 하위의 코드 변경 시에만 가동 (모노레포 정적 필터링)
+    paths:
+      - 'services/domains/auth/**'
+      - '.github/workflows/deploy-auth.yml'
+
+jobs:
+  call-builder:
+    uses: ./.github/workflows/reusable-build-push.yml
+    with:
+      service_name: "auth"
+      service_path: "./services/domains/auth"
+      helm_values_path: "./k8s/apps/auth/values.yaml"
+    secrets:
+      inherit # 상위 레포지토리의 AZURE_CREDENTIALS 상속 공유

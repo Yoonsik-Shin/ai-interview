@@ -1,0 +1,58 @@
+name: 🚀 Reusable Build & Push (GitOps)
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+        description: "빌드할 서비스 이름 (예: auth, interview)"
+      service_path:
+        required: true
+        type: string
+        description: "빌드할 소스 코드 디렉토리 경로"
+      helm_values_path:
+        required: true
+        type: string
+        description: "ArgoCD가 바라볼 values.yaml 경로"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: 🔒 ACR Login
+        run: |
+          az acr login --name unbrdnacr
+
+      - name: 🛠️ Docker Build
+        run: |
+          docker build \
+            -t unbrdnacr.azurecr.io/${{ inputs.service_name }}:${{ github.sha }} \
+            -t unbrdnacr.azurecr.io/${{ inputs.service_name }}:latest \
+            ${{ inputs.service_path }}
+
+      - name: 📤 Docker Push
+        run: |
+          docker push unbrdnacr.azurecr.io/${{ inputs.service_name }}:${{ github.sha }}
+          docker push unbrdnacr.azurecr.io/${{ inputs.service_name }}:latest
+
+      # 💡 ArgoCD GitOps 태그 갱신 부 (백푸시)
+      - name: 🌿 Update Helm Image Tag (GitOps Sync)
+        run: |
+          sed -i 's/tag: .*/tag: "${{ github.sha }}"/g' ${{ inputs.helm_values_path }}
+
+      - name: 💾 Commit and Push values.yaml
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add ${{ inputs.helm_values_path }}
+          git commit -m "deploy(${{ inputs.service_name }}): update image tag to ${{ github.sha }}" || echo "No changes to commit"
+          git push origin main

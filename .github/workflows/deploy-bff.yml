@@ -1,0 +1,18 @@
+name: 🔐 Deploy BFF Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'services/gateways/bff/**'
+      - '.github/workflows/deploy-bff.yml'
+
+jobs:
+  call-builder:
+    uses: ./.github/workflows/reusable-build-push.yml
+    with:
+      service_name: "bff"
+      service_path: "./services/gateways/bff"
+      helm_values_path: "./k8s/apps/bff/values.yaml"
+    secrets:
+      inherit

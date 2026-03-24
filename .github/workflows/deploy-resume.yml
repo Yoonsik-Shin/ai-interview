@@ -1,0 +1,18 @@
+name: 🔐 Deploy Resume Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'services/domains/resume/**'
+      - '.github/workflows/deploy-resume.yml'
+
+jobs:
+  call-builder:
+    uses: ./.github/workflows/reusable-build-push.yml
+    with:
+      service_name: "resume"
+      service_path: "./services/domains/resume"
+      helm_values_path: "./k8s/apps/resume/values.yaml"
+    secrets:
+      inherit
