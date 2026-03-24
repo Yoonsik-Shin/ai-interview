@@ -5,10 +5,14 @@ set -e
 # 🚀 ALL-Azure AKS 마이그레이션 통합 가동 스크립트
 # ==========================================
 
-echo "== [1/4] Terraform 인프라 프로비저닝 시작 =="
+echo "== [1/4] Terraform 인프라 프로비저닝 (증축) =="
 cd terraform
+# 초기 전면 생성 모드가 아닌 기존 Final_2 AKS 활용 분기로 변수 오버라이딩 적용
 terraform init
-terraform apply -auto-approve
+terraform apply -auto-approve \
+  -var="create_resource_group=false" \
+  -var="create_aks=false" \
+  -var="resource_group_name=Final_2"
 cd ..
 
 echo "== [2/4] AKS 자격 증명(Kubeconfig) 취득 =="

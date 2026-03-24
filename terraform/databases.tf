@@ -2,11 +2,11 @@
 
 resource "azurerm_postgresql_flexible_server" "db" {
   name                   = "unbrdn-postgres-server"
-  resource_group_name    = data.azurerm_resource_group.unbrdn.name
-  location               = data.azurerm_resource_group.unbrdn.location
+  resource_group_name    = local.rg_name
+  location               = local.rg_location
   version                = "15"
   administrator_login    = "psqladmin"
-  administrator_password = "SecurePassword123!"
+  administrator_password = var.db_password
 
   sku_name   = "GP_Standard_D2s_v3"
   storage_mb = 32768
@@ -14,11 +14,11 @@ resource "azurerm_postgresql_flexible_server" "db" {
 
 # 🔴 Azure Cache for Redis (Track 3)
 resource "azurerm_redis_cache" "redis" {
-  name                = "unbrdn-redis-track3"
-  resource_group_name = data.azurerm_resource_group.unbrdn.name
-  location            = data.azurerm_resource_group.unbrdn.location
-  capacity            = 1
-  family              = "C"
-  sku_name            = "Standard"
+  name                 = "unbrdn-redis-track3"
+  resource_group_name  = local.rg_name
+  location             = local.rg_location
+  capacity             = 1
+  family               = "C"
+  sku_name             = "Standard"
   non_ssl_port_enabled = false
 }
