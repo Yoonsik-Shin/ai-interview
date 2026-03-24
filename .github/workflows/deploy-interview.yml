@@ -17,7 +17,7 @@ jobs:
     uses: ./.github/workflows/reusable-build-push.yml
     with:
       service_name: "interview"
-      service_path: "./services/domains/interview"
+      service_path: "./services/domains"
       helm_values_path: "./k8s/apps/interview/values.yaml"
       dockerfile_path: "./services/domains/Dockerfile"
     secrets:

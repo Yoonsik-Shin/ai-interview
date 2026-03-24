@@ -18,7 +18,7 @@ jobs:
     uses: ./.github/workflows/reusable-build-push.yml
     with:
       service_name: "auth"
-      service_path: "./services/domains/auth"
+      service_path: "./services/domains"
       helm_values_path: "./k8s/apps/auth/values.yaml"
       dockerfile_path: "./services/domains/Dockerfile"
     secrets:

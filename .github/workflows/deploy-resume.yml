@@ -17,7 +17,7 @@ jobs:
     uses: ./.github/workflows/reusable-build-push.yml
     with:
       service_name: "resume"
-      service_path: "./services/domains/resume"
+      service_path: "./services/domains"
       helm_values_path: "./k8s/apps/resume/values.yaml"
       dockerfile_path: "./services/domains/Dockerfile"
     secrets:

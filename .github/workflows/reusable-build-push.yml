@@ -50,6 +50,7 @@ jobs:
           docker build \
             --build-context proto=services/proto \
             -f "$DOCKERFILE" \
+            --build-arg MODULE_NAME=${{ inputs.service_name }} \
             -t unbrdnacr.azurecr.io/${{ inputs.service_name }}:${{ github.sha }} \
             -t unbrdnacr.azurecr.io/${{ inputs.service_name }}:latest \
             ${{ inputs.service_path }}
@@ -76,4 +77,5 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add ${{ inputs.helm_values_path }}
           git commit -m "deploy(${{ inputs.service_name }}): update image tag to ${{ github.sha }}" || echo "No changes to commit"
+          git pull origin ${{ github.ref_name }} --rebase # 👈 병렬 푸시 충돌 방지용 리베이스
           git push origin ${{ github.ref_name }}
