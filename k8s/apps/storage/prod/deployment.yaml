@@ -48,7 +48,7 @@ spec:
                 - name: ocir-secret
             containers:
                 - name: storage
-                  image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-storage:${IMAGE_TAG}
+                  image: unbrdnacr.azurecr.io/storage:ff8d25812965058e5a098b9a7c9a48be15a4d63e
                   imagePullPolicy: Always
                   ports:
                       - containerPort: 8000
