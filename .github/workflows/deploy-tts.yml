@@ -13,6 +13,6 @@ jobs:
     with:
       service_name: "tts"
       service_path: "./services/infra/tts"
-      helm_values_path: "./k8s/apps/tts/values.yaml"
+      helm_values_path: "./k8s/apps/tts/prod/deployment.yaml"
     secrets:
       inherit

@@ -13,6 +13,6 @@ jobs:
     with:
       service_name: "bff"
       service_path: "./services/gateways/bff"
-      helm_values_path: "./k8s/apps/bff/values.yaml"
+      helm_values_path: "./k8s/apps/bff/prod/deployment.yaml"
     secrets:
       inherit

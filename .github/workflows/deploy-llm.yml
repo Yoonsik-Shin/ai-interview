@@ -13,6 +13,6 @@ jobs:
     with:
       service_name: "llm"
       service_path: "./services/infra/llm"
-      helm_values_path: "./k8s/apps/llm/values.yaml"
+      helm_values_path: "./k8s/apps/llm/prod/deployment.yaml"
     secrets:
       inherit

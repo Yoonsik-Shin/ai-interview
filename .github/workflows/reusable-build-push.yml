@@ -11,10 +11,10 @@ on:
         required: true
         type: string
         description: "빌드할 소스 코드 디렉토리 경로"
-      helm_values_path:
+      helm_values_path: # input name 유지 (동 호환성)
         required: true
         type: string
-        description: "ArgoCD가 바라볼 values.yaml 경로"
+        description: "ArgoCD가 바라볼 deployment.yaml 혹은 values.yaml 경로"
 
 jobs:
   build-and-push:
@@ -44,12 +44,18 @@ jobs:
           docker push unbrdnacr.azurecr.io/${{ inputs.service_name }}:${{ github.sha }}
           docker push unbrdnacr.azurecr.io/${{ inputs.service_name }}:latest
 
-      # 💡 ArgoCD GitOps 태그 갱신 부 (백푸시)
-      - name: 🌿 Update Helm Image Tag (GitOps Sync)
+      # 💡 ArgoCD GitOps를 위한 이미지 태그 백푸시 (Helm / Raw YAML 둘 다 대응)
+      - name: 🌿 Update Image Tag (GitOps Sync)
         run: |
-          sed -i 's/tag: .*/tag: "${{ github.sha }}"/g' ${{ inputs.helm_values_path }}
+          # 1. Helm values.yaml 형태인 경우
+          if [[ "${{ inputs.helm_values_path }}" == *"values.yaml" ]]; then
+            sed -i 's/tag: .*/tag: "${{ github.sha }}"/g' ${{ inputs.helm_values_path }}
+          # 2. 일반 deployment.yaml 형태인 경우 (이미지 풀 경로 교체)
+          else
+            sed -i "s|image: .*|image: unbrdnacr.azurecr.io/${{ inputs.service_name }}:${{ github.sha }}|g" ${{ inputs.helm_values_path }}
+          fi
 
-      - name: 💾 Commit and Push values.yaml
+      - name: 💾 Commit and Push Deployment Trigger
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"

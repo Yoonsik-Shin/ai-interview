@@ -13,6 +13,6 @@ jobs:
     with:
       service_name: "socket"
       service_path: "./services/gateways/socket"
-      helm_values_path: "./k8s/apps/socket/values.yaml"
+      helm_values_path: "./k8s/apps/socket/prod/deployment.yaml"
     secrets:
       inherit
