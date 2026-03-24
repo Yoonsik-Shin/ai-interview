@@ -6,6 +6,10 @@
 # Release 이름을 redis로 설정 (기존 서비스 이름과 호환)
 fullnameOverride: redis
 
+# 이미지 버전 명시 (Docker Hub에서 삭제된 태그 방지)
+image:
+    tag: "7.2.6-debian-12-r0"
+
 # 전역 설정
 global:
     redis:
@@ -21,6 +25,8 @@ architecture: replication
 # Sentinel 모드 활성화
 sentinel:
     enabled: true
+    image:
+        tag: "7.2.6-debian-12-r0"
     quorum: 2
     resources:
         requests:
