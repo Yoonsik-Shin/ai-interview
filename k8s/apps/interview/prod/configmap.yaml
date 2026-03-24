@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: core-config
+  name: interview-config
   namespace: unbrdn
 data:
   # Server
@@ -11,7 +11,7 @@ data:
   # Kafka
   kafka-bootstrap-servers: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
-  SPRING_KAFKA_CONSUMER_GROUP_ID: "core-streaming-group"
+  SPRING_KAFKA_CONSUMER_GROUP_ID: "interview-streaming-group"
   SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: "latest"
   KAFKA_DOCUMENT_PROCESS_TOPIC: "document.process"
   KAFKA_DOCUMENT_PROCESSED_TOPIC: "document.processed"

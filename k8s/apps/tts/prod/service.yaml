@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tts
+  namespace: unbrdn
+  labels:
+    app: tts
+spec:
+  selector:
+    app: tts
+  ports:
+    - name: grpc
+      port: 50053
+      targetPort: 50053
+      protocol: TCP
+  type: ClusterIP

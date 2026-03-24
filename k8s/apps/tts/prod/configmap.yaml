@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tts-config
+  namespace: unbrdn
+data:
+  # Redis
+  REDIS_HOST: "redis.unbrdn.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  # Redis Sentinel Configuration
+  REDIS_SENTINEL_HOSTS: "redis-node-0.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-1.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-2.redis-headless.unbrdn.svc.cluster.local:26379"
+  REDIS_SENTINEL_HOST: "redis-node-0.redis-headless.unbrdn.svc.cluster.local"
+  REDIS_SENTINEL_PORT: "26379"
+  REDIS_SENTINEL_NAME: "mymaster"
+  # Redis Connection
+  REDIS_SOCKET_TIMEOUT: "0"
+  REDIS_CONNECT_TIMEOUT: "5"
+  REDIS_HEALTH_CHECK_INTERVAL: "10"
+  REDIS_SOCKET_KEEPALIVE: "true"
+  REDIS_TCP_KEEPIDLE: "30"
+  REDIS_TCP_KEEPINTVL: "10"
+  REDIS_TCP_KEEPCNT: "3"
+  REDIS_BLOCKING_TIMEOUT: "5"
+
+  # TTS 설정
+  EDGE_TTS_ENABLED: "true"
+
+  # Queue / PubSub
+  TTS_INPUT_QUEUE: "tts:sentence:queue"
+  TTS_PUBSUB_CHANNEL_TEMPLATE: "interview:audio:{interviewId}"
+
+  # Health Check (gRPC)
+  TTS_GRPC_PORT: "50053"
