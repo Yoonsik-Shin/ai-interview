@@ -19,9 +19,6 @@ spec:
         environment: prod
     spec:
       # AI 전용 노드(gpupool-inference)에 배치 - sentence-transformers GPU 가속
-      nodeSelector:
-        role: inference
-
       containers:
         - name: document
           image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-document:${IMAGE_TAG}

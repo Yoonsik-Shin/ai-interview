@@ -27,9 +27,6 @@ spec:
             matchLabels:
               app: llm
       # OpenAI API 외부 호출만 수행 - GPU 불필요, apppool에 배치
-      nodeSelector:
-        role: app
-
       containers:
         - name: llm
           image: unbrdnacr.azurecr.io/llm:f25f1671cef3582249685ad84a0115b5600ed91b
