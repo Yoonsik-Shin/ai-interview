@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import me.unbrdn.core.common.adapter.out.persistence.entity.BaseTimeJpaEntity;
 import me.unbrdn.core.interview.domain.enums.PassFailStatus;
+import me.unbrdn.core.interview.domain.enums.ReportGenerationStatus;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -28,6 +29,10 @@ public class InterviewReportsJpaEntity extends BaseTimeJpaEntity {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "interview_id", nullable = false, unique = true)
     private InterviewSessionJpaEntity interview;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "generation_status", nullable = false, length = 20)
+    private ReportGenerationStatus generationStatus;
 
     @Column(name = "total_score", nullable = false)
     private Integer totalScore;

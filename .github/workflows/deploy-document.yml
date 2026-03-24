@@ -1,0 +1,23 @@
+name: 🔐 Deploy Document Service
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch: # 수동 가동 지원
+
+  push:
+    branches: [ main, dev ]
+    paths:
+      - 'services/infra/document/**'
+      - '.github/workflows/deploy-document.yml'
+
+jobs:
+  call-builder:
+    uses: ./.github/workflows/reusable-build-push.yml
+    with:
+      service_name: "document"
+      service_path: "./services/infra/document"
+      helm_values_path: "./k8s/apps/document/prod/deployment.yaml"
+    secrets:
+      inherit

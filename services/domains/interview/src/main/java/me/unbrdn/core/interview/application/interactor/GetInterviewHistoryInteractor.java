@@ -1,12 +1,14 @@
 package me.unbrdn.core.interview.application.interactor;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import me.unbrdn.core.interview.adapter.out.mongodb.entity.InterviewMessageDocument;
+import me.unbrdn.core.interview.adapter.out.persistence.entity.InterviewMessageJpaEntity;
+import me.unbrdn.core.interview.adapter.out.persistence.repository.InterviewMessageJpaRepository;
 import me.unbrdn.core.interview.application.port.in.GetInterviewHistoryUseCase;
-import me.unbrdn.core.interview.application.port.out.LoadInterviewHistoryPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,27 +18,21 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GetInterviewHistoryInteractor implements GetInterviewHistoryUseCase {
 
-    private final LoadInterviewHistoryPort loadHistoryPort;
+    private final InterviewMessageJpaRepository messageJpaRepository;
 
     @Override
     @Transactional(readOnly = true)
     public List<InterviewMessageDto> execute(String interviewId) {
         log.info("Executing GetInterviewHistory: interviewId={}", interviewId);
 
-        // TODO: Add authorization check (verify user owns this interview)
-        // This will be implemented when we add security context
+        List<InterviewMessageJpaEntity> entities = messageJpaRepository
+                .findByInterview_IdOrderByCreatedAtAsc(UUID.fromString(interviewId));
 
-        List<InterviewMessageDocument> documents = loadHistoryPort.loadHistory(interviewId);
-
-        return documents.stream().map(this::toDto).collect(Collectors.toList());
+        return entities.stream().map(this::toDto).collect(Collectors.toList());
     }
 
-    private InterviewMessageDto toDto(InterviewMessageDocument doc) {
-        return new InterviewMessageDto(
-                doc.getRole(),
-                doc.getType(),
-                doc.getContent(),
-                doc.getTimestamp() != null ? doc.getTimestamp().toString() : null,
-                doc.getPayload());
+    private InterviewMessageDto toDto(InterviewMessageJpaEntity entity) {
+        return new InterviewMessageDto(entity.getRole() != null ? entity.getRole().name() : "", "", entity.getContent(),
+                entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null, Map.of());
     }
 }

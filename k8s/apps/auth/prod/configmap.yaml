@@ -23,6 +23,8 @@ data:
   REDIS_HOST: "redis.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
+  SPRING_DATA_REDIS_HOST: "redis.unbrdn.svc.cluster.local"
+  SPRING_DATA_REDIS_PORT: "6379"
 
   # JPA
   SPRING_JPA_HIBERNATE_DDL_AUTO: "validate"

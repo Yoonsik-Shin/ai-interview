@@ -7,16 +7,22 @@ import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import java.util.List;
 import me.unbrdn.core.grpc.common.v1.InterviewStageProto;
-// Removed ConversationHistory import
 import me.unbrdn.core.grpc.llm.v1.GenerateRequest;
+import me.unbrdn.core.grpc.llm.v1.GenerateReportRequest;
+import me.unbrdn.core.grpc.llm.v1.GenerateReportResponse;
 import me.unbrdn.core.grpc.llm.v1.LlmServiceGrpc;
+import me.unbrdn.core.grpc.llm.v1.ReportMessage;
 import me.unbrdn.core.grpc.llm.v1.TokenChunk;
+import me.unbrdn.core.interview.adapter.out.persistence.entity.InterviewMessageJpaEntity;
 import me.unbrdn.core.interview.application.dto.command.CallLlmCommand;
 import me.unbrdn.core.interview.application.dto.command.ProcessLlmTokenCommand;
+import me.unbrdn.core.interview.application.dto.result.GenerateReportResult;
 import me.unbrdn.core.interview.application.port.in.ProcessLlmTokenUseCase;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
+import me.unbrdn.core.interview.domain.enums.PassFailStatus;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
 
@@ -141,6 +147,37 @@ public class LlmGrpcAdapter implements CallLlmPort {
                         .build();
 
         processLlmTokenUseCase.execute(tokenCommand);
+    }
+
+    @Override
+    public GenerateReportResult generateReport(String interviewId, List<InterviewMessageJpaEntity> messages) {
+        List<ReportMessage> protoMessages = messages.stream()
+                .map(msg -> ReportMessage.newBuilder()
+                        .setRole(msg.getRole() != null ? msg.getRole().name() : "")
+                        .setContent(msg.getContent() != null ? msg.getContent() : "")
+                        .build())
+                .toList();
+
+        GenerateReportRequest request = GenerateReportRequest.newBuilder()
+                .setInterviewId(interviewId)
+                .addAllMessages(protoMessages)
+                .build();
+
+        GenerateReportResponse response = llmServiceBlockingStub.generateReport(request);
+
+        PassFailStatus passFailStatus;
+        try {
+            passFailStatus = PassFailStatus.valueOf(response.getPassFailStatus());
+        } catch (IllegalArgumentException e) {
+            passFailStatus = PassFailStatus.HOLD;
+        }
+
+        return GenerateReportResult.builder()
+                .totalScore(response.getTotalScore())
+                .passFailStatus(passFailStatus)
+                .summaryText(response.getSummaryText())
+                .resumeFeedback(response.getResumeFeedback())
+                .build();
     }
 
     private InterviewStageProto toProtoInterviewStage(InterviewStage stage) {

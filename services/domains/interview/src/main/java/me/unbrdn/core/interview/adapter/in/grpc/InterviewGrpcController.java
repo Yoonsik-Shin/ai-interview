@@ -11,8 +11,12 @@ import me.unbrdn.core.grpc.interview.v1.CancelInterviewRequest;
 import me.unbrdn.core.grpc.interview.v1.CancelInterviewResponse;
 import me.unbrdn.core.grpc.interview.v1.CompleteInterviewRequest;
 import me.unbrdn.core.grpc.interview.v1.CompleteInterviewResponse;
+import me.unbrdn.core.grpc.interview.v1.CreateInterviewReportRequest;
+import me.unbrdn.core.grpc.interview.v1.CreateInterviewReportResponse;
 import me.unbrdn.core.grpc.interview.v1.CreateInterviewRequest;
 import me.unbrdn.core.grpc.interview.v1.CreateInterviewResponse;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewReportRequest;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewReportResponse;
 import me.unbrdn.core.grpc.interview.v1.GetInterviewHistoryRequest;
 import me.unbrdn.core.grpc.interview.v1.GetInterviewHistoryResponse;
 import me.unbrdn.core.grpc.interview.v1.GetInterviewStageRequest;
@@ -31,8 +35,10 @@ import me.unbrdn.core.grpc.interview.v1.TransitionStageRequest;
 import me.unbrdn.core.grpc.interview.v1.TransitionStageResponse;
 import me.unbrdn.core.interview.application.dto.command.CreateInterviewCommand;
 import me.unbrdn.core.interview.application.dto.result.CreateInterviewResult;
+import me.unbrdn.core.interview.application.port.in.CreateInterviewReportUseCase;
 import me.unbrdn.core.interview.application.port.in.CreateInterviewUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewHistoryUseCase;
+import me.unbrdn.core.interview.application.port.in.GetInterviewReportUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewHistoryUseCase.InterviewMessageDto;
 import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery;
@@ -67,6 +73,8 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
     private final me.unbrdn.core.interview.application.port.in.ForceStageUseCase forceStageUseCase;
     private final me.unbrdn.core.interview.application.port.in.GetInterviewUseCase
             getInterviewUseCase;
+    private final CreateInterviewReportUseCase createInterviewReportUseCase;
+    private final GetInterviewReportUseCase getInterviewReportUseCase;
     private final InterviewGrpcMapper mapper;
 
     @Override
@@ -425,6 +433,57 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             responseObserver.onCompleted();
         } catch (Exception e) {
             log.error("Failed to get interview", e);
+            io.grpc.Status status = GlobalGrpcExceptionHandler.toGrpcStatus(e);
+            responseObserver.onError(status.asRuntimeException());
+        }
+    }
+
+    @Override
+    public void createInterviewReport(
+            CreateInterviewReportRequest request,
+            StreamObserver<CreateInterviewReportResponse> responseObserver) {
+        try {
+            UUID interviewId = UUID.fromString(request.getInterviewId());
+            var command = new CreateInterviewReportUseCase.CreateReportCommand(interviewId);
+            var result = createInterviewReportUseCase.execute(command);
+
+            CreateInterviewReportResponse response = CreateInterviewReportResponse.newBuilder()
+                    .setReportId(result.reportId().toString())
+                    .setGenerationStatus(result.generationStatus().name())
+                    .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("Failed to create interview report", e);
+            io.grpc.Status status = GlobalGrpcExceptionHandler.toGrpcStatus(e);
+            responseObserver.onError(status.asRuntimeException());
+        }
+    }
+
+    @Override
+    public void getInterviewReport(
+            GetInterviewReportRequest request,
+            StreamObserver<GetInterviewReportResponse> responseObserver) {
+        try {
+            UUID interviewId = UUID.fromString(request.getInterviewId());
+            UUID reportId = UUID.fromString(request.getReportId());
+            var query = new GetInterviewReportUseCase.GetReportQuery(interviewId, reportId);
+            var result = getInterviewReportUseCase.execute(query);
+
+            GetInterviewReportResponse response = GetInterviewReportResponse.newBuilder()
+                    .setReportId(result.reportId().toString())
+                    .setGenerationStatus(result.generationStatus().name())
+                    .setTotalScore(result.totalScore())
+                    .setPassFailStatus(result.passFailStatus().name())
+                    .setSummaryText(result.summaryText() != null ? result.summaryText() : "")
+                    .setResumeFeedback(result.resumeFeedback() != null ? result.resumeFeedback() : "")
+                    .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("Failed to get interview report", e);
             io.grpc.Status status = GlobalGrpcExceptionHandler.toGrpcStatus(e);
             responseObserver.onError(status.asRuntimeException());
         }

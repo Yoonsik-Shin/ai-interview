@@ -97,22 +97,6 @@ spec:
             # Strimzi Kafka 클러스터 연결 정보
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-cluster-kafka-bootstrap.kafka:9092"
-            # MongoDB 연결 정보 (History 저장용)
-            - name: SPRING_DATA_MONGODB_HOST
-              value: "mongo.unbrdn.svc.cluster.local"
-            - name: SPRING_DATA_MONGODB_PORT
-              value: "27017"
-            - name: SPRING_DATA_MONGODB_DATABASE
-              value: "unbrdn"
-            - name: SPRING_DATA_MONGODB_USERNAME
-              value: "root"
-            - name: SPRING_DATA_MONGODB_PASSWORD
-              value: "rootpassword"
-            - name: SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE
-              value: "admin"
-            # Force Java System Properties (binding issue workaround)
-            - name: JAVA_TOOL_OPTIONS
-              value: "-Dspring.data.mongodb.host=mongo.unbrdn.svc.cluster.local -Dspring.data.mongodb.port=27017 -Dspring.data.mongodb.database=unbrdn -Dspring.data.mongodb.username=root -Dspring.data.mongodb.password=rootpassword -Dspring.data.mongodb.authentication-database=admin"
           resources:
             requests:
               memory: "512Mi"

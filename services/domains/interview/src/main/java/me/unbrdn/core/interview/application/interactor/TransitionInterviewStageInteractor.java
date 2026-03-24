@@ -32,6 +32,7 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
     private final ManageSessionStatePort sessionStatePort;
     private final ProduceInterviewEventPort produceInterviewEventPort;
     private final PublishTranscriptPort publishTranscriptPort;
+    private final GenerateReportInteractor generateReportInteractor;
 
     @Override
     public void execute(TransitionStageCommand command) {
@@ -66,6 +67,8 @@ public class TransitionInterviewStageInteractor implements TransitionInterviewSt
         case CLOSING_GREETING -> {
             // CLOSING_GREETING 단계 진입 시 마무리 인사 자동 발화 트리거
             triggerClosingGreeting(session, state);
+            // TTS 재생 중 비동기로 리포트 생성 (병렬 실행)
+            generateReportInteractor.triggerReportGeneration(session.getId());
         }
         case COMPLETED -> {
             session.complete();

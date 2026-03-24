@@ -19,8 +19,6 @@ data:
   KAFKA_BROKER: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
   STT_GRPC_HOST: "stt.unbrdn.svc.cluster.local"
   STT_GRPC_PORT: "50052"
-  CORE_GRPC_HOST: "core.unbrdn.svc.cluster.local"
-  CORE_GRPC_PORT: "9090"
 
   AUTH_GRPC_HOST: "auth.unbrdn.svc.cluster.local"
   AUTH_GRPC_PORT: "9090"
