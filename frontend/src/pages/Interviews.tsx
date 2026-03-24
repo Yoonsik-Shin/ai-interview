@@ -114,7 +114,7 @@ export function Interviews() {
 
                 <div className={styles.cardMeta}>
                   <span>🕒 {formatDate(item.startedAt)}</span>
-                  <span>⏱️ 약 {item.targetDurationMinutes}분 소요</span>
+                  <span>⏱️ 약 {item.scheduledDurationMinutes}분 소요</span>
                 </div>
 
                 <div className={styles.cardAction}>

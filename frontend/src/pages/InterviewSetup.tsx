@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   createInterview,
   type CreateInterviewReq,
-  type InterviewRole,
+  type InterviewPersona,
   type InterviewPersonality,
 } from "@/api/interview";
 import {
@@ -28,7 +28,7 @@ export function InterviewSetup() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // State
-  const [selectedRoles, setSelectedRoles] = useState<InterviewRole[]>([
+  const [selectedRoles, setSelectedRoles] = useState<InterviewPersona[]>([
     "LEADER",
     "TECH",
   ]);
@@ -36,16 +36,15 @@ export function InterviewSetup() {
     useState<InterviewPersonality>("COMFORTABLE");
 
   const [form, setForm] = useState<
-    Omit<CreateInterviewReq, "resumeId" | "interviewerRoles" | "personality">
+    Omit<CreateInterviewReq, "resumeId" | "participatingPersonas" | "personality">
   >({
     companyName: "",
     domain: "프론트엔드",
     type: "PRACTICE",
-    targetDurationMinutes: 30,
-    selfIntroduction: "",
+    scheduledDurationMinutes: 30,
   });
 
-  const toggleRole = (role: InterviewRole) => {
+  const toggleRole = (role: InterviewPersona) => {
     if (role === "LEADER") return; // LEADER is mandatory
     setSelectedRoles((prev) => {
       const isSelected = prev.includes(role);
@@ -273,10 +272,10 @@ export function InterviewSetup() {
 
   function adjustDuration(amount: number) {
     setForm((f) => {
-      const next = f.targetDurationMinutes + amount;
+      const next = f.scheduledDurationMinutes + amount;
       return {
         ...f,
-        targetDurationMinutes: Math.max(10, Math.min(120, next)),
+        scheduledDurationMinutes: Math.max(10, Math.min(120, next)),
       };
     });
   }
@@ -352,24 +351,10 @@ export function InterviewSetup() {
           ? selectedResumeId
           : uploadedResumeId || undefined;
 
-      // 이력서 유효성 검사 (탭 상태에 따라 메시지 분기)
-      if (isNewUpload) {
-        if (!uploadedResumeId) {
-          setError("이력서를 먼저 업로드해주세요.");
-          setLoading(false);
-          return;
-        }
-      } else {
-        if (!selectedResumeId) {
-          setError("이력서를 먼저 선택해주세요.");
-          setLoading(false);
-          return;
-        }
-      }
       const payload: CreateInterviewReq = {
         ...form,
         resumeId,
-        interviewerRoles: selectedRoles,
+        participatingPersonas: selectedRoles,
         personality: personality,
       };
 
@@ -709,13 +694,13 @@ export function InterviewSetup() {
                     },
                   ].map((p) => {
                     const isSelected = selectedRoles.includes(
-                      p.id as InterviewRole,
+                      p.id as InterviewPersona,
                     );
                     return (
                       <div
                         key={p.id}
                         className={`${styles.personaCard} ${isSelected ? styles.selected : ""} ${p.id === "LEADER" ? styles.mandatory : ""}`}
-                        onClick={() => toggleRole(p.id as InterviewRole)}
+                        onClick={() => toggleRole(p.id as InterviewPersona)}
                       >
                         <div className={styles.cardIcon}>{p.icon}</div>
                         <div className={styles.cardTitle}>
@@ -759,7 +744,7 @@ export function InterviewSetup() {
                         max={120}
                         autoFocus
                         className={styles.durationInput}
-                        value={form.targetDurationMinutes}
+                        value={form.scheduledDurationMinutes}
                         onBlur={() => setIsEditingDuration(false)}
                         onKeyDown={(e) =>
                           e.key === "Enter" && setIsEditingDuration(false)
@@ -767,7 +752,7 @@ export function InterviewSetup() {
                         onChange={(e) =>
                           setForm((f) => ({
                             ...f,
-                            targetDurationMinutes: Number(e.target.value),
+                            scheduledDurationMinutes: Number(e.target.value),
                           }))
                         }
                       />
@@ -776,7 +761,7 @@ export function InterviewSetup() {
                         className={styles.durationValue}
                         onClick={() => setIsEditingDuration(true)}
                       >
-                        <span>{form.targetDurationMinutes}</span>
+                        <span>{form.scheduledDurationMinutes}</span>
                         <small>분</small>
                       </div>
                     )}
@@ -936,7 +921,7 @@ export function InterviewSetup() {
                     <div className={styles.summaryItem}>
                       <span className={styles.summaryLabel}>목표 시간</span>
                       <span className={styles.summaryValue}>
-                        {form.targetDurationMinutes}분
+                        {form.scheduledDurationMinutes}분
                       </span>
                     </div>
                     <div className={styles.summaryItem}>
