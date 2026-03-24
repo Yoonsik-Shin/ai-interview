@@ -26,33 +26,9 @@ spec:
           labelSelector:
             matchLabels:
               app: llm
-      # Main 노드에만 배치 (안정성 확보 - Langchain/RAG)
-      # 참고: STT/TTS/벡터화는 향후 별도 서비스로 분리하여 Preemptible 노드에서 실행
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app: llm
-                topologyKey: kubernetes.io/hostname
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                  - key: node-pool
-                    operator: In
-                    values:
-                      - main
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: node-pool
-                    operator: In
-                    values:
-                      - main
+      # AI 전용 노드(gpupool-inference)에 배치
+      nodeSelector:
+        role: inference
       imagePullSecrets:
         - name: ocir-secret
       containers:

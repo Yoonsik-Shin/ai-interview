@@ -26,24 +26,9 @@ spec:
           labelSelector:
             matchLabels:
               app: tts
-      # AI 전용 노드에 배치
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app: tts
-                topologyKey: kubernetes.io/hostname
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: node-pool
-                    operator: In
-                    values:
-                      - main
+      # AI 전용 노드(gpupool-inference)에 배치
+      nodeSelector:
+        role: inference
       imagePullSecrets:
         - name: ocir-secret
       containers:

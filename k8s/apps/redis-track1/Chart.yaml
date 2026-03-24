@@ -1,0 +1,11 @@
+apiVersion: v2
+name: redis-track1
+description: Track 1 Redis (Sentinel Mode, Pub/Sub, Buffer)
+type: application
+version: 0.1.0
+appVersion: "7.2.4"
+
+dependencies:
+  - name: redis
+    version: "19.0.3" # Bitnami Redis stable
+    repository: "https://charts.bitnami.com/bitnami"

@@ -9,7 +9,7 @@ data:
   GRPC_PORT: "50051"
   OPENAI_MODEL: "gpt-4o-mini"
 
-  REDIS_HOST: "redis.unbrdn.svc.cluster.local"
+  REDIS_HOST: "redis-node-0.redis-headless.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
   # Redis Sentinel (3 Pod)
