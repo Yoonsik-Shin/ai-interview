@@ -78,12 +78,12 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
+            - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+              value: "org.postgresql.Driver"
             # PostgreSQL 연결 정보 (로컬 개발용)
             # 프로덕션: Oracle Autonomous Database 사용
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres:5432/interview_db?currentSchema=auth&options=-c%20search_path=auth,public"
-            - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
-              value: "org.postgresql.Driver"
             - name: SPRING_FLYWAY_SCHEMAS
               value: "auth,public"
             - name: SPRING_FLYWAY_CREATE_SCHEMAS

@@ -1,54 +1,30 @@
 # ===============================
 # Track 1 Redis: Sentinel Mode (Bitnami)
 # ===============================
-redis:
+image:
+  registry: docker.io
+  repository: bitnami/redis
+  tag: "7.2.4-debian-12-r22" # 👈 실존하는 최신 전압 고정
+
+sentinel:
+  enabled: true
   image:
     registry: docker.io
-    repository: bitnami/redis
-    tag: "7.2"
-  fullnameOverride: "redis"
-  global:
-    redis:
-  image:
-    registry: docker.io
-    repository: bitnami/redis
-    tag: "7.2"
-      password: "SecureTrack1Password" # 가승인 패스워드
+    repository: bitnami/redis-sentinel
+    tag: "7.2.4-debian-12-r19" # 👈 실존하는 최신 전압 고정
 
-  sentinel:
-    enabled: true # Sentinel 활성화 (파드 3개 분산)
+auth:
+  enabled: true
+  password: "SecureTrack1Password"
 
-  master:
-    nodeSelector:
-      role: app
-    persistence:
-      enabled: false # 디스크 쓰기 차단 (초고속 인메모리 파이프라인)
-    resources:
-      requests:
-        cpu: 200m
-        memory: 128Mi
-      limits:
-        cpu: 500m
-        memory: 256Mi
+master:
+  nodeSelector:
+    role: app
+  persistence:
+    enabled: false
 
-  replica:
-    nodeSelector:
-      role: app
-    persistence:
-      enabled: false
-    resources:
-      requests:
-        cpu: 100m
-        memory: 128Mi
-      limits:
-        cpu: 250m
-        memory: 128Mi
-
-  # 극강 속도 확보용 디스크 차단 추가 주입
-  redis:
-  image:
-    registry: docker.io
-    repository: bitnami/redis
-    tag: "7.2"
-    appendonly: "no"
-    save: ""
+replica:
+  nodeSelector:
+    role: app
+  persistence:
+    enabled: false

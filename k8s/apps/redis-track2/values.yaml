@@ -1,36 +1,27 @@
 # ===============================
 # Track 2 Redis: LLM 독점 격리 메모리 (Bitnami)
 # ===============================
-redis:
-  image:
-    registry: docker.io
-    repository: bitnami/redis
-    tag: "7.2"
-  global:
-    redis:
-  image:
-    registry: docker.io
-    repository: bitnami/redis
-    tag: "7.2"
-      password: "SecureTrack2Password"
+image:
+  registry: docker.io
+  repository: bitnami/redis
+  tag: "7.2.4-debian-12-r22" # 👈 실존하는 최신 전압 고정
 
-  replica:
-    replicaCount: 1 # Standard Master-Replica standalone
-    nodeSelector:
-      role: app
+auth:
+  enabled: true
+  password: "SecureTrack2Password"
 
-  master:
-    nodeSelector:
-      role: app
-    persistence:
-      enabled: true # 💡 파드 다운 시 대화 상태 복구용 디스크 활성
-      size: 8Gi
+replica:
+  replicaCount: 1
+  nodeSelector:
+    role: app
 
-  # AOF 켜기 (대화 복구 보장)
-  redis:
-  image:
-    registry: docker.io
-    repository: bitnami/redis
-    tag: "7.2"
-    appendonly: "yes"
-    maxmemory-policy: "volatile-lru"
+master:
+  nodeSelector:
+    role: app
+  persistence:
+    enabled: true
+    size: 8Gi
+
+# AOF 켜기 (대화 복구 보장)
+master:
+  configmap: "redis-track2-configuration"
