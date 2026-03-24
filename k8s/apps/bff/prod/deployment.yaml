@@ -56,7 +56,7 @@ spec:
         - name: ocir-secret
       containers:
         - name: bff
-          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-bff:${IMAGE_TAG}
+          image: unbrdnacr.azurecr.io/bff:728b871c186566f40b66c2824038593519fe6cf9
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
