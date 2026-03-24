@@ -83,7 +83,7 @@ spec:
             # PostgreSQL 연결 정보 (로컬 개발용)
             # 프로덕션: Oracle Autonomous Database 사용
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://unbrdn-postgres.postgres.database.azure.com:5432/interview_db?currentSchema=auth&options=-c%20search_path=auth,public"
+              value: "jdbc:postgresql://unbrdn-postgres.postgres.database.azure.com:5432/postgres?currentSchema=auth&options=-c%20search_path=auth,public"
             - name: SPRING_FLYWAY_SCHEMAS
               value: "auth,public"
             - name: SPRING_FLYWAY_CREATE_SCHEMAS
