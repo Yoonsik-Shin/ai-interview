@@ -1,9 +1,8 @@
-# 🌍 전면 Azure 100% Terraform Provider & Base RG
 provider "azurerm" {
   features {}
 }
 
-resource "azurerm_resource_group" "unbrdn" {
-  name     = "unbrdn-aks-rg"
-  location = "Korea Central"
+# 🌍 기존 리소스 그룹 읽기 (Final_2)
+data "azurerm_resource_group" "unbrdn" {
+  name = "Final_2"
 }

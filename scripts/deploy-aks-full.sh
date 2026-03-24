@@ -12,12 +12,12 @@ terraform apply -auto-approve
 cd ..
 
 echo "== [2/4] AKS 자격 증명(Kubeconfig) 취득 =="
-az aks get-credentials --resource-group unbrdn-aks-rg --name unbrdn-aks --overwrite-existing
+az aks get-credentials --resource-group Final_2 --name unbrdn-aks --overwrite-existing
 
 echo "== [3/4] ArgoCD 설치 (Namespace: argocd) =="
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update
-helm install argocd argo/argo-cd --namespace argocd --create-namespace \
+helm upgrade --install argocd argo/argo-cd --namespace argocd --create-namespace \
   --set server.service.type=LoadBalancer
 
 echo "== [4/4] ArgoCD 초기 Pass 조회 가이드 =="
