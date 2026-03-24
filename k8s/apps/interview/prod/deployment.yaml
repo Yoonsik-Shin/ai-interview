@@ -52,7 +52,7 @@ spec:
                       - main
       containers:
         - name: interview
-          image: interview:latest
+          image: unbrdnacr.azurecr.io/interview:b509fdeb867a2a7167d2275b28c89dd2fcf0b145
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
