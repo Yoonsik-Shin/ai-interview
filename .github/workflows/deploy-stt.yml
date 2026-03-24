@@ -2,7 +2,7 @@ name: 🔐 Deploy STT Service
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
     paths:
       - 'services/infra/stt/**'
       - '.github/workflows/deploy-stt.yml'

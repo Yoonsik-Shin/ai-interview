@@ -2,7 +2,7 @@ name: 🔐 Deploy LLM Service
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
     paths:
       - 'services/infra/llm/**'
       - '.github/workflows/deploy-llm.yml'

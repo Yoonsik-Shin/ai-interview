@@ -2,7 +2,7 @@ name: 🔐 Deploy Interview Service
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
     paths:
       - 'services/domains/interview/**'
       - '.github/workflows/deploy-interview.yml'

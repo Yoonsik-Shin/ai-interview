@@ -2,7 +2,7 @@ name: 🔐 Deploy Socket Service
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
     paths:
       - 'services/gateways/socket/**'
       - '.github/workflows/deploy-socket.yml'

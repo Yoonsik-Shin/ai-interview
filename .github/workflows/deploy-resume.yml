@@ -2,7 +2,7 @@ name: 🔐 Deploy Resume Service
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
     paths:
       - 'services/domains/resume/**'
       - '.github/workflows/deploy-resume.yml'

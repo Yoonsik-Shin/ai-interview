@@ -2,7 +2,7 @@ name: 🔐 Deploy TTS Service
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
     paths:
       - 'services/infra/tts/**'
       - '.github/workflows/deploy-tts.yml'
