@@ -33,7 +33,7 @@ spec:
         - name: ocir-secret
       containers:
         - name: stt
-          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-stt:${IMAGE_TAG}
+          image: unbrdnacr.azurecr.io/stt:d01111ff9a7ae8855f67155e60b7d054246491d6
           imagePullPolicy: Always
           ports:
             - containerPort: 50052
