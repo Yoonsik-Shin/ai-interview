@@ -42,5 +42,5 @@ data:
   LOG_LEVEL_CORE: "INFO"
 
   # Database (PostgreSQL - 로컬 환경)
-  datasource-url: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/unbrdn"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/unbrdn"
+  datasource-url: "jdbc:postgresql://unbrdn-postgres.postgres.database.azure.com:5432/unbrdn"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://unbrdn-postgres.postgres.database.azure.com:5432/unbrdn"
