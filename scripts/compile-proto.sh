@@ -41,10 +41,10 @@ compile_python_protos() {
 }
 
 # Python Services
-compile_python_protos "llm"
-compile_python_protos "stt"
-compile_python_protos "storage"
-compile_python_protos "document"
+compile_python_protos "infra/llm"
+compile_python_protos "infra/stt"
+compile_python_protos "infra/storage"
+compile_python_protos "infra/document"
 
 # Core Service (Java - Gradle이 자동 처리)
 echo "📦 Core Service (Java)..."
