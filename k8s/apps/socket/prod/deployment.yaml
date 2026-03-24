@@ -36,22 +36,7 @@ spec:
                   matchLabels:
                     app: socket
                 topologyKey: kubernetes.io/hostname
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                  - key: node-pool
-                    operator: In
-                    values:
-                      - main
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: node-pool
-                    operator: In
-                    values:
-                      - main
+
       imagePullSecrets:
         - name: ocir-secret
       containers:

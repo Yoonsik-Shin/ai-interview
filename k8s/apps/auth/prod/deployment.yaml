@@ -34,22 +34,7 @@ spec:
                   matchLabels:
                     app: auth
                 topologyKey: kubernetes.io/hostname
-        nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                  - key: node-pool
-                    operator: In
-                    values:
-                      - main
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: node-pool
-                    operator: In
-                    values:
-                      - main
+
       containers:
         - name: auth
           image: unbrdnacr.azurecr.io/auth:b509fdeb867a2a7167d2275b28c89dd2fcf0b145
