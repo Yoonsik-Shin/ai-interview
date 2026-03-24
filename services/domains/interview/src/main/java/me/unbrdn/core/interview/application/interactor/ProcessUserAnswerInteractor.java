@@ -103,9 +103,12 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
             long elapsedSeconds = awaitElapsedSeconds(command.getInterviewId());
             int retryCount = getSelfIntroRetryCount(command.getInterviewId());
 
-            boolean isSkip = command.getUserText() != null && command.getUserText().contains("자기소개 생략");
+            boolean isForcedCompletion =
+                    command.getUserText() != null
+                            && (command.getUserText().contains("자기소개 생략")
+                                    || command.getUserText().contains("자기소개 시간 초과"));
 
-            if (!isSkip && elapsedSeconds < 30 && retryCount < 2) {
+            if (!isForcedCompletion && elapsedSeconds < 30 && retryCount < 2) {
                 log.info(
                         "Self intro too short (elapsed={}s), requesting retry (count={})",
                         elapsedSeconds,
@@ -123,8 +126,16 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                                 .build();
                 publishTranscriptPort.publish(retryEvent);
 
+                // Reset selfIntroStart so the next retry attempt measures elapsed from now
+                stringRedisTemplate.opsForHash().put(
+                        "interview:session:" + command.getInterviewId(),
+                        "selfIntroStart",
+                        String.valueOf(System.currentTimeMillis()));
+
                 // Revert state to LISTENING for next retry loop
-                state.setStatus(me.unbrdn.core.interview.domain.model.InterviewSessionState.Status.LISTENING);
+                state.setStatus(
+                        me.unbrdn.core.interview.domain.model.InterviewSessionState.Status
+                                .LISTENING);
                 sessionStatePort.saveState(command.getInterviewId(), state);
 
                 return; // Skip LLM call for a retry prompt
@@ -236,7 +247,8 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                 log.warn("Failed to parse selfIntroStart from Redis: {}", startObj);
             }
         } else {
-            log.warn("selfIntroStart not found in Redis. Socket might not have set it.");
+            log.warn("selfIntroStart not found in Redis. Treating as already completed to avoid accidental retry.");
+            return Long.MAX_VALUE;
         }
         return 0;
     }

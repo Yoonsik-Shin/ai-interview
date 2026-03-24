@@ -78,8 +78,8 @@ public class InterviewGrpcMapper {
                 .setInterviewId(summary.interviewId().toString())
                 .setStartedAt(summary.startedAt() != null ? summary.startedAt().toString() : "")
                 .setStatus(toProtoInterviewStatus(summary.status()))
-                .setCompanyName(summary.companyName())
-                .setDomain(summary.domain())
+                .setCompanyName(summary.companyName() != null ? summary.companyName() : "")
+                .setDomain(summary.domain() != null ? summary.domain() : "")
                 .setType(toProtoInterviewType(summary.type()))
                 .setScheduledDurationMinutes(summary.scheduledDurationMinutes())
                 .build();
@@ -98,8 +98,8 @@ public class InterviewGrpcMapper {
                         .setInterviewId(result.interviewId().toString())
                         .setStatus(toProtoInterviewStatus(result.status()))
                         .setType(toProtoInterviewType(result.type()))
-                        .setCompanyName(result.companyName())
-                        .setDomain(result.domain())
+                        .setCompanyName(result.companyName() != null ? result.companyName() : "")
+                        .setDomain(result.domain() != null ? result.domain() : "")
                         .setScheduledDurationMinutes(result.scheduledDurationMinutes());
 
         if (result.participatingPersonas() != null) {

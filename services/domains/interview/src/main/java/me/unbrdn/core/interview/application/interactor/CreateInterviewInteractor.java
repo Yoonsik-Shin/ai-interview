@@ -48,7 +48,7 @@ public class CreateInterviewInteractor implements CreateInterviewUseCase {
         List<String> participatingPersonas =
                 command.getRoles() == null || command.getRoles().isEmpty()
                         ? List.of("TECH")
-                        : command.getRoles();
+                        : new java.util.ArrayList<>(command.getRoles());
 
         String interviewId = UUID.randomUUID().toString();
 
@@ -57,7 +57,7 @@ public class CreateInterviewInteractor implements CreateInterviewUseCase {
                         interviewId,
                         command.getUserId(),
                         resumeId,
-                        null,
+                        command.getCompanyName(),
                         interviewType,
                         command.getDomain(),
                         command.getScheduledDurationMinutes(),

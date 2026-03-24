@@ -57,6 +57,7 @@ public class InterviewSessionState implements Serializable {
     public static InterviewSessionState fromEntity(InterviewSession session) {
         return InterviewSessionState.builder()
                 .resumeId(session.getResumeId() != null ? session.getResumeId().toString() : null)
+                .status(Status.READY) // 기본 상태값 READY 주입 (에러 방지용)
                 .currentDifficulty(3)
                 .lastInterviewerId("LEADER")
                 .turnCount(session.getTurnCount())

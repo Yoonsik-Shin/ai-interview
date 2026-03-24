@@ -1,7 +1,6 @@
 package me.unbrdn.core.interview.adapter.out.persistence.repository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import me.unbrdn.core.interview.adapter.out.persistence.entity.InterviewSessionJpaEntity;
 import me.unbrdn.core.interview.domain.enums.InterviewSessionStatus;

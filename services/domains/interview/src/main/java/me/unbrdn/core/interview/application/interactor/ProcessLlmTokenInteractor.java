@@ -214,9 +214,6 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
 
         // Check current stage and handle auto-transitions
         try {
-            var sessionOpt =
-                    interviewPort.loadById(java.util.UUID.fromString(command.getInterviewId()));
-
             me.unbrdn.core.interview.domain.model.InterviewSessionState state =
                     sessionStatePort
                             .getState(command.getInterviewId())
@@ -238,31 +235,10 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
                             .build();
             publishTranscriptPort.publish(turnCompleteCommand);
 
-            sessionOpt.ifPresent(
-                    session -> {
-                        InterviewStage currentStage = state.getCurrentStage();
-
-                        if (currentStage == InterviewStage.CLOSING_GREETING) {
-                            log.info(
-                                    "Closing greeting completed, transitioning to COMPLETED: interviewId={}",
-                                    command.getInterviewId());
-                            session.complete();
-                            state.setCurrentStage(InterviewStage.COMPLETED);
-                            state.setStatus(
-                                    me.unbrdn.core.interview.domain.model.InterviewSessionState
-                                            .Status.COMPLETED);
-                            sessionStatePort.saveState(command.getInterviewId(), state);
-                            interviewPort.save(session);
-
-                            // Publish INTERVIEW_COMPLETED event
-                            produceInterviewEventPort.produceMessage(
-                                    command.getInterviewId(),
-                                    "SYSTEM",
-                                    "INTERVIEW_COMPLETED",
-                                    "Interview completed successfully",
-                                    Collections.emptyMap());
-                        }
-                    });
+            // CLOSING_GREETING 완료 후 COMPLETED 자동 전환을 여기서 하지 않음.
+            // ProcessClosingGreetingUseCase가 사용자 끝인사(isFinal) 수신 후
+            // transitionStage(COMPLETED)를 직접 호출하여 STAGE_CHANGE를 발행함.
+            // 여기서 status=COMPLETED로 세팅하면 사용자 오디오 청크가 차단되어 종료 불가.
         } catch (Exception e) {
             log.error("Failed to handle stage transition after LLM completion", e);
         }
@@ -278,16 +254,34 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
                                                 .createDefault());
                 state.setCurrentStage(InterviewStage.LAST_QUESTION_PROMPT);
                 sessionStatePort.saveState(command.getInterviewId(), state);
+
+                // STAGE_CHANGE 발행 — 프론트엔드가 LAST_QUESTION_PROMPT로 전환되어 stagesRequiringReady 트리거
+                publishTranscriptPort.publish(
+                        PublishTranscriptCommand.builder()
+                                .interviewId(command.getInterviewId())
+                                .type("STAGE_CHANGE")
+                                .currentStage(InterviewStage.LAST_QUESTION_PROMPT.name())
+                                .previousStage(InterviewStage.IN_PROGRESS.name())
+                                .build());
             } catch (Exception e) {
                 log.error("Failed to transition to LAST_QUESTION_PROMPT", e);
             }
         } else {
-            eventPublisher.publishEvent(
-                    InterviewerIntroFinishedEvent.builder()
-                            .interviewId(command.getInterviewId())
-                            .userId(command.getUserId())
-                            .mode(command.getMode())
-                            .build());
+            // INTERVIEWER_INTRO 단계일 때만 이벤트 발행 — IN_PROGRESS 등 다른 단계에서 불필요하게 발행 방지
+            me.unbrdn.core.interview.domain.model.InterviewSessionState currentState =
+                    sessionStatePort
+                            .getState(command.getInterviewId())
+                            .orElse(
+                                    me.unbrdn.core.interview.domain.model.InterviewSessionState
+                                            .createDefault());
+            if (currentState.getCurrentStage() == InterviewStage.INTERVIEWER_INTRO) {
+                eventPublisher.publishEvent(
+                        InterviewerIntroFinishedEvent.builder()
+                                .interviewId(command.getInterviewId())
+                                .userId(command.getUserId())
+                                .mode(command.getMode())
+                                .build());
+            }
         }
     }
 

@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import me.unbrdn.core.interview.domain.model.InterviewSessionState;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -31,7 +32,7 @@ public class InterviewStateSnapshotJpaEntity {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "state_json", nullable = false, columnDefinition = "jsonb")
-    private Object stateJson;
+    private InterviewSessionState stateJson;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
