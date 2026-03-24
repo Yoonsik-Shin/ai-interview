@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - ../common/kafka-exporter-deployment.yaml
+  - ../common/promtail-daemonset.yaml
+  - ../common/prometheus-deployment.yaml
+  - ../common/prometheus-configmap.yaml
+  - ../common/grafana-deployment.yaml
+  - ../common/kube-state-metrics-deployment.yaml
+  - ../common/namespace.yaml
+  - ../common/prometheus-rbac.yaml
+  - ../common/node-exporter-daemonset.yaml
+  - ../common/loki-deployment.yaml
+  - ../common/promtail-rbac.yaml
