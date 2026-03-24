@@ -35,6 +35,7 @@ jobs:
       - name: 🛠️ Docker Build
         run: |
           docker build \
+            --build-context proto=services/proto \
             -t unbrdnacr.azurecr.io/${{ inputs.service_name }}:${{ github.sha }} \
             -t unbrdnacr.azurecr.io/${{ inputs.service_name }}:latest \
             ${{ inputs.service_path }}
@@ -61,4 +62,4 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add ${{ inputs.helm_values_path }}
           git commit -m "deploy(${{ inputs.service_name }}): update image tag to ${{ github.sha }}" || echo "No changes to commit"
-          git push origin main
+          git push origin ${{ github.ref_name }}
