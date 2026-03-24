@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stt-config
+  namespace: unbrdn
+data:
+  # Kafka
+  KAFKA_BROKER: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+
+  # Kafka Topics
+  STT_INPUT_TOPIC: "interview.audio.input"
+  STT_OUTPUT_TOPIC: "interview.stt.transcript.created.v1"
+
+  # Redis
+  REDIS_SENTINEL_HOSTS: "redis-node-0.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-1.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-2.redis-headless.unbrdn.svc.cluster.local:26379"
+  REDIS_SENTINEL_HOST: "redis-node-0.redis-headless.unbrdn.svc.cluster.local"
+  REDIS_SENTINEL_PORT: "26379"
+  REDIS_SENTINEL_NAME: "mymaster"
+  REDIS_DB: "2"
+  # Fallback
+  REDIS_HOST: "redis.unbrdn.svc.cluster.local"
+  REDIS_PORT: "6379"
+
+  # Whisper 설정 (prod: CUDA GPU 모드)
+  WHISPER_MODEL_SIZE: "medium"
+  WHISPER_DEVICE: "cuda"
+  WHISPER_COMPUTE_TYPE: "int8"
+
+  # VAD Settings (Hallucination 방지)
+  VAD_MIN_SILENCE_MS: "500"
+  VAD_MIN_SPEECH_MS: "300"
+  NO_SPEECH_THRESHOLD: "0.6"
+
+  # STT gRPC
+  STT_GRPC_PORT: "50052"
+
+  # Redis Pub/Sub and Streams
+  STT_REDIS_CHANNEL: "stt:transcript:pubsub"
+  STT_REDIS_STREAM: "stt:transcript:stream"

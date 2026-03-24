@@ -26,9 +26,9 @@ spec:
           labelSelector:
             matchLabels:
               app: llm
-      # AI 전용 노드(gpupool-inference)에 배치
+      # OpenAI API 외부 호출만 수행 - GPU 불필요, apppool에 배치
       nodeSelector:
-        role: inference
+        role: app
       imagePullSecrets:
         - name: ocir-secret
       containers:

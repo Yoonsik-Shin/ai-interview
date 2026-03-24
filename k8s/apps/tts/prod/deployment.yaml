@@ -26,9 +26,7 @@ spec:
           labelSelector:
             matchLabels:
               app: tts
-      # AI 전용 노드(gpupool-inference)에 배치
-      nodeSelector:
-        role: inference
+      # 일반 연산 노드(apppool / CPU)에 배치 (실시간 스트리밍 안정성 확보)
       imagePullSecrets:
         - name: ocir-secret
       containers:

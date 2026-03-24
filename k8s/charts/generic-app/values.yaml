@@ -30,7 +30,7 @@ probes:
   liveness:
     path: /actuator/health
     initialDelaySeconds: 40
-   readiness:
+  readiness:
     path: /actuator/health
     initialDelaySeconds: 20
   startup:

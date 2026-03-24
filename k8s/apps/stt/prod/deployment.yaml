@@ -62,11 +62,13 @@ spec:
                 name: stt-secrets
           resources:
             requests:
-              cpu: "1000m" # Whisper CPU 집약적
-              memory: "1Gi"
+              cpu: "500m"
+              memory: "2Gi"
+              nvidia.com/gpu: "1"
             limits:
               cpu: "2000m"
-              memory: "2Gi"
+              memory: "4Gi"
+              nvidia.com/gpu: "1"
           # 캐시 볼륨: Whisper 모델 저장
           volumeMounts:
             - name: whisper-cache
@@ -74,5 +76,5 @@ spec:
       volumes:
         - name: whisper-cache
           emptyDir:
-            sizeLimit: 2Gi
+            sizeLimit: 3Gi
       restartPolicy: Always

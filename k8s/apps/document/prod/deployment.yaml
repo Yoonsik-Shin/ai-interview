@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: document
+  namespace: unbrdn
+  labels:
+    app: document
+    environment: prod
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: document
+  template:
+    metadata:
+      labels:
+        app: document
+        environment: prod
+    spec:
+      # AI 전용 노드(gpupool-inference)에 배치 - sentence-transformers GPU 가속
+      nodeSelector:
+        role: inference
+      imagePullSecrets:
+        - name: ocir-secret
+      containers:
+        - name: document
+          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-document:${IMAGE_TAG}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8100
+              name: http
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8100
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8100
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          envFrom:
+            - configMapRef:
+                name: document-config
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "2Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "1000m"
+              memory: "4Gi"
+              nvidia.com/gpu: "1"
+          # 임베딩 모델 캐시
+          volumeMounts:
+            - name: embedding-cache
+              mountPath: /home/appuser/.cache/huggingface
+      volumes:
+        - name: embedding-cache
+          emptyDir:
+            sizeLimit: 2Gi
+      restartPolicy: Always
