@@ -15,5 +15,6 @@ jobs:
       service_name: "auth"
       service_path: "./services/domains/auth"
       helm_values_path: "./k8s/apps/auth/values.yaml"
+      dockerfile_path: "./services/domains/Dockerfile"
     secrets:
       inherit # 상위 레포지토리의 AZURE_CREDENTIALS 상속 공유

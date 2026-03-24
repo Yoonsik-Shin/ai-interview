@@ -15,10 +15,17 @@ on:
         required: true
         type: string
         description: "ArgoCD가 바라볼 deployment.yaml 혹은 values.yaml 경로"
+      dockerfile_path:
+        required: false
+        type: string
+        default: ""
+        description: "커스텀 Dockerfile 경로 (없으면 service_path/Dockerfile 사용)"
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # 👈 GitOps 이미지 태그 업데이트 백푸시 권한 필요
     steps:
       - name: ⬇️ Checkout Code
         uses: actions/checkout@v4
@@ -34,8 +41,15 @@ jobs:
 
       - name: 🛠️ Docker Build
         run: |
+          DOCKERFILE="${{ inputs.dockerfile_path }}"
+          if [ -z "$DOCKERFILE" ]; then
+            DOCKERFILE="${{ inputs.service_path }}/Dockerfile"
+          fi
+          echo "Using Dockerfile: $DOCKERFILE"
+          
           docker build \
             --build-context proto=services/proto \
+            -f "$DOCKERFILE" \
             -t unbrdnacr.azurecr.io/${{ inputs.service_name }}:${{ github.sha }} \
             -t unbrdnacr.azurecr.io/${{ inputs.service_name }}:latest \
             ${{ inputs.service_path }}
