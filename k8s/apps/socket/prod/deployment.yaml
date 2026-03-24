@@ -56,7 +56,7 @@ spec:
         - name: ocir-secret
       containers:
         - name: socket
-          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-socket:${IMAGE_TAG}
+          image: unbrdnacr.azurecr.io/socket:ef844a9ccfd3dd3925bc593345a6e0530ff4998d
           imagePullPolicy: Always
           ports:
             - containerPort: 4000
