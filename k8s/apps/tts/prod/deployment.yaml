@@ -31,7 +31,7 @@ spec:
         - name: ocir-secret
       containers:
         - name: tts
-          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-tts:${IMAGE_TAG}
+          image: unbrdnacr.azurecr.io/tts:ee669f7130588aac3c916ffa2836cd5a507f2ea4
           imagePullPolicy: Always
           ports:
             - containerPort: 50053
