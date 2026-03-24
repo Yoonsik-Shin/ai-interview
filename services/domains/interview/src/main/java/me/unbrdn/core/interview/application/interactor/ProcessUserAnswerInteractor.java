@@ -11,7 +11,6 @@ import me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand
 import me.unbrdn.core.interview.application.port.in.ProcessUserAnswerUseCase;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
-import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPort;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
 import me.unbrdn.core.interview.application.port.out.SaveAdjustmentLogPort;
@@ -29,7 +28,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
 
-    private final ManageConversationHistoryPort conversationHistoryPort;
     private final CallLlmPort callLlmPort;
     private final InterviewPort interviewPort;
     private final PublishTranscriptPort publishTranscriptPort;
@@ -92,13 +90,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
 
         // 2. [REMOVED for Phase 6] 대화 히스토리 로드는 더 이상 Core에서 하지 않음.
 
-        // 2-1. Save User Message immediately to avoid data loss
-        conversationHistoryPort.appendUserMessage(
-                command.getInterviewId(),
-                "user",
-                command.getUserText());
-
-        // 2-1-1. Persist user message to DB for report generation
+        // 2-1. Persist user message to DB for report generation
         try {
             InterviewMessage userMessage = InterviewMessage.create(
                     interviewSession,

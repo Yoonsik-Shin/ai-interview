@@ -12,7 +12,6 @@ import me.unbrdn.core.interview.application.event.InterviewerIntroFinishedEvent;
 import me.unbrdn.core.interview.application.port.in.ProcessLlmTokenUseCase;
 import me.unbrdn.core.interview.application.port.out.AppendRedisCachePort;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
-import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPort;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.application.port.out.ProduceInterviewEventPort;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
@@ -31,7 +30,6 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
     private final AppendRedisCachePort appendRedisCachePort;
     private final PublishTranscriptPort publishTranscriptPort;
     private final PushTtsQueuePort pushTtsQueuePort;
-    private final ManageConversationHistoryPort conversationHistoryPort;
     private final InterviewPort interviewPort;
     private final ManageSessionStatePort sessionStatePort;
 
@@ -199,10 +197,6 @@ public class ProcessLlmTokenInteractor implements ProcessLlmTokenUseCase {
                 "LLM response completed: interviewId={}, responseLength={}",
                 command.getInterviewId(),
                 fullResponse.length());
-
-        // Only append AI message, as User message was already appended in
-        // ProcessUserAnswerInteractor
-        conversationHistoryPort.appendAiMessage(command.getInterviewId(), fullResponse);
 
         // Publish AI Message Event to Kafka/MongoDB for Audit Trail
         produceInterviewEventPort.produceMessage(

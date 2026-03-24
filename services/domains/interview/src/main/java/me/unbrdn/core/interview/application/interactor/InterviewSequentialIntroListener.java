@@ -9,7 +9,6 @@ import me.unbrdn.core.interview.application.event.InterviewerIntroFinishedEvent;
 import me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
-import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPort;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
@@ -24,7 +23,6 @@ public class InterviewSequentialIntroListener {
     private final InterviewPort interviewPort;
     private final CallLlmPort callLlmPort;
     private final ManageSessionStatePort sessionStatePort;
-    private final ManageConversationHistoryPort conversationHistoryPort;
     private final PublishTranscriptPort publishTranscriptPort;
 
     @EventListener
