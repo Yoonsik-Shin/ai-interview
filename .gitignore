@@ -127,3 +127,6 @@ coverage/
 *.orig
 *.rej
 *~
+terraform/.terraform/
+terraform/terraform.tfstate*
+terraform/*.tfvars
