@@ -27,6 +27,8 @@ spec:
             matchLabels:
               app: stt
       # AI 전용 노드(gpupool-inference)에 배치
+      imagePullSecrets:
+        - name: acr-secret
       containers:
         - name: stt
           image: unbrdnacr.azurecr.io/stt:d01111ff9a7ae8855f67155e60b7d054246491d6

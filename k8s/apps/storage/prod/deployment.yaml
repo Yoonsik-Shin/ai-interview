@@ -38,6 +38,12 @@ spec:
                               topologyKey: kubernetes.io/hostname
 
 
+            imagePullSecrets:
+
+
+              - name: acr-secret
+
+
             containers:
                 - name: storage
                   image: unbrdnacr.azurecr.io/storage:ff8d25812965058e5a098b9a7c9a48be15a4d63e

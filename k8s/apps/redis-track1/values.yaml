@@ -2,9 +2,17 @@
 # Track 1 Redis: Sentinel Mode (Bitnami)
 # ===============================
 redis:
+  image:
+    registry: docker.io
+    repository: bitnami/redis
+    tag: "7.2"
   fullnameOverride: "redis"
   global:
     redis:
+  image:
+    registry: docker.io
+    repository: bitnami/redis
+    tag: "7.2"
       password: "SecureTrack1Password" # 가승인 패스워드
 
   sentinel:
@@ -38,5 +46,9 @@ redis:
 
   # 극강 속도 확보용 디스크 차단 추가 주입
   redis:
+  image:
+    registry: docker.io
+    repository: bitnami/redis
+    tag: "7.2"
     appendonly: "no"
     save: ""

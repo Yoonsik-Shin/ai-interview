@@ -28,6 +28,10 @@ spec:
               app: tts
       # 일반 연산 노드(apppool / CPU)에 배치 (실시간 스트리밍 안정성 확보)
 
+      imagePullSecrets:
+
+        - name: acr-secret
+
       containers:
         - name: tts
           image: unbrdnacr.azurecr.io/tts:ee669f7130588aac3c916ffa2836cd5a507f2ea4
