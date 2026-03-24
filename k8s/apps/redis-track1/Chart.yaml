@@ -7,5 +7,5 @@ appVersion: "7.2.4"
 
 dependencies:
   - name: redis
-    version: "19.0.3" # Bitnami Redis stable
+    version: "19.3.3" # Bitnami Redis stable
     repository: "https://charts.bitnami.com/bitnami"
