@@ -15,7 +15,10 @@ import me.unbrdn.core.interview.application.port.out.ManageConversationHistoryPo
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
 import me.unbrdn.core.interview.application.port.out.SaveAdjustmentLogPort;
+import me.unbrdn.core.interview.application.port.out.SaveInterviewMessagePort;
+import me.unbrdn.core.interview.domain.entity.InterviewMessage;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
+import me.unbrdn.core.interview.domain.enums.MessageRole;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -32,6 +35,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
     private final PublishTranscriptPort publishTranscriptPort;
     private final ManageSessionStatePort sessionStatePort;
     private final SaveAdjustmentLogPort saveAdjustmentLogPort;
+    private final SaveInterviewMessagePort saveInterviewMessagePort;
 
     private final StringRedisTemplate stringRedisTemplate;
 
@@ -91,9 +95,23 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
         // 2-1. Save User Message immediately to avoid data loss
         conversationHistoryPort.appendUserMessage(
                 command.getInterviewId(),
-                "user", // or command.getInputRole() if
-                // available here? user is standard
+                "user",
                 command.getUserText());
+
+        // 2-1-1. Persist user message to DB for report generation
+        try {
+            InterviewMessage userMessage = InterviewMessage.create(
+                    interviewSession,
+                    state.getTurnCount() != null ? state.getTurnCount() : 0,
+                    0,
+                    state.getCurrentStage(),
+                    MessageRole.USER,
+                    command.getUserText(),
+                    null);
+            saveInterviewMessagePort.save(userMessage);
+        } catch (Exception e) {
+            log.error("Failed to persist user message to DB: interviewId={}", command.getInterviewId(), e);
+        }
 
         // 2-2. Update Session State (Increment Turn Count)
         updateTurnCount(interviewSession);
