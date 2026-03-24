@@ -123,6 +123,17 @@ export class InterviewConnectionListener {
                 previousStage: currentStage,
                 currentStage: currentStage,
             });
+
+            // SELF_INTRO 재접속 시 타이머 동기화 — 프론트가 setTimeLeft(90)으로 초기화하므로
+            // Redis의 실제 selfIntroStart 기준으로 남은 시간을 보정 전송
+            if (currentStage === InterviewStage.SELF_INTRO) {
+                const selfIntroStart = await this.redisClient.hget(sessionKey, "selfIntroStart");
+                if (selfIntroStart) {
+                    const elapsed = Math.floor((Date.now() - Number(selfIntroStart)) / 1000);
+                    const timeLeft = Math.max(0, 90 - elapsed);
+                    client.emit("interview:timer_sync", { timeLeft });
+                }
+            }
         }
     }
 

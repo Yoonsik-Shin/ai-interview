@@ -48,7 +48,7 @@ interface GetInterviewStageResponse {
     interviewerCount?: number;
     domain?: string;
     selfIntroRetryCount: number;
-    interviewerRoles?: number[];
+    participatingPersonas?: string[];
     personality?: number;
 }
 
@@ -101,7 +101,7 @@ export class InterviewGrpcService implements OnModuleInit {
         interviewerCount?: number;
         domain?: string;
         selfIntroRetryCount: number;
-        interviewerRoles?: number[];
+        participatingPersonas?: string[];
         personality?: number;
     }> {
         try {
@@ -120,7 +120,7 @@ export class InterviewGrpcService implements OnModuleInit {
                 interviewerCount: response.interviewerCount,
                 domain: response.domain,
                 selfIntroRetryCount: response.selfIntroRetryCount,
-                interviewerRoles: response.interviewerRoles,
+                participatingPersonas: response.participatingPersonas,
                 personality: response.personality,
             };
         } catch (error) {

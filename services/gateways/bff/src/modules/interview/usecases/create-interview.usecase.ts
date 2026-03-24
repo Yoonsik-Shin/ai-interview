@@ -7,10 +7,9 @@ export class CreateInterviewCommand {
         public readonly userId: string,
         public readonly domain: string,
         public readonly type: InterviewType,
-        public readonly interviewerRoles: InterviewRole[],
+        public readonly participatingPersonas: InterviewRole[],
         public readonly personality: InterviewPersonality,
-        public readonly targetDurationMinutes: number,
-        public readonly selfIntroduction: string,
+        public readonly scheduledDurationMinutes: number,
         public readonly resumeId?: string,
         public readonly companyName?: string,
     ) {}
@@ -33,8 +32,8 @@ export class CreateInterviewUseCase {
             companyName: command.companyName ?? "",
             domain: command.domain,
             type: this.interviewGrpcService.toProtoType(command.type),
-            participatingPersonas: command.interviewerRoles.map((r) => r.toString()),
-            scheduledDurationMinutes: command.targetDurationMinutes,
+            participatingPersonas: command.participatingPersonas.map((r) => r.toString()),
+            scheduledDurationMinutes: command.scheduledDurationMinutes,
             resumeId: command.resumeId,
         });
 

@@ -18,7 +18,7 @@ export class InterviewSummary {
         public readonly status: string,
         public readonly domain: string,
         public readonly type: InterviewType,
-        public readonly targetDurationMinutes: number,
+        public readonly scheduledDurationMinutes: number,
         public readonly interviewerCount: number,
     ) {}
 }
@@ -52,8 +52,8 @@ export class GetInterviewsUseCase {
                         this.interviewGrpcService.fromProtoStatus(interview.status),
                         interview.domain,
                         this.interviewGrpcService.fromProtoType(interview.type),
-                        interview.targetDurationMinutes,
-                        interview.interviewerCount,
+                        interview.scheduledDurationMinutes,
+                        0,
                     ),
             ),
         );

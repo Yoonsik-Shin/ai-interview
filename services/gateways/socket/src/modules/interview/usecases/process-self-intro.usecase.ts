@@ -22,16 +22,20 @@ export class ProcessSelfIntroUseCase implements AudioProcessor {
         if (payload.isFinal) {
             const elapsed = await this.getSelfIntroElapsed(payload.interviewId);
 
-            // 90초 초과 시 강제로 IN_PROGRESS로 넘어감.
-            // VAD가 90초 타이머에 의해 멈췄을 때 발화가 0자이면 Core 로직이 안 돌기 때문에 Socket에서 확실히 넘겨줌.
+            // 90초 초과 시 강제 완료 처리.
+            // transitionStage(IN_PROGRESS) 직접 호출 대신 processUserAnswer를 통해 단일 진입점으로 처리.
+            // (transitionStage 직접 호출 시 triggerFirstQuestion + processUserAnswer 양쪽에서 LLM이 중복 호출되는 버그 방지)
             if (elapsed >= 90) {
-                await this.stageService.transitionStage(
+                const userId = command.client.data?.userId || "system";
+                await this.stageService.processUserAnswer(
                     payload.interviewId,
-                    InterviewStage.IN_PROGRESS,
+                    "(자기소개 시간 초과)",
+                    userId,
                 );
 
                 const sessionKey = `interview:session:${payload.interviewId}`;
                 await this.redisClient.hdel(sessionKey, "selfIntroStart");
+                return; // STT 파이프라인 중복 실행 방지
             }
         }
     }

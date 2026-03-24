@@ -6,7 +6,7 @@ WORKDIR /workspace
 # --build-context proto=services/proto 로 주입된 컨텍스트를 사용
 COPY --from=proto . ./proto
 # BFF 서비스를 위한 디렉토리 생성
-RUN mkdir -p bff/src/types/grpc
+RUN mkdir -p gateways/bff/src/types/grpc
 WORKDIR /workspace/proto
 RUN buf generate
 
@@ -21,7 +21,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 # gRPC 생성물 복사
-COPY --from=proto-gen /workspace/bff/src/types/grpc /app/proto/generated/ts
+COPY --from=proto-gen /workspace/gateways/bff/src/types/grpc /app/proto/generated/ts
 
 # 의존성 파일 복사 (캐싱 효율 최적화)
 COPY package.json pnpm-lock.yaml ./

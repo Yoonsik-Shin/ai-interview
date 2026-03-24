@@ -43,7 +43,7 @@ export class InterviewGateway {
     ): Promise<void> {
         this.logger.log(client, "stage_ready_received", payload);
 
-        const result = await this.syncStageUseCase.execute(
+        await this.syncStageUseCase.execute(
             new SyncStageCommand(
                 client,
                 payload.interviewId,
@@ -52,14 +52,8 @@ export class InterviewGateway {
                 "READY",
             ),
         );
-
-        if (result.currentStage !== payload.currentStage) {
-            client.emit("interview:stage_changed", {
-                interviewId: payload.interviewId,
-                previousStage: result.previousStage,
-                currentStage: result.currentStage,
-            });
-        }
+        // stage_changed는 Java transitionStage → Redis Pub/Sub → TranscriptPubSubConsumer 단일 경로로만 발행.
+        // 직접 client.emit 제거 — 이중 수신 버그(CANDIDATE_GREETING/SELF_INTRO에서 startRecording 등 이중 실행) 방지.
     }
 
     @SubscribeMessage("debug:skip_stage")
@@ -128,18 +122,19 @@ export class InterviewGateway {
             ),
         );
 
+        // isIntervened 체크는 stage 변경 여부와 무관하게 수행 (SELF_INTRO skip 시 currentStage가 변하지 않아도 개입 메시지 전송)
+        if (result.isIntervened) {
+            client.emit("interview:intervene", {
+                message: result.interventionMessage,
+            });
+        }
+
         if (result.currentStage !== payload.currentStage) {
             client.emit("interview:stage_changed", {
                 interviewId: payload.interviewId,
                 previousStage: result.previousStage,
                 currentStage: result.currentStage,
             });
-
-            if (result.isIntervened) {
-                client.emit("interview:intervene", {
-                    message: result.interventionMessage,
-                });
-            }
         }
     }
 

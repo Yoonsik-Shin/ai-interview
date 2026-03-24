@@ -30,7 +30,7 @@ export class CreateInterviewRequestDto {
 
     @IsArray()
     @IsEnum(InterviewRole, { each: true })
-    interviewerRoles: InterviewRole[];
+    participatingPersonas: InterviewRole[];
 
     @IsEnum(InterviewPersonality)
     personality: InterviewPersonality;
@@ -38,8 +38,6 @@ export class CreateInterviewRequestDto {
     @IsInt()
     @Min(10)
     @Max(120)
-    targetDurationMinutes: number;
+    scheduledDurationMinutes: number;
 
-    @IsString()
-    selfIntroduction: string;
 }

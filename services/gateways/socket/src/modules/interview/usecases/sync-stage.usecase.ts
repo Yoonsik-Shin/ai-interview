@@ -41,7 +41,9 @@ export class SyncStageUseCase {
             nextStage = this.getNextStageByReady(command.currentStage);
         } else if (command.action === "SKIP") {
             if (command.currentStage === InterviewStage.SELF_INTRO) {
-                nextStage = InterviewStage.IN_PROGRESS;
+                // processUserAnswer handles IN_PROGRESS transition + LLM call internally.
+                // Do NOT set nextStage — calling transitionStage afterwards would trigger
+                // triggerFirstQuestion() a second time, causing duplicate LLM responses.
                 isIntervened = true;
                 interventionMessage = "자기소개를 건너뛰고 바로 면접을 시작하겠습니다.";
 
@@ -64,6 +66,15 @@ export class SyncStageUseCase {
             command.interviewId,
             nextStage,
         );
+        
+        // [근본 해결] 후보자 발화가 필요한 단계일 때 Redis 세션 상태를 LISTENING으로 강제 주입
+        if (
+            transitionedStage === InterviewStage.CANDIDATE_GREETING || 
+            transitionedStage === InterviewStage.SELF_INTRO
+        ) {
+            const stateKey = `interview:${command.interviewId}:state`;
+            await this.redisClient.hset(stateKey, "status", "LISTENING");
+        }
 
         // Redis Optimization: SELF_INTRO 시작 시 시간 기록
         if (transitionedStage === InterviewStage.SELF_INTRO) {
@@ -84,10 +95,10 @@ export class SyncStageUseCase {
         switch (current) {
             case InterviewStage.GREETING:
                 return InterviewStage.CANDIDATE_GREETING;
-            case InterviewStage.INTERVIEWER_INTRO:
-                return InterviewStage.SELF_INTRO_PROMPT;
             case InterviewStage.SELF_INTRO_PROMPT:
                 return InterviewStage.SELF_INTRO;
+            case InterviewStage.LAST_QUESTION_PROMPT:
+                return InterviewStage.LAST_ANSWER;
             default:
                 return null;
         }
