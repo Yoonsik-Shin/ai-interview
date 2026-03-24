@@ -37,8 +37,7 @@ spec:
                     app: bff
                 topologyKey: kubernetes.io/hostname
 
-      imagePullSecrets:
-        - name: ocir-secret
+
       containers:
         - name: bff
           image: unbrdnacr.azurecr.io/bff:728b871c186566f40b66c2824038593519fe6cf9

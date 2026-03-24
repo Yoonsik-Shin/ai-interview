@@ -37,8 +37,7 @@ spec:
                     app: core
                 topologyKey: kubernetes.io/hostname
 
-      imagePullSecrets:
-        - name: ocir-secret
+
       containers:
         - name: core
           image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-core:${IMAGE_TAG}

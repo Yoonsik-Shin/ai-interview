@@ -29,8 +29,7 @@ spec:
       # AI 전용 노드(gpupool-inference)에 배치
       nodeSelector:
         role: inference
-      imagePullSecrets:
-        - name: ocir-secret
+
       containers:
         - name: stt
           image: unbrdnacr.azurecr.io/stt:d01111ff9a7ae8855f67155e60b7d054246491d6
