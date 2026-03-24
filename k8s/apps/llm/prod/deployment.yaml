@@ -33,7 +33,7 @@ spec:
         - name: ocir-secret
       containers:
         - name: llm
-          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-llm:${IMAGE_TAG}
+          image: unbrdnacr.azurecr.io/llm:f25f1671cef3582249685ad84a0115b5600ed91b
           imagePullPolicy: Always
           ports:
             - containerPort: 50051
