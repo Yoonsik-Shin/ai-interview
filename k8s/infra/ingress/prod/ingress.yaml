@@ -6,8 +6,6 @@ metadata:
   labels:
     environment: prod
   annotations:
-    # OCI Load Balancer 설정
-    oci.oraclecloud.com/load-balancer-type: "lb"
     # Cert-Manager 설정
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     # Nginx Ingress Controller 설정
@@ -41,14 +39,6 @@ spec:
                 name: kafka-ui
                 port:
                   number: 8080
-          - path: /grafana
-            pathType: Prefix
-            backend:
-              service:
-                name: grafana
-                namespace: monitoring
-                port:
-                  number: 3000
           - path: /socket.io/
             pathType: Prefix
             backend:
