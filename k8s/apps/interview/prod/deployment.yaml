@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interview
+  namespace: unbrdn
+  labels:
+    app: interview
+    environment: prod
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: interview
+  template:
+    metadata:
+      labels:
+        app: interview
+        environment: prod
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: interview
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: interview
+                topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-pool
+                    operator: In
+                    values:
+                      - main
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-pool
+                    operator: In
+                    values:
+                      - main
+      containers:
+        - name: interview
+          image: interview:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              protocol: TCP
+            - containerPort: 9090
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 15
+          # ConfigMap에서 환경 변수 로드
+          envFrom:
+            - configMapRef:
+                name: interview-config
+            - secretRef:
+                name: interview-jwt-keys
+          # 개별 환경 변수
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            # PostgreSQL 연결 정보 (로컬 개발용)
+            # 프로덕션: Oracle Autonomous Database 사용
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres:5432/interview_db?currentSchema=interview&options=-c%20search_path=interview,public"
+            - name: SPRING_FLYWAY_SCHEMAS
+              value: "interview,public"
+            - name: SPRING_FLYWAY_CREATE_SCHEMAS
+              value: "true"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            - name: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
+              value: "org.hibernate.dialect.PostgreSQLDialect"
+            - name: SPRING_JPA_DATABASE_PLATFORM
+              value: "org.hibernate.dialect.PostgreSQLDialect"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "none"
+            # Strimzi Kafka 클러스터 연결 정보
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-cluster-kafka-bootstrap.kafka:9092"
+            # MongoDB 연결 정보 (History 저장용)
+            - name: SPRING_DATA_MONGODB_HOST
+              value: "mongo.unbrdn.svc.cluster.local"
+            - name: SPRING_DATA_MONGODB_PORT
+              value: "27017"
+            - name: SPRING_DATA_MONGODB_DATABASE
+              value: "unbrdn"
+            - name: SPRING_DATA_MONGODB_USERNAME
+              value: "root"
+            - name: SPRING_DATA_MONGODB_PASSWORD
+              value: "rootpassword"
+            - name: SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE
+              value: "admin"
+            # Force Java System Properties (binding issue workaround)
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Dspring.data.mongodb.host=mongo.unbrdn.svc.cluster.local -Dspring.data.mongodb.port=27017 -Dspring.data.mongodb.database=unbrdn -Dspring.data.mongodb.username=root -Dspring.data.mongodb.password=rootpassword -Dspring.data.mongodb.authentication-database=admin"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+              ephemeral-storage: "200Mi"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+              ephemeral-storage: "1Gi"
+      restartPolicy: Always

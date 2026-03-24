@@ -18,7 +18,7 @@ jobs:
     with:
       service_name: "payment"
       service_path: "./services/domains"
-      helm_values_path: "./k8s/apps/payment/values.yaml"
+      helm_values_path: "./k8s/apps/payment/prod/deployment.yaml"
       dockerfile_path: "./services/domains/Dockerfile"
     secrets:
       inherit

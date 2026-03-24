@@ -18,7 +18,7 @@ jobs:
     with:
       service_name: "resume"
       service_path: "./services/domains"
-      helm_values_path: "./k8s/apps/resume/values.yaml"
+      helm_values_path: "./k8s/apps/resume/prod/deployment.yaml"
       dockerfile_path: "./services/domains/Dockerfile"
     secrets:
       inherit
