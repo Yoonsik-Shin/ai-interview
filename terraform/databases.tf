@@ -3,7 +3,7 @@
 resource "azurerm_postgresql_flexible_server" "db" {
   name                   = "unbrdn-postgres-server"
   resource_group_name    = local.rg_name
-  location               = local.rg_location
+  location               = "Korea Central"
   version                = "15"
   administrator_login    = "psqladmin"
   administrator_password = var.db_password
@@ -16,7 +16,7 @@ resource "azurerm_postgresql_flexible_server" "db" {
 resource "azurerm_redis_cache" "redis" {
   name                 = "unbrdn-redis-track3"
   resource_group_name  = local.rg_name
-  location             = local.rg_location
+  location             = "Korea Central"
   capacity             = 1
   family               = "C"
   sku_name             = "Standard"
