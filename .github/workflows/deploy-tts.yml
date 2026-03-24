@@ -1,5 +1,8 @@
 name: 🔐 Deploy TTS Service
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch: # 수동 가동 지원
 
