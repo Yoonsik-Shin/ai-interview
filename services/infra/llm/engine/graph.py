@@ -64,4 +64,11 @@ def create_interview_graph(model_name: str = "gpt-4o-mini", openai_api_key: str 
     redis_conn = redis.Redis.from_url(REDIS_TRACK2_URL)
     saver = RedisSaver(redis_client=redis_conn)
     
+    # [근본 해결] 애플리케이션 시작 시 Redis Search Index 자동 생성 실행
+    try:
+        saver.setup()
+    except Exception as e:
+        # 이미 인덱스가 생성되었거나 기타 충돌 발생 시 무시
+        print(f"Index creation skipped/exists: {e}")
+    
     return workflow.compile(checkpointer=saver)

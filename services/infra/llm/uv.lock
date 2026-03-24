@@ -1038,7 +1038,7 @@ requires-dist = [
     { name = "langgraph-checkpoint-redis" },
     { name = "openai", specifier = "==2.14.0" },
     { name = "pgvector", specifier = ">=0.3.2" },
-    { name = "protobuf", specifier = ">=5.28.0" },
+    { name = "protobuf", specifier = ">=5.29.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.9" },
     { name = "python-dotenv", specifier = "==1.0.0" },
     { name = "redis", specifier = ">=5.2.1" },

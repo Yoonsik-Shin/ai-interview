@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1.4
-FROM python:3.11-slim
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
 RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3.11-venv \
+    python3-pip \
     curl \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
@@ -37,7 +40,7 @@ COPY . .
 # New structure: stt/v1/stt.proto
 # Proto 파일 생성 및 패키지 구조 정규화 (하드코딩 replace 제거)
 RUN mkdir -p generated \
-    && python -m grpc_tools.protoc -I/app/proto --python_out=generated --grpc_python_out=generated /app/proto/stt/v1/stt.proto \
+    && python3.11 -m grpc_tools.protoc -I/app/proto --python_out=generated --grpc_python_out=generated /app/proto/stt/v1/stt.proto \
     && find generated -type d -exec touch {}/__init__.py \;
 
 ENV PYTHONPATH="/app:/app/generated"

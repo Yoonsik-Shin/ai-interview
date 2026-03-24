@@ -9,18 +9,18 @@ managed:
 plugins:
   # TypeScript (BFF & Socket Services)
   - remote: buf.build/community/stephenh-ts-proto
-    out: ../bff/src/types/grpc
+    out: ../gateways/bff/src/types/grpc
     opt:
       - nestJs=true
       - addGrpcMetadata=true
   - remote: buf.build/community/stephenh-ts-proto
-    out: ../socket/src/types/grpc
+    out: ../gateways/socket/src/types/grpc
     opt:
       - nestJs=true
       - addGrpcMetadata=true
 
   # Python (LLM Service)
   - remote: buf.build/protocolbuffers/python
-    out: ../llm/generated
+    out: ../infra/llm/generated
   - remote: buf.build/grpc/python
-    out: ../llm/generated
+    out: ../infra/llm/generated

@@ -31,7 +31,7 @@ COPY --from=proto . ./proto
 
 # Proto 파일 생성 및 패키지 구조 정규화 (하드코딩 replace 제거)
 RUN mkdir -p generated \
-    && python -m grpc_tools.protoc -I./proto --python_out=generated --grpc_python_out=generated ./proto/llm/v1/llm.proto \
+    && python -m grpc_tools.protoc -I./proto --python_out=generated --grpc_python_out=generated ./proto/llm/v1/llm.proto ./proto/common/v1/enums.proto \
     && find generated -type d -exec touch {}/__init__.py \;
 
 # Fix ownership
@@ -43,4 +43,4 @@ EXPOSE 50051
 USER appuser
 
 # Run gRPC server + Redis consumer
-CMD ["uv", "run", "main.py"]
+CMD ["python", "main.py"]
