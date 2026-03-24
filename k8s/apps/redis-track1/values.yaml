@@ -3,8 +3,6 @@
 # ===============================
 redis:
   fullnameOverride: "redis"
-  image:
-    tag: "7.2"
   global:
     redis:
       password: "SecureTrack1Password" # 가승인 패스워드

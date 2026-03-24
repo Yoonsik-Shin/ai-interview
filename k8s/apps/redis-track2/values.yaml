@@ -2,8 +2,6 @@
 # Track 2 Redis: LLM 독점 격리 메모리 (Bitnami)
 # ===============================
 redis:
-  image:
-    tag: "7.2"
   global:
     redis:
       password: "SecureTrack2Password"

@@ -3,9 +3,9 @@ name: redis-track2
 description: Track 2 Redis (Python LLM State, LangGraph Checkpoint)
 type: application
 version: 0.1.0
-appVersion: "7.2.4"
+appVersion: "7.4.1"
 
 dependencies:
   - name: redis
-    version: "19.3.3"
+    version: "20.6.0"
     repository: "https://charts.bitnami.com/bitnami"
