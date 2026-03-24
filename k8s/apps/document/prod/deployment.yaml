@@ -21,7 +21,7 @@ spec:
       # AI 전용 노드(gpupool-inference)에 배치 - sentence-transformers GPU 가속
       containers:
         - name: document
-          image: ${IMAGE_REGISTRY}/unbrdn-krn-ocir-document:${IMAGE_TAG}
+          image: unbrdnacr.azurecr.io/document:fd25716f99d6b0fc9a5af2da5f592e7920935d41
           imagePullPolicy: Always
           ports:
             - containerPort: 8100
