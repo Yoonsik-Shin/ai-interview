@@ -18,6 +18,9 @@ public class FlywayConfig {
     @Value("${spring.flyway.baseline-on-migrate:true}")
     private boolean baselineOnMigrate;
 
+    @Value("${spring.flyway.schemas:}")
+    private String schemas;
+
     @Bean
     public Flyway flyway(DataSource dataSource) {
         if (!enabled) {
@@ -28,13 +31,19 @@ public class FlywayConfig {
         System.out.println("========== Starting Manual Flyway Migration ==========");
         System.out.println("Locations: " + locations);
 
-        Flyway flyway =
+        var configure =
                 Flyway.configure()
                         .dataSource(dataSource)
                         .locations(locations)
                         .baselineOnMigrate(baselineOnMigrate)
-                        .baselineVersion("0")
-                        .load();
+                        .baselineVersion("0");
+
+        if (schemas != null && !schemas.isEmpty()) {
+            configure.schemas(schemas.split(","));
+            System.out.println("Schemas: " + schemas);
+        }
+
+        Flyway flyway = configure.load();
 
         flyway.migrate();
         System.out.println("========== Manual Flyway Migration Completed ==========");
