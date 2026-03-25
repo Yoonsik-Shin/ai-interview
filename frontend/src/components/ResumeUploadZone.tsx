@@ -431,7 +431,7 @@ export function ResumeUploadZone({
                   </div>
 
                   {validationSource === "server" &&
-                    aiScore &&
+                    aiScore !== null &&
                     aiScore >= 0.5 && (
                       <div className={styles.serverSuccess}>
                         ✓ 서버 정밀 검증 완료
@@ -444,19 +444,35 @@ export function ResumeUploadZone({
         </div>
         <p className={styles.hint}>{accept.toUpperCase()} (최대 10MB)</p>
 
-        {/* 로컬 AI 검증 실패 안내 메시지 */}
+        {/* 서버 검증 에러 안내 메시지 */}
         {selectedFile &&
           aiScore !== null &&
+          aiScore === 0 &&
+          validationSource === "server" &&
+          !validating && (
+            <div className={styles.warningMessage}>
+              <span className={styles.warningIcon}>⚠️</span>
+              <div className={styles.warningText}>
+                <strong>서버 검증 중 문제가 발생했습니다.</strong>
+                <p>
+                  {v?.reason || "일시적인 서버 오류입니다. 잠시 후 다시 시도해주세요."}
+                </p>
+              </div>
+            </div>
+          )}
+
+        {/* 이력서 검증 실패 안내 메시지 */}
+        {selectedFile &&
+          aiScore !== null &&
+          aiScore > 0 &&
           aiScore < 0.6 &&
-          validationSource === "local" &&
           !validating && (
             <div className={styles.warningMessage}>
               <span className={styles.warningIcon}>⚠️</span>
               <div className={styles.warningText}>
                 <strong>이력서가 아닌 것 같습니다.</strong>
                 <p>
-                  파일을 다시 확인해주시거나, 더 자세한 검증을 위해 아래 버튼을
-                  눌러주세요.
+                  파일을 다시 확인해주세요.
                 </p>
               </div>
             </div>

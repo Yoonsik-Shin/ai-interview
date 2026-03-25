@@ -291,24 +291,40 @@ export async function validateResumeFile(
     // 5. 서버 LLM 검증 (마스킹된 텍스트 사용)
     console.log("[ResumeValidator] Executing server-side validation...");
     const { validateContent } = await import("../api/resumes");
-    const result = await validateContent(maskedText);
 
-    return {
-      ...result,
-      source: "server",
-      embedding,
-      validationText: inputPreview,
-      maxDuplicateSimilarity,
-    };
+    try {
+      const result = await validateContent(maskedText);
+
+      return {
+        ...result,
+        source: "server",
+        embedding,
+        validationText: inputPreview,
+        maxDuplicateSimilarity,
+      };
+    } catch (serverError: any) {
+      console.error("Server validation failed:", serverError);
+
+      // 서버 에러 시 사용자에게 명확히 알림 (잘못된 검증 결과를 보여주지 않음)
+      return {
+        isResume: false,
+        score: 0,
+        reason: "서버 검증에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        source: "server",
+        embedding,
+        validationText: inputPreview,
+        maxDuplicateSimilarity,
+      };
+    }
   } catch (e: any) {
-    console.error("AI Validation/Embedding Error:", e);
+    console.error("AI Embedding/Duplicate Check Error:", e);
     let errorMessage = "AI 검증 실패 (임베딩 생성 불가)";
     if (e.message?.includes("fetch")) errorMessage = "AI 모델 다운로드 실패";
     else if (e.message?.includes("memory"))
       errorMessage = "메모리 부족으로 AI 검증 실패";
 
     return {
-      isResume: true, // 일단 통과
+      isResume: true, // 임베딩 실패 시에만 통과 처리 (서버 검증 자체가 불가능하므로)
       score: 0.5,
       reason: errorMessage,
       source: "local",
