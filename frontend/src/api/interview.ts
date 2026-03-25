@@ -68,3 +68,29 @@ export async function completeInterview(interviewId: string): Promise<void> {
     method: "POST",
   });
 }
+
+export type CreateReportRes = {
+  reportId: string;
+  generationStatus: string;
+};
+
+export type GetReportRes = {
+  reportId: string;
+  generationStatus: string;
+  totalScore: number;
+  passFailStatus: string;
+  summaryText: string;
+  resumeFeedback: string;
+};
+
+export async function createReport(interviewId: string): Promise<CreateReportRes> {
+  return api<CreateReportRes>(`/v1/interviews/${interviewId}/reports`, {
+    method: "POST",
+  });
+}
+
+export async function getReport(interviewId: string, reportId: string): Promise<GetReportRes> {
+  return api<GetReportRes>(`/v1/interviews/${interviewId}/reports/${reportId}`, {
+    method: "GET",
+  });
+}
