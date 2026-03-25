@@ -10,7 +10,7 @@ data:
   OPENAI_MODEL: "gpt-4o-mini"
 
   # Azure OpenAI (prod)
-  AZURE_OPENAI_ENDPOINT: "https://unbrdn-openai.openai.azure.com/"
+  AZURE_OPENAI_ENDPOINT: "https://koreacentral.api.cognitive.microsoft.com/"
   AZURE_OPENAI_DEPLOYMENT_ID: "gpt-4o-mini"
 
   # Track 1: Pub/Sub (LLM 토큰 스트리밍 → Socket → Frontend)
