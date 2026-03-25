@@ -60,6 +60,7 @@ export async function uploadToPresignedUrl(
     body: file,
     headers: {
       "Content-Type": file.type,
+      "x-ms-blob-type": "BlockBlob",
     },
   });
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
