@@ -46,7 +46,7 @@ spec:
 
             containers:
                 - name: storage
-                  image: unbrdnacr.azurecr.io/storage:4761675a1ae2b2e2468106384278850963a45bcd
+                  image: unbrdnacr.azurecr.io/storage:af3b46f7cf3550dae6370111ac50ca9089c4ee3b
                   imagePullPolicy: Always
                   ports:
                       - containerPort: 8000
