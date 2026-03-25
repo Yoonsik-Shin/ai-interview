@@ -52,18 +52,16 @@ spec:
                       - containerPort: 8000
                         protocol: TCP
                         name: http
-                  # 헬스 체크
+                  # 헬스 체크 (gRPC 포트 - tcpSocket으로 프로세스 생존 확인)
                   readinessProbe:
-                      httpGet:
-                          path: /health/ready
+                      tcpSocket:
                           port: 8000
                       initialDelaySeconds: 25
                       periodSeconds: 10
                       timeoutSeconds: 5
                       failureThreshold: 5
                   livenessProbe:
-                      httpGet:
-                          path: /health
+                      tcpSocket:
                           port: 8000
                       initialDelaySeconds: 40
                       periodSeconds: 20

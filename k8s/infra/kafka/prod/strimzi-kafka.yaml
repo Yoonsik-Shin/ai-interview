@@ -23,6 +23,7 @@ spec:
       transaction.state.log.min.isr: 2
       default.replication.factor: 3
       min.insync.replicas: 2
+      auto.create.topics.enable: "true"
       # KRaft 모드에서는 inter.broker.protocol.version과 log.message.format.version 불필요
       # (Strimzi 0.50.0+ KRaft 기본 사용)
   entityOperator:
