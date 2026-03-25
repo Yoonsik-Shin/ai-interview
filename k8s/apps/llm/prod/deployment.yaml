@@ -31,7 +31,7 @@ spec:
         - name: acr-secret
       containers:
         - name: llm
-          image: unbrdnacr.azurecr.io/llm:f25f1671cef3582249685ad84a0115b5600ed91b
+          image: unbrdnacr.azurecr.io/llm:4761675a1ae2b2e2468106384278850963a45bcd
           imagePullPolicy: Always
           ports:
             - containerPort: 50051
