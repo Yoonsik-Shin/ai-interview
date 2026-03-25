@@ -1,0 +1,35 @@
+# Bitnami Redis Helm Chart - Track 3 (Local only - prod은 Azure Cache for Redis 사용)
+# 역할: 인터뷰 세션 상태 (Hash), Sentence Stream (Redis Streams)
+# 설계: appendonly yes (세션 상태 재시작 후 복구), volatile-lru
+
+redis:
+  fullnameOverride: redis-track3
+
+  auth:
+    enabled: false
+
+  architecture: standalone
+
+  master:
+    persistence:
+      enabled: true
+      size: 4Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+    configuration: |
+      bind 0.0.0.0
+      port 6379
+      appendonly yes
+      appendfsync everysec
+      maxmemory-policy volatile-lru
+
+  sentinel:
+    enabled: false
+
+  replica:
+    replicaCount: 0

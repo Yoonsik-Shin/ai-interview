@@ -1,0 +1,9 @@
+apiVersion: v2
+name: track3
+description: "Redis Track 3 - 비즈니스/큐 (인터뷰 세션 상태, Sentence Stream)"
+type: application
+version: 1.0.0
+dependencies:
+  - name: redis
+    version: ">=25.0.0"
+    repository: https://charts.bitnami.com/bitnami

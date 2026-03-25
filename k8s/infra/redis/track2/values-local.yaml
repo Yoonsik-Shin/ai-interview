@@ -1,0 +1,6 @@
+# Redis Track2 - Local 환경 override
+# Helm deep merge 방식 때문에 nodeSelector를 ~ (null)로 명시 제거 필요
+
+redis:
+  master:
+    nodeSelector: ~

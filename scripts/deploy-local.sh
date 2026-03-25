@@ -724,11 +724,19 @@ INFRA_PIDS+=($!)
             # Track 1: Pub/Sub, Socket.io 어댑터, 웹소켓 세션 캐시, LLM 버퍼
             helm upgrade --install redis-track1 k8s/infra/redis/track1 \
                 -n ${NAMESPACE} \
+                -f k8s/infra/redis/track1/values-local.yaml \
                 --dependency-update \
                 --wait --timeout 300s > "$LOG_FILE" 2>&1
 
             # Track 2: LangGraph Checkpoint (LLM 전용)
             helm upgrade --install redis-track2 k8s/infra/redis/track2 \
+                -n ${NAMESPACE} \
+                -f k8s/infra/redis/track2/values-local.yaml \
+                --dependency-update \
+                --wait --timeout 300s >> "$LOG_FILE" 2>&1
+
+            # Track 3: 인터뷰 세션 상태, Sentence Stream (prod: Azure Cache for Redis)
+            helm upgrade --install redis-track3 k8s/infra/redis/track3 \
                 -n ${NAMESPACE} \
                 --dependency-update \
                 --wait --timeout 300s >> "$LOG_FILE" 2>&1

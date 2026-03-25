@@ -1,0 +1,39 @@
+# Redis Track1 - Local 환경 override
+# sentinel 모드에서는 모든 pod가 replica StatefulSet(redis-track1-node)을 사용
+# Helm deep merge 방식 때문에 affinity 하위 키를 ~ (null)로 명시 제거 필요
+
+redis:
+  # 로컬: ESO/Azure Key Vault 없으므로 redis-track1-credentials 시크릿 미존재 → auth 비활성화
+  auth:
+    enabled: false
+    existingSecret: ~
+    existingSecretPasswordKey: ~
+
+  master:
+    affinity:
+      nodeAffinity: ~
+      podAntiAffinity: ~
+
+  replica:
+    # 로컬: replica 1개로 축소 (sentinel quorum 2 충족: master 1 + replica 1 = sentinel 2개)
+    replicaCount: 1
+    affinity:
+      # nodeAffinity(role=app) 제거
+      nodeAffinity: ~
+      podAntiAffinity:
+        # required → soft(preferred)로 완화 (단일/소수 노드 대응)
+        requiredDuringSchedulingIgnoredDuringExecution: ~
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                      - redis-track1
+                  - key: app.kubernetes.io/component
+                    operator: In
+                    values:
+                      - replica
+              topologyKey: "kubernetes.io/hostname"

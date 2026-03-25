@@ -60,6 +60,9 @@ public class VectorStoreConfig {
     public VectorStore pgVectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel,
             @Value("${spring.ai.vectorstore.pgvector.dimensions:1536}") int dimensions) {
 
+        // 스키마가 없으면 생성 (Flyway CREATE_SCHEMAS보다 먼저 실행될 수 있으므로 직접 보장)
+        jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS resume");
+
         // 스키마 가시성 강제 지정 (native query 에러 방지)
         try {
             jdbcTemplate.execute("SET search_path TO resume, public");
@@ -67,8 +70,6 @@ public class VectorStoreConfig {
             // 무시
         }
 
-        // Flyway가 가끔 문제를 일으키거나 특정 환경에서 누락될 수 있으므로
-        // JdbcTemplate으로 테이블 존재 여부 확인 후 직접 생성 시도 (안전 장치)
         jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public");
 
         // 차원 불일치 해결을 위한 강력한 체크: 기존 테이블이 있고 차원이 다르면 삭제 후 재생성

@@ -1,6 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
-CREATE TABLE resumes (
+CREATE SCHEMA IF NOT EXISTS resume;
+
+CREATE TABLE resume.resumes (
     id uuid NOT NULL,
     user_id uuid NOT NULL,
     title character varying(100) NOT NULL,
@@ -15,9 +17,9 @@ CREATE TABLE resumes (
     CONSTRAINT resumes_pkey PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_resumes_file_hash ON resumes(file_hash);
+CREATE INDEX idx_resumes_file_hash ON resume.resumes(file_hash);
 
-CREATE TABLE resume_embeddings (
+CREATE TABLE resume.resume_embeddings (
     id uuid NOT NULL,
     resume_id uuid NOT NULL,
     content TEXT,
@@ -26,17 +28,17 @@ CREATE TABLE resume_embeddings (
     created_at TIMESTAMP(6),
     updated_at TIMESTAMP(6),
     CONSTRAINT resume_embeddings_pkey PRIMARY KEY (id),
-    CONSTRAINT fk_resume_embeddings_resume FOREIGN KEY (resume_id) REFERENCES resumes (id) ON DELETE CASCADE
+    CONSTRAINT fk_resume_embeddings_resume FOREIGN KEY (resume_id) REFERENCES resume.resumes (id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_resume_embeddings_embedding ON resume_embeddings USING hnsw (embedding public.vector_cosine_ops);
+CREATE INDEX idx_resume_embeddings_embedding ON resume.resume_embeddings USING hnsw (embedding public.vector_cosine_ops);
 
-CREATE TABLE vector_store (
+CREATE TABLE resume.vector_store (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     content TEXT,
     metadata JSONB,
     embedding public.vector(384)
 );
 
-CREATE INDEX vector_store_embedding_idx ON vector_store USING hnsw (embedding public.vector_cosine_ops);
-CREATE INDEX vector_store_metadata_idx ON vector_store USING gin (metadata);
+CREATE INDEX vector_store_embedding_idx ON resume.vector_store USING hnsw (embedding public.vector_cosine_ops);
+CREATE INDEX vector_store_metadata_idx ON resume.vector_store USING gin (metadata);
