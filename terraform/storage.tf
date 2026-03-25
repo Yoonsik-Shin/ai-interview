@@ -11,6 +11,16 @@ resource "azurerm_storage_account" "storage" {
     default_action             = "Allow"
     bypass                     = ["AzureServices"]
   }
+
+  blob_properties {
+    cors_rule {
+      allowed_headers    = ["*"]
+      allowed_methods    = ["GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS"]
+      allowed_origins    = ["https://unbrdn.me", "https://www.unbrdn.me"]
+      exposed_headers    = ["*"]
+      max_age_in_seconds = 3600
+    }
+  }
 }
 
 resource "azurerm_storage_container" "blob" {
