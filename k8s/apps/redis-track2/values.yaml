@@ -1,28 +1,41 @@
 # ===============================
-# Track 2 Redis: Umbrella Chart (Dependent: bitnami/redis)
+# Track 2 Redis: LLM 전용 (LangGraph Checkpoint)
+# 역할: LLM 서버만 독점 접근, StateGraph 체크포인트 저장
+# 설계: appendonly yes (파드 재시작 후 대화 기록 복구), volatile-lru
 # ===============================
 redis:
-  image:
-    registry: docker.io
-    repository: bitnami/redis
-    tag: "7.2.4-debian-12-r22"
+    fullnameOverride: "redis-track2"
 
-  auth:
-    enabled: true
-    password: "SecureTrack2Password"
+    # 이미지: Chart 기본값 사용 (명시적 태그 제거)
 
-  replica:
-    replicaCount: 1
-    nodeSelector:
-      role: app
+    auth:
+        enabled: false
 
-  master:
-    nodeSelector:
-      role: app
-    persistence:
-      enabled: true
-      size: 8Gi
+    architecture: standalone
 
-  # AOF 켜기 (대화 복구 보장)
-  master:
-    configmap: "redis-track2-configuration"
+    master:
+        nodeSelector:
+            role: app
+        persistence:
+            enabled: true
+            size: 8Gi
+        resources:
+            requests:
+                memory: "256Mi"
+                cpu: "100m"
+            limits:
+                memory: "512Mi"
+                cpu: "250m"
+        configuration: |
+            bind 0.0.0.0
+            port 6379
+            # Track 2: AOF 켜기 (파드 재시작 후 LangGraph 체크포인트 복구)
+            appendonly yes
+            appendfsync everysec
+            maxmemory-policy volatile-lru
+
+    sentinel:
+        enabled: false
+
+    replica:
+        replicaCount: 0

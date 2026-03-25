@@ -74,6 +74,8 @@ spec:
                 name: interview-config
             - secretRef:
                 name: interview-jwt-keys
+            - secretRef:
+                name: interview-redis-track3-secret
           # 개별 환경 변수
           env:
             - name: SPRING_PROFILES_ACTIVE

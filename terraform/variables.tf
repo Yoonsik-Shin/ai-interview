@@ -3,19 +3,19 @@
 variable "create_resource_group" {
   description = "리소스 그룹을 새로 생성할지 여부"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "resource_group_name" {
   description = "리소스 그룹 이름"
   type        = string
-  default     = "unbrdn-aks-rg"
+  default     = "Final_2"
 }
 
 variable "create_aks" {
   description = "AKS 클러스터를 새로 생성할지 여부"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "aks_cluster_name" {

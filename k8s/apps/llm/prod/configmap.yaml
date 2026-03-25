@@ -9,14 +9,17 @@ data:
   GRPC_PORT: "50051"
   OPENAI_MODEL: "gpt-4o-mini"
 
+  # Track 1: Pub/Sub (LLM 토큰 스트리밍 → Socket → Frontend)
   REDIS_HOST: "redis-node-0.redis-headless.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
-  # Redis Sentinel (3 Pod)
   REDIS_SENTINEL_HOSTS: "redis-node-0.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-1.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-2.redis-headless.unbrdn.svc.cluster.local:26379"
   REDIS_SENTINEL_HOST: "redis-node-0.redis-headless.unbrdn.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
   REDIS_SENTINEL_NAME: "mymaster"
+
+  # Track 2: LangGraph Checkpoint (대화 히스토리, 에이전트 메모리)
+  REDIS_TRACK2_URL: "redis://redis-track2-master.unbrdn.svc.cluster.local:6379/0"
 
   TTS_QUEUE: "tts:sentence:queue"
 

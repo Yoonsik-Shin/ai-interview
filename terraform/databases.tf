@@ -12,6 +12,15 @@ resource "azurerm_postgresql_flexible_server" "db" {
   storage_mb = 32768
 }
 
+# AKS → Azure PostgreSQL 접근 허용 (Azure 내부 서비스 허용)
+resource "azurerm_postgresql_flexible_server_firewall_rule" "allow_azure_services" {
+  name      = "AllowAzureServices"
+  server_id = azurerm_postgresql_flexible_server.db.id
+  # Azure Portal "Allow Azure services" 특수 룰: 0.0.0.0 → 0.0.0.0
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
+
 # 🔴 Azure Cache for Redis (Track 3)
 resource "azurerm_redis_cache" "redis" {
   name                 = "unbrdn-redis-track3"

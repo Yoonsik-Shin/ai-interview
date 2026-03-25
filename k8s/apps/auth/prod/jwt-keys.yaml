@@ -1,0 +1,26 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: auth-jwt-keys
+  namespace: unbrdn
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    name: azure-keyvault-store
+    kind: ClusterSecretStore
+  target:
+    name: auth-jwt-keys
+    creationPolicy: Owner
+  data:
+    - secretKey: JWT_KEY_0_KID
+      remoteRef:
+        key: auth-jwt-kid
+    - secretKey: JWT_KEY_0_PRIVATE_KEY
+      remoteRef:
+        key: auth-jwt-private-key
+    - secretKey: JWT_KEY_0_PUBLIC_KEY
+      remoteRef:
+        key: auth-jwt-public-key
+    - secretKey: JWT_KEY_0_ACTIVE
+      remoteRef:
+        key: auth-jwt-active
