@@ -18,7 +18,6 @@ spec:
         app: document
         environment: prod
     spec:
-      # AI 전용 노드(gpupool-inference)에 배치 - sentence-transformers GPU 가속
       containers:
         - name: document
           image: unbrdnacr.azurecr.io/document:fd25716f99d6b0fc9a5af2da5f592e7920935d41
@@ -48,11 +47,11 @@ spec:
                 name: document-config
           resources:
             requests:
-              cpu: "200m"
+              cpu: "500m"
               memory: "2Gi"
               nvidia.com/gpu: "1"
             limits:
-              cpu: "1000m"
+              cpu: "2000m"
               memory: "4Gi"
               nvidia.com/gpu: "1"
           # 임베딩 모델 캐시

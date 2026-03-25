@@ -99,10 +99,10 @@ master:
             requiredDuringSchedulingIgnoredDuringExecution:
                 nodeSelectorTerms:
                     - matchExpressions:
-                          - key: node-pool
+                          - key: role
                             operator: In
                             values:
-                                - main
+                                - app
 
 # Replica 설정
 replica:
@@ -145,10 +145,10 @@ replica:
             requiredDuringSchedulingIgnoredDuringExecution:
                 nodeSelectorTerms:
                     - matchExpressions:
-                          - key: node-pool
+                          - key: role
                             operator: In
                             values:
-                                - main
+                                - app
 
 # 메트릭 (Helm Chart가 자동 관리)
 metrics:

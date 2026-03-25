@@ -8,4 +8,4 @@ data:
     version: v1
     sharing:
       timeSlicing:
-        replicas: 3
+        replicas: 4
