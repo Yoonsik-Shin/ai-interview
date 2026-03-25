@@ -1,5 +1,15 @@
 # Changelog
 
+## [2026-03-26]
+
+### 수정
+
+- **Resume 서비스 Flyway 마이그레이션 체크섬 불일치 해결**:
+  - DB에 이미 적용된 V001 마이그레이션 파일이 수정되어 배포 환경에서 체크섬 불일치(`1151096846` → `-50881629`) 발생
+  - V001을 원본으로 복원하고, resume 스키마 격리 변경사항을 `V002__move_to_resume_schema.sql`로 분리
+  - `FlywayConfig`에 `spring.flyway.schemas` 프로퍼티 지원 추가
+  - resume 서비스 `application.properties`에 `spring.flyway.schemas=resume` 기본값 설정
+
 ## [2026-03-22]
 
 ### 추가 및 변경 (Phase 6: LLM Track 2 분리)
