@@ -19,12 +19,16 @@ data:
   LLM_GRPC_HOST: "llm.unbrdn.svc.cluster.local"
   LLM_GRPC_PORT: "50051"
 
-  # Redis (대화 맥락 저장)
+  # Redis (대화 맥락 저장 - Sentinel 모드)
   REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
   SPRING_DATA_REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   SPRING_DATA_REDIS_PORT: "6379"
+  REDIS_SENTINEL_MASTER: "mymaster"
+  REDIS_SENTINEL_NODES: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
+  SPRING_DATA_REDIS_SENTINEL_MASTER: "mymaster"
+  SPRING_DATA_REDIS_SENTINEL_NODES: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
 
   # JPA
   SPRING_JPA_HIBERNATE_DDL_AUTO: "validate"

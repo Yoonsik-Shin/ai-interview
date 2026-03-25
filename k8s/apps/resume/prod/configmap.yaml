@@ -19,17 +19,26 @@ data:
   LLM_GRPC_HOST: "llm.unbrdn.svc.cluster.local"
   LLM_GRPC_PORT: "50051"
 
-  # Redis (대화 맥락 저장)
+  # Redis (대화 맥락 저장 - Sentinel 모드)
   REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
   SPRING_DATA_REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   SPRING_DATA_REDIS_PORT: "6379"
+  REDIS_SENTINEL_MASTER: "mymaster"
+  REDIS_SENTINEL_NODES: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
+  SPRING_DATA_REDIS_SENTINEL_MASTER: "mymaster"
+  SPRING_DATA_REDIS_SENTINEL_NODES: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
 
   # JPA
   SPRING_JPA_HIBERNATE_DDL_AUTO: "validate"
   SPRING_JPA_SHOW_SQL: "false"
   SPRING_JPA_FORMAT_SQL: "false"
+  SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.PostgreSQLDialect"
+  SPRING_JPA_DATABASE_PLATFORM: "org.hibernate.dialect.PostgreSQLDialect"
+
+  # Datasource
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
 
   # Flyway
   SPRING_FLYWAY_ENABLED: "true"
@@ -43,5 +52,5 @@ data:
   LOG_LEVEL_CORE: "INFO"
 
   # Database (PostgreSQL - 로컬 환경)
-  datasource-url: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/interview_db"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/interview_db"
+  datasource-url: "jdbc:postgresql://unbrdn-postgres.postgres.database.azure.com:5432/postgres"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://unbrdn-postgres.postgres.database.azure.com:5432/postgres"

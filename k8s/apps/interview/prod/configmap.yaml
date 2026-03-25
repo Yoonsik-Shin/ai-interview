@@ -48,6 +48,11 @@ data:
   LOG_LEVEL: "INFO"
   LOG_LEVEL_CORE: "INFO"
 
-  # Database (PostgreSQL - 로컬 환경)
-  datasource-url: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/unbrdn"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/unbrdn"
+  # Database (PostgreSQL - 프로덕션)
+  datasource-url: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/postgres"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.unbrdn.svc.cluster.local:5432/postgres"
+
+  # MongoDB
+  SPRING_DATA_MONGODB_HOST: "mongo.unbrdn.svc.cluster.local"
+  SPRING_DATA_MONGODB_PORT: "27017"
+  SPRING_DATA_MONGODB_DATABASE: "unbrdn"

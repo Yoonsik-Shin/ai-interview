@@ -83,7 +83,7 @@ spec:
             # PostgreSQL 연결 정보 (로컬 개발용)
             # 프로덕션: Oracle Autonomous Database 사용
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://postgres:5432/interview_db?currentSchema=interview&options=-c%20search_path=interview,public"
+              value: "jdbc:postgresql://postgres:5432/postgres?currentSchema=interview&options=-c%20search_path=interview,public"
             - name: SPRING_FLYWAY_SCHEMAS
               value: "interview,public"
             - name: SPRING_FLYWAY_CREATE_SCHEMAS
