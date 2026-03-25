@@ -30,6 +30,22 @@ resource "azurerm_dns_a_record" "argocd" {
   records             = [var.ingress_ip]
 }
 
+resource "azurerm_dns_a_record" "kafka" {
+  name                = "kafka"
+  zone_name           = azurerm_dns_zone.main.name
+  resource_group_name = local.rg_name
+  ttl                 = 300
+  records             = [var.ingress_ip]
+}
+
+resource "azurerm_dns_a_record" "redis" {
+  name                = "redis"
+  zone_name           = azurerm_dns_zone.main.name
+  resource_group_name = local.rg_name
+  ttl                 = 300
+  records             = [var.ingress_ip]
+}
+
 # Azure DNS 네임서버 출력 (도메인 등록기관에서 이 값으로 NS 변경)
 output "dns_nameservers" {
   description = "도메인 등록기관에서 이 네임서버로 변경하세요"
