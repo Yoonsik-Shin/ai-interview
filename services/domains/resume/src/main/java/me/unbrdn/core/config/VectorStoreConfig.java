@@ -55,7 +55,7 @@ public class VectorStoreConfig {
     }
 
     @Bean
-    @Profile("local")
+    @Profile({"local", "prod"})
     @org.springframework.context.annotation.DependsOn("flyway")
     public VectorStore pgVectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel,
             @Value("${spring.ai.vectorstore.pgvector.dimensions:1536}") int dimensions) {
