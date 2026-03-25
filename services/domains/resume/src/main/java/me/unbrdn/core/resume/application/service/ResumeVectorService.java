@@ -61,7 +61,7 @@ public class ResumeVectorService {
         }
 
         jdbcTemplate.update(
-                "INSERT INTO resume.vector_store (id, content, metadata, embedding) VALUES (gen_random_uuid(), ?, ?::jsonb, ?::vector)",
+                "INSERT INTO resume.vector_store (id, content, metadata, embedding) VALUES (public.gen_random_uuid(), ?, ?::jsonb, ?::public.vector)",
                 content,
                 metadataJson,
                 embedding);
@@ -92,14 +92,14 @@ public class ResumeVectorService {
                 """
                 SELECT
                     vs.metadata->>'resumeId' as resume_id,
-                    1 - (vs.embedding <=> ?::vector) as similarity,
+                    1 - (vs.embedding <=> ?::public.vector) as similarity,
                     r.title,
                     r.created_at
                 FROM resume.vector_store vs
                 JOIN resume.resumes r ON r.id::text = vs.metadata->>'resumeId'
                 WHERE vs.metadata->>'userId' = ?
                 AND vs.metadata->>'category' = 'VALIDATION'
-                AND 1 - (vs.embedding <=> ?::vector) > ?
+                AND 1 - (vs.embedding <=> ?::public.vector) > ?
                 ORDER BY similarity DESC
                 LIMIT 1
                 """;
