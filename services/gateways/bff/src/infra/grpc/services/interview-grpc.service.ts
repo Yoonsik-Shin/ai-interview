@@ -81,6 +81,16 @@ export class InterviewGrpcService implements OnModuleInit {
         return firstValueFrom(service.forceStage({ interviewId, targetStage }));
     }
 
+    async createInterviewReport(interviewId: string): Promise<any> {
+        const service = this.interviewService as any;
+        return firstValueFrom(service.createInterviewReport({ interviewId }));
+    }
+
+    async getInterviewReport(interviewId: string, reportId: string): Promise<any> {
+        const service = this.interviewService as any;
+        return firstValueFrom(service.getInterviewReport({ interviewId, reportId }));
+    }
+
     // --- Mappings ---
 
     toProtoType(type: InterviewType): InterviewTypeProto {
