@@ -29,3 +29,9 @@ variable "db_password" {
   type        = string
   default     = "SecurePassword123!"
 }
+
+variable "ingress_ip" {
+  description = "NGINX Ingress LoadBalancer IP (kubectl get svc -n ingress-nginx로 확인)"
+  type        = string
+  default     = "20.196.252.64"
+}
