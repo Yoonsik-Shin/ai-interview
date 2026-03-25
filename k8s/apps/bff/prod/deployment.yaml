@@ -64,6 +64,17 @@ spec:
           envFrom:
             - configMapRef:
                 name: bff-config
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-track1-credentials
+                  key: password
+            - name: REDIS_SENTINEL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-track1-credentials
+                  key: password
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
