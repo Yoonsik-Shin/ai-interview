@@ -56,6 +56,13 @@ spec:
                 name: llm-secrets
             - configMapRef:
                 name: llm-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               memory: "1Gi"

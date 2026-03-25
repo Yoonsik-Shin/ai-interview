@@ -68,6 +68,13 @@ spec:
                 secretKeyRef:
                   name: redis-track1-credentials
                   key: password
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: "200m"

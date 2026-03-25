@@ -64,6 +64,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: bff-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               memory: "512Mi"
