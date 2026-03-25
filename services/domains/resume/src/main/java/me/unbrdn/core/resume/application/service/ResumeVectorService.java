@@ -61,7 +61,8 @@ public class ResumeVectorService {
         }
 
         jdbcTemplate.update(
-                "INSERT INTO resume.vector_store (id, content, metadata, embedding) VALUES (public.gen_random_uuid(), ?, ?::jsonb, ?::public.vector)",
+                "INSERT INTO resume.vector_store (id, content, metadata, embedding) VALUES (?, ?, ?::jsonb, ?::public.vector)",
+                UUID.randomUUID(),
                 content,
                 metadataJson,
                 embedding);
