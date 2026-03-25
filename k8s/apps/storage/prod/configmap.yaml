@@ -32,5 +32,4 @@ data:
   # Health Check
   PORT: "8000"
 
-  # Database
-  MONGODB_URI: "mongodb://root:rootpassword@mongo.unbrdn.svc.cluster.local:27017/unbrdn?authSource=admin"
+  # Database (URI는 Secret에서 관리)
