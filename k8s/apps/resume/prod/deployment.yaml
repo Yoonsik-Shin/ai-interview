@@ -37,7 +37,7 @@ spec:
 
       containers:
         - name: resume
-          image: unbrdnacr.azurecr.io/resume:b509fdeb867a2a7167d2275b28c89dd2fcf0b145
+          image: unbrdnacr.azurecr.io/resume:0ca05cd2251f9f28bd7c5bdabf31fefc84a03c45
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
