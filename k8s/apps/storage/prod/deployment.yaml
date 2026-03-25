@@ -73,6 +73,13 @@ spec:
                             name: storage-config
                       - secretRef:
                             name: storage-secrets
+                  env:
+                      # Redis Track1 인증
+                      - name: REDIS_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: redis-track1-credentials
+                            key: password
                   resources:
                       requests:
                           cpu: "100m"

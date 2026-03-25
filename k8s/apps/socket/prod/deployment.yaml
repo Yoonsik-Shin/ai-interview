@@ -69,7 +69,10 @@ spec:
             failureThreshold: 5
           env:
             - name: REDIS_PASSWORD
-              value: ""
+              valueFrom:
+                secretKeyRef:
+                  name: redis-track1-credentials
+                  key: password
           envFrom:
             - configMapRef:
                 name: socket-config

@@ -94,6 +94,12 @@ spec:
               value: "org.hibernate.dialect.PostgreSQLDialect"
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
               value: "none"
+            # Redis Track1 인증
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-track1-credentials
+                  key: password
             # Strimzi Kafka 클러스터 연결 정보
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-cluster-kafka-bootstrap.kafka:9092"

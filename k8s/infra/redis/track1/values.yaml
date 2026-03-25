@@ -6,7 +6,9 @@ redis:
   fullnameOverride: redis-track1
 
   auth:
-    enabled: false
+    enabled: true
+    existingSecret: redis-track1-credentials
+    existingSecretPasswordKey: password
 
   architecture: replication
 

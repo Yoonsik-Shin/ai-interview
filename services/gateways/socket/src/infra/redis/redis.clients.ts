@@ -40,9 +40,9 @@ export abstract class BaseRedisClient extends Redis implements OnModuleDestroy {
 
         return {
             name: sentinelName,
-            password: redisPassword || undefined,
+            password: redisPassword,
             db: redisDb,
-            sentinelPassword: redisPassword || undefined,
+            sentinelPassword: redisPassword,
             sentinels: endpoints,
         };
     }
