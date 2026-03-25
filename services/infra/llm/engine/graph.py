@@ -1,28 +1,15 @@
 
 from langgraph.graph import StateGraph, END
-from langchain_openai import ChatOpenAI
 
 from engine.nodes import InterviewState, InterviewNodes
+from engine.llm_factory import build_chat_llm
 from langgraph.checkpoint.redis import RedisSaver
 import redis
-from config import REDIS_TRACK2_URL, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT_ID
+from config import REDIS_TRACK2_URL
 
 
-def _build_llm(model_name: str, openai_api_key: str):
-    if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT_ID:
-        from langchain_openai import AzureChatOpenAI
-        return AzureChatOpenAI(
-            azure_deployment=AZURE_OPENAI_DEPLOYMENT_ID,
-            azure_endpoint=AZURE_OPENAI_ENDPOINT,
-            api_key=AZURE_OPENAI_API_KEY,
-            api_version="2024-02-01",
-            streaming=True,
-        )
-    return ChatOpenAI(model=model_name, api_key=openai_api_key, streaming=True)
-
-
-def create_interview_graph(model_name: str = "gpt-4o-mini", openai_api_key: str = None):
-    llm = _build_llm(model_name, openai_api_key)
+def create_interview_graph():
+    llm = build_chat_llm(streaming=True)
     nodes = InterviewNodes(llm)
 
     workflow = StateGraph(InterviewState)

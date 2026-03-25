@@ -44,11 +44,6 @@ class LlmServiceStub(object):
                 request_serializer=llm_dot_v1_dot_llm__pb2.TTSRequest.SerializeToString,
                 response_deserializer=llm_dot_v1_dot_llm__pb2.TTSChunk.FromString,
                 _registered_method=True)
-        self.GetEmbedding = channel.unary_unary(
-                '/llm.v1.LlmService/GetEmbedding',
-                request_serializer=llm_dot_v1_dot_llm__pb2.GetEmbeddingRequest.SerializeToString,
-                response_deserializer=llm_dot_v1_dot_llm__pb2.GetEmbeddingResponse.FromString,
-                _registered_method=True)
         self.ClassifyResume = channel.unary_unary(
                 '/llm.v1.LlmService/ClassifyResume',
                 request_serializer=llm_dot_v1_dot_llm__pb2.ClassifyResumeRequest.SerializeToString,
@@ -71,12 +66,6 @@ class LlmServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def TextToSpeech(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetEmbedding(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -108,11 +97,6 @@ def add_LlmServiceServicer_to_server(servicer, server):
                     servicer.TextToSpeech,
                     request_deserializer=llm_dot_v1_dot_llm__pb2.TTSRequest.FromString,
                     response_serializer=llm_dot_v1_dot_llm__pb2.TTSChunk.SerializeToString,
-            ),
-            'GetEmbedding': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetEmbedding,
-                    request_deserializer=llm_dot_v1_dot_llm__pb2.GetEmbeddingRequest.FromString,
-                    response_serializer=llm_dot_v1_dot_llm__pb2.GetEmbeddingResponse.SerializeToString,
             ),
             'ClassifyResume': grpc.unary_unary_rpc_method_handler(
                     servicer.ClassifyResume,
@@ -179,33 +163,6 @@ class LlmService(object):
             '/llm.v1.LlmService/TextToSpeech',
             llm_dot_v1_dot_llm__pb2.TTSRequest.SerializeToString,
             llm_dot_v1_dot_llm__pb2.TTSChunk.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetEmbedding(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/llm.v1.LlmService/GetEmbedding',
-            llm_dot_v1_dot_llm__pb2.GetEmbeddingRequest.SerializeToString,
-            llm_dot_v1_dot_llm__pb2.GetEmbeddingResponse.FromString,
             options,
             channel_credentials,
             insecure,

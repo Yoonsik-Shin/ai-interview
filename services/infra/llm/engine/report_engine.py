@@ -63,13 +63,9 @@ def generate_report(messages: list) -> dict:
     conversation_text = "\n".join(conversation_lines)
 
     from langchain_core.messages import SystemMessage, HumanMessage
-    from langchain_openai import ChatOpenAI
+    from engine.llm_factory import build_chat_llm
 
-    # GPT-4o로 structured output 생성
-    response_llm = ChatOpenAI(
-        model="gpt-4o",
-        temperature=0.3,
-    )
+    response_llm = build_chat_llm(temperature=0.3)
 
     prompt_messages = [
         SystemMessage(content=REPORT_SYSTEM_PROMPT),

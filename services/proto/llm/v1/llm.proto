@@ -11,8 +11,6 @@ option java_outer_classname = "LlmProto";
 service LlmService {
   rpc GenerateResponse(GenerateRequest) returns (stream TokenChunk);
   rpc TextToSpeech(TTSRequest) returns (stream TTSChunk);
-  rpc GetEmbedding(GetEmbeddingRequest) returns (GetEmbeddingResponse);
-
   // 이력서 분류 및 판별
   rpc ClassifyResume(ClassifyResumeRequest) returns (ClassifyResumeResponse);
 
@@ -45,14 +43,6 @@ message ClassifyResumeResponse {
   bool is_resume = 1;
   string reason = 2;
   float score = 3;
-}
-
-message GetEmbeddingRequest {
-  string text = 1;
-}
-
-message GetEmbeddingResponse {
-  repeated float embedding = 1;
 }
 
 message PersonaProfile {

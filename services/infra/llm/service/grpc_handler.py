@@ -9,22 +9,18 @@ from grpc_health.v1 import health_pb2_grpc
 from llm.v1 import llm_pb2
 from llm.v1 import llm_pb2_grpc
 from common.v1 import enums_pb2
-from engine.openai_engine import OpenAIEngine
 from config import GRPC_PORT
 from utils.log_format import log_json
 
 class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
     def __init__(self):
         # LangGraph & LLM Setup
-        # API Key is expected to be in env (OPENAI_API_KEY) or loaded via config
-        from config import OPENAI_API_KEY
         from engine.graph import create_interview_graph
         from engine.nodes import InterviewNodes
-        from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-        
-        self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=OPENAI_API_KEY, streaming=True)
-        self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=OPENAI_API_KEY)
-        self.graph = create_interview_graph(openai_api_key=OPENAI_API_KEY)
+        from engine.llm_factory import build_chat_llm
+
+        self.llm = build_chat_llm(streaming=True)
+        self.graph = create_interview_graph()
         # Helper to get prompt messages
         self.nodes = InterviewNodes(self.llm)
 
@@ -219,24 +215,6 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return llm_pb2.ClassifyResumeResponse(is_resume=False, reason="서버 오류 발생")
-
-    def GetEmbedding(self, request, context):
-        """텍스트 벡터 임베딩 생성"""
-        try:
-            log_json("llm_get_embedding_start", textLength=len(request.text))
-            
-            # 단일 텍스트 임베딩 생성
-            vector = self.embeddings.embed_query(request.text)
-            
-            log_json("llm_get_embedding_completed", dimension=len(vector))
-            
-            return llm_pb2.GetEmbeddingResponse(embedding=vector)
-            
-        except Exception as e:
-            log_json("llm_embedding_error", error=str(e))
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
-            return llm_pb2.GetEmbeddingResponse(embedding=[])
 
 
 def serve_grpc():
