@@ -44,12 +44,18 @@ class AzureBlobStorageEngine:
             from datetime import timezone, timedelta
             account_name = self.client.account_name
             account_key = self.client.credential.account_key
+            
+            # 명시적인 권한 설정 (PUT 요청 시 write 권한 필수)
+            permissions = BlobSasPermissions(read=True)
+            if method == "put_object":
+                permissions = BlobSasPermissions(write=True, create=True)
+            
             sas_token = generate_blob_sas(
                 account_name=account_name,
                 container_name=self.container_name,
                 blob_name=object_key,
                 account_key=account_key,
-                permission=BlobSasPermissions(read=True),
+                permission=permissions,
                 expiry=datetime.now(timezone.utc) + timedelta(seconds=expiration),
             )
             url = f"https://{account_name}.blob.core.windows.net/{self.container_name}/{object_key}?{sas_token}"
