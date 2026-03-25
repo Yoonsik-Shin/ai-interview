@@ -104,6 +104,19 @@ spec:
               value: "org.hibernate.dialect.PostgreSQLDialect"
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
               value: "none"
+            # MongoDB 인증
+            - name: SPRING_DATA_MONGODB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-root-username
+            - name: SPRING_DATA_MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-root-password
+            - name: SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE
+              value: "admin"
             # Redis Track1 인증
             - name: SPRING_DATA_REDIS_PASSWORD
               valueFrom:
