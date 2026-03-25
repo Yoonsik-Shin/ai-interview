@@ -100,6 +100,11 @@ spec:
                 secretKeyRef:
                   name: redis-track1-credentials
                   key: password
+            - name: SPRING_DATA_REDIS_SENTINEL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-track1-credentials
+                  key: password
             # Strimzi Kafka 클러스터 연결 정보
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-cluster-kafka-bootstrap.kafka:9092"

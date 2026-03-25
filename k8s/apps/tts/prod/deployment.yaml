@@ -61,6 +61,13 @@ spec:
                 name: tts-config
             - secretRef:
                 name: tts-secrets
+          env:
+            # Redis Track1 인증
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-track1-credentials
+                  key: password
           resources:
             requests:
               cpu: "200m"
