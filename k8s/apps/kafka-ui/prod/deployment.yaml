@@ -32,6 +32,18 @@ spec:
               value: "kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
             - name: SERVER_SERVLET_CONTEXT_PATH
               value: "/admin"
+            - name: AUTH_TYPE
+              value: "LOGIN_FORM"
+            - name: SPRING_SECURITY_USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-ui-credentials
+                  key: username
+            - name: SPRING_SECURITY_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-ui-credentials
+                  key: password
           readinessProbe:
             httpGet:
               path: /admin/actuator/health
