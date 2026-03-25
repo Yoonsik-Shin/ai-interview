@@ -81,7 +81,7 @@ spec:
             # PostgreSQL 연결 정보 (로컬 개발용)
             # 프로덕션: Oracle Autonomous Database 사용
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://postgres:5432/interview_db"
+              value: "jdbc:postgresql://postgres:5432/postgres?currentSchema=resume&options=-c%20search_path=resume,public"
             - name: SPRING_JPA_PROPERTIES_HIBERNATE_DEFAULT_SCHEMA
               value: "resume"
             - name: SPRING_FLYWAY_SCHEMAS
