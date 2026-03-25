@@ -8,6 +8,8 @@ metadata:
 spec:
   kafka:
     version: 4.1.1
+    metadata:
+      clusterId: Hj88P_5MRjaAHudpVp1z8g
     listeners:
       - name: plain
         port: 9092
