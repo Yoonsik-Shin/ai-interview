@@ -32,13 +32,6 @@ spec:
     - host: unbrdn.me
       http:
         paths:
-          - path: /admin
-            pathType: Prefix
-            backend:
-              service:
-                name: kafka-ui
-                port:
-                  number: 8080
           - path: /socket.io/
             pathType: Prefix
             backend:

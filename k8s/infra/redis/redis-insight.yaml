@@ -52,12 +52,17 @@ metadata:
   name: redis-insight-ingress
   namespace: unbrdn
   annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - redis.unbrdn.me
+      secretName: redis-insight-tls
   rules:
-    - host: redis.localhost
+    - host: redis.unbrdn.me
       http:
         paths:
           - path: /
