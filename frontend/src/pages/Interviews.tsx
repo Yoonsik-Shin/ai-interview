@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   getInterviews,
   completeInterview,
+  createReport,
   InterviewSessionSummary,
 } from "../api/interview";
 import { Skeleton } from "../components/Skeleton";
@@ -41,10 +42,22 @@ export function Interviews() {
 
     try {
       await completeInterview(id);
-      fetchInterviews();
+      const reportRes = await createReport(id);
+      navigate(`/interviews/${id}/reports/${reportRes.reportId}`);
     } catch (err) {
       console.error("Failed to complete interview", err);
       alert("면접 종료에 실패했습니다.");
+    }
+  };
+
+  const handleViewReport = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    try {
+      const reportRes = await createReport(id);
+      navigate(`/interviews/${id}/reports/${reportRes.reportId}`);
+    } catch (err) {
+      console.error("Failed to create report", err);
+      alert("리포트를 불러오는 데 실패했습니다.");
     }
   };
 
@@ -126,12 +139,21 @@ export function Interviews() {
                       종료하기
                     </button>
                   )}
-                  <button
-                    className={styles.actionButton}
-                    onClick={() => navigate(`/interview/${item.interviewId}`)}
-                  >
-                    {item.status === "COMPLETED" ? "결과 보기" : "이어하기"}
-                  </button>
+                  {item.status === "COMPLETED" ? (
+                    <button
+                      className={styles.actionButton}
+                      onClick={(e) => handleViewReport(e, item.interviewId)}
+                    >
+                      리포트 보기
+                    </button>
+                  ) : (
+                    <button
+                      className={styles.actionButton}
+                      onClick={() => navigate(`/interview/${item.interviewId}`)}
+                    >
+                      이어하기
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

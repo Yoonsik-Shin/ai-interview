@@ -144,6 +144,43 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             context.set_details(f"{type(e).__name__}: {str(e)}")
             raise e
 
+    def GenerateReport(self, request, context):
+        """면접 리포트 생성 (GPT-4o structured output)"""
+        try:
+            log_json("llm_generate_report_start", interviewId=request.interview_id, messageCount=len(request.messages))
+
+            from engine.report_engine import generate_report
+
+            messages = [
+                {"role": msg.role, "content": msg.content}
+                for msg in request.messages
+            ]
+
+            result = generate_report(messages)
+
+            log_json("llm_generate_report_completed",
+                     interviewId=request.interview_id,
+                     totalScore=result["totalScore"],
+                     passFailStatus=result["passFailStatus"])
+
+            return llm_pb2.GenerateReportResponse(
+                total_score=result["totalScore"],
+                pass_fail_status=result["passFailStatus"],
+                summary_text=result["summaryText"],
+                resume_feedback=result["resumeFeedback"],
+            )
+
+        except Exception as e:
+            log_json("llm_generate_report_error", error=str(e), error_type=type(e).__name__)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return llm_pb2.GenerateReportResponse(
+                total_score=0,
+                pass_fail_status="FAIL",
+                summary_text="리포트 생성 중 오류가 발생했습니다.",
+                resume_feedback="",
+            )
+
     def ClassifyResume(self, request, context):
         """이력서 여부 판별 (gpt-4o-mini 사용)"""
         try:

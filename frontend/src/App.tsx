@@ -11,6 +11,7 @@ import { Interview } from "./pages/Interview";
 import { ResumeManage } from "./pages/ResumeManage";
 import { Profile } from "./pages/Profile";
 import { DebugPage } from "./pages/DebugPage";
+import { InterviewReport } from "./pages/InterviewReport";
 import { useEffect } from "react";
 import { preloadModel } from "@/services/resume-validator";
 import { InterviewRecoveryProvider } from "./contexts/InterviewRecoveryContext";
@@ -103,6 +104,26 @@ export default function App() {
             <AuthGuard>
               <PageFrame>
                 <DebugPage />
+              </PageFrame>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/interviews/:interviewId/reports/:reportId"
+          element={
+            <AuthGuard>
+              <PageFrame>
+                <InterviewReport />
+              </PageFrame>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/interviews/:interviewId/reports"
+          element={
+            <AuthGuard>
+              <PageFrame>
+                <InterviewReport />
               </PageFrame>
             </AuthGuard>
           }

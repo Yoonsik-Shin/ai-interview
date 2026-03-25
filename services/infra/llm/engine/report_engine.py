@@ -28,7 +28,7 @@ passFailStatus 기준:
 """
 
 
-def generate_report(llm, messages: list) -> dict:
+def generate_report(messages: list) -> dict:
     """
     면접 대화 내역을 분석하여 리포트 생성
 
@@ -46,9 +46,8 @@ def generate_report(llm, messages: list) -> dict:
     for msg in messages:
         role = msg.get("role", "")
         content = msg.get("content", "")
-        stage = msg.get("stage", "")
 
-        if role in ("USER", "ASSISTANT") and content.strip():
+        if role in ("USER", "AI") and content.strip():
             label = "지원자" if role == "USER" else "면접관"
             conversation_lines.append(f"[{label}] {content}")
 

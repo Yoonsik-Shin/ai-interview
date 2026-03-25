@@ -15,6 +15,26 @@ service LlmService {
 
   // 이력서 분류 및 판별
   rpc ClassifyResume(ClassifyResumeRequest) returns (ClassifyResumeResponse);
+
+  // 면접 리포트 생성
+  rpc GenerateReport(GenerateReportRequest) returns (GenerateReportResponse);
+}
+
+message GenerateReportRequest {
+  string interview_id = 1;
+  repeated ReportMessage messages = 2;
+}
+
+message ReportMessage {
+  string role = 1;    // USER / AI
+  string content = 2;
+}
+
+message GenerateReportResponse {
+  int32 total_score = 1;
+  string pass_fail_status = 2;  // PASS / FAIL / HOLD
+  string summary_text = 3;
+  string resume_feedback = 4;
 }
 
 message ClassifyResumeRequest {

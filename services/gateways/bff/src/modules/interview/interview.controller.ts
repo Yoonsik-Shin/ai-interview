@@ -22,6 +22,8 @@ import {
     ResumeInterviewUseCase,
     ResumeInterviewCommand,
 } from "./usecases/resume-interview.usecase";
+import { CreateReportUseCase, CreateReportCommand } from "./usecases/create-report.usecase";
+import { GetReportUseCase, GetReportQuery } from "./usecases/get-report.usecase";
 import { CreateInterviewRequestDto } from "./dto/request/create-interview-request.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -37,6 +39,8 @@ export class InterviewController {
         private readonly cancelInterviewUseCase: CancelInterviewUseCase,
         private readonly pauseInterviewUseCase: PauseInterviewUseCase,
         private readonly resumeInterviewUseCase: ResumeInterviewUseCase,
+        private readonly createReportUseCase: CreateReportUseCase,
+        private readonly getReportUseCase: GetReportUseCase,
     ) {}
 
     @Get()
@@ -106,5 +110,17 @@ export class InterviewController {
     @UseGuards(JwtAuthGuard)
     async resumeInterview(@Param("id") id: string) {
         return await this.resumeInterviewUseCase.execute(new ResumeInterviewCommand(id));
+    }
+
+    @Post(":id/reports")
+    @UseGuards(JwtAuthGuard)
+    async createReport(@Param("id") id: string) {
+        return await this.createReportUseCase.execute(new CreateReportCommand(id));
+    }
+
+    @Get(":id/reports/:reportId")
+    @UseGuards(JwtAuthGuard)
+    async getReport(@Param("id") id: string, @Param("reportId") reportId: string) {
+        return await this.getReportUseCase.execute(new GetReportQuery(id, reportId));
     }
 }

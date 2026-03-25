@@ -8,6 +8,8 @@ import { CancelInterviewUseCase } from "./usecases/cancel-interview.usecase";
 import { PauseInterviewUseCase } from "./usecases/pause-interview.usecase";
 import { GetInterviewUseCase } from "./usecases/get-interview.usecase";
 import { ResumeInterviewUseCase } from "./usecases/resume-interview.usecase";
+import { CreateReportUseCase } from "./usecases/create-report.usecase";
+import { GetReportUseCase } from "./usecases/get-report.usecase";
 import { GrpcModule } from "../../infra/grpc/grpc.module";
 
 @Module({
@@ -22,6 +24,8 @@ import { GrpcModule } from "../../infra/grpc/grpc.module";
         PauseInterviewUseCase,
         ResumeInterviewUseCase,
         GetInterviewUseCase,
+        CreateReportUseCase,
+        GetReportUseCase,
     ],
 })
 export class InterviewModule {}
