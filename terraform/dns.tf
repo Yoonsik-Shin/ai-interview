@@ -36,7 +36,7 @@ resource "azurerm_dns_txt_record" "asuid_root" {
   resource_group_name = local.rg_name
   ttl                 = 300
   record {
-    value = azurerm_static_web_app.frontend.default_host_name
+    value = "_qczf6y17974l0omfuua3ywxn9zfacat"
   }
 }
 
