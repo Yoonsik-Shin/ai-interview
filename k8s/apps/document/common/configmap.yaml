@@ -11,7 +11,7 @@ data:
   KAFKA_DOCUMENT_PROCESSED_TOPIC: "document.processed"
 
   # Redis
-  REDIS_HOST: "redis.unbrdn.svc.cluster.local"
+  REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "2"
 

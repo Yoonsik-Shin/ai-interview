@@ -2,13 +2,7 @@
 # 역할: STT/TTS/LLM Pub/Sub, Socket.io 어댑터, 웹소켓 세션 캐시, LLM 버퍼
 # 설계: appendonly no (디스크 쓰기 차단 → 극강 I/O), noeviction (TTL 지정 필수)
 
-fullnameOverride: redis
-
-# 이미지 버전: 명시하지 않고 Chart 기본값 사용 (삭제된 태그 방지)
-
-global:
-    redis:
-        password: ""
+fullnameOverride: redis-track1
 
 auth:
     enabled: false
@@ -58,7 +52,6 @@ master:
         port 6379
         tcp-keepalive 60
         timeout 0
-        # Track 1: 디스크 쓰기 완전 차단 (극강 I/O)
         appendonly no
         save ""
         maxmemory-policy noeviction
@@ -70,7 +63,7 @@ master:
                           - key: app.kubernetes.io/name
                             operator: In
                             values:
-                                - redis
+                                - redis-track1
                           - key: app.kubernetes.io/component
                             operator: In
                             values:
@@ -112,7 +105,7 @@ replica:
                           - key: app.kubernetes.io/name
                             operator: In
                             values:
-                                - redis
+                                - redis-track1
                           - key: app.kubernetes.io/component
                             operator: In
                             values:

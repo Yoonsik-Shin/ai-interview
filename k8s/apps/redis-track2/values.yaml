@@ -1,41 +1,33 @@
-# ===============================
-# Track 2 Redis: LLM 전용 (LangGraph Checkpoint)
-# 역할: LLM 서버만 독점 접근, StateGraph 체크포인트 저장
-# 설계: appendonly yes (파드 재시작 후 대화 기록 복구), volatile-lru
-# ===============================
 redis:
-    fullnameOverride: "redis-track2"
+  fullnameOverride: redis-track2
 
-    # 이미지: Chart 기본값 사용 (명시적 태그 제거)
+  auth:
+    enabled: false
 
-    auth:
-        enabled: false
+  architecture: standalone
 
-    architecture: standalone
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "250m"
+    configuration: |
+      bind 0.0.0.0
+      port 6379
+      appendonly yes
+      appendfsync everysec
+      maxmemory-policy volatile-lru
+    nodeSelector:
+      role: app
 
-    master:
-        nodeSelector:
-            role: app
-        persistence:
-            enabled: true
-            size: 8Gi
-        resources:
-            requests:
-                memory: "256Mi"
-                cpu: "100m"
-            limits:
-                memory: "512Mi"
-                cpu: "250m"
-        configuration: |
-            bind 0.0.0.0
-            port 6379
-            # Track 2: AOF 켜기 (파드 재시작 후 LangGraph 체크포인트 복구)
-            appendonly yes
-            appendfsync everysec
-            maxmemory-policy volatile-lru
+  sentinel:
+    enabled: false
 
-    sentinel:
-        enabled: false
-
-    replica:
-        replicaCount: 0
+  replica:
+    replicaCount: 0

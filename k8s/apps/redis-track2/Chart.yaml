@@ -1,11 +1,9 @@
 apiVersion: v2
 name: redis-track2
-description: Track 2 Redis (Python LLM State, LangGraph Checkpoint)
+description: "Redis Track 2 - LLM 전용 LangGraph Checkpoint (대화 히스토리, 에이전트 메모리)"
 type: application
-version: 0.1.0
-appVersion: "7.4.1"
-
+version: 1.0.0
 dependencies:
   - name: redis
-    version: "20.6.0"
-    repository: "https://charts.bitnami.com/bitnami"
+    version: ">=25.0.0"
+    repository: https://charts.bitnami.com/bitnami

@@ -20,7 +20,7 @@ data:
   LLM_GRPC_PORT: "50051"
 
   # Redis (대화 맥락 저장)
-  REDIS_HOST: "redis.unbrdn.svc.cluster.local"
+  REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
 

@@ -11,13 +11,13 @@ data:
   STORAGE_COMPLETED_TOPIC: "storage.completed"
 
   # Redis
-  REDIS_HOST: "redis.unbrdn.svc.cluster.local"
+  REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "2"
   REDIS_AUDIO_QUEUE_PREFIX: "interview:audio"
   # Bitnami Helm Chart: Pod 이름은 redis-node-{ordinal} 패턴 사용
-  REDIS_SENTINEL_HOSTS: "redis-node-0.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-1.redis-headless.unbrdn.svc.cluster.local:26379,redis-node-2.redis-headless.unbrdn.svc.cluster.local:26379"
-  REDIS_SENTINEL_HOST: "redis-node-0.redis-headless.unbrdn.svc.cluster.local"
+  REDIS_SENTINEL_HOSTS: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
+  REDIS_SENTINEL_HOST: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
   REDIS_SENTINEL_NAME: "mymaster"
 

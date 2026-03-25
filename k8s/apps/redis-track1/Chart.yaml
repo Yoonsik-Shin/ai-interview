@@ -1,11 +1,9 @@
 apiVersion: v2
 name: redis-track1
-description: Track 1 Redis (Sentinel Mode, Pub/Sub, Buffer)
+description: "Redis Track 1 - STT/TTS/LLM Pub/Sub, Socket.io 어댑터, 웹소켓 세션 캐시, LLM 버퍼"
 type: application
-version: 0.1.0
-appVersion: "7.4.1"
-
+version: 1.0.0
 dependencies:
   - name: redis
-    version: "20.6.0" # Bitnami Redis stable (Redis 7.4.x)
-    repository: "https://charts.bitnami.com/bitnami"
+    version: ">=25.0.0"
+    repository: https://charts.bitnami.com/bitnami
