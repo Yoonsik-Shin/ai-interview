@@ -130,7 +130,6 @@ export function Interview() {
     setOnIntervene,
     setOnRetryAnswer,
     setOnResumeProcessed,
-    abortStream,
     socket,
   } = useInterviewSocket(id);
 
@@ -171,9 +170,6 @@ export function Interview() {
   const subtitleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isStoppingRef = useRef(false);
   const recordingRef = useRef(false);
-  useEffect(() => {
-    recordingRef.current = recording;
-  }, [recording]);
 
   // 3-Layer Defense System
   const isInterviewActive =
@@ -261,6 +257,10 @@ export function Interview() {
       onLevel: (level, ts) => onLevelRef.current(level, ts),
     },
   );
+
+  useEffect(() => {
+    recordingRef.current = recording;
+  }, [recording]);
 
   const finalizeStreamingMessage = useCallback(() => {
     streamBufRef.current = "";
