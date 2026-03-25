@@ -51,6 +51,12 @@ data:
   LOG_LEVEL: "INFO"
   LOG_LEVEL_CORE: "INFO"
 
-  # Database (PostgreSQL - 로컬 환경)
+  # Database (PostgreSQL - 프로덕션)
   datasource-url: "jdbc:postgresql://unbrdn-postgres.postgres.database.azure.com:5432/postgres"
   SPRING_DATASOURCE_URL: "jdbc:postgresql://unbrdn-postgres.postgres.database.azure.com:5432/postgres"
+
+  # Spring AI PgVector
+  SPRING_AI_VECTORSTORE_PGVECTOR_DIMENSIONS: "384"
+  SPRING_AI_VECTORSTORE_PGVECTOR_DISTANCE_TYPE: "COSINE_DISTANCE"
+  SPRING_AI_VECTORSTORE_PGVECTOR_INDEX_TYPE: "HNSW"
+  SPRING_AI_VECTORSTORE_PGVECTOR_REMOVE_EXISTING_VECTOR_STORE_TABLE: "false"
