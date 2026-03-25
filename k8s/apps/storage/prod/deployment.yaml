@@ -81,8 +81,6 @@ spec:
                             name: redis-track1-credentials
                             key: password
                   securityContext:
-                    runAsNonRoot: true
-                    runAsUser: 1000
                     allowPrivilegeEscalation: false
                     capabilities:
                       drop:
