@@ -1,11 +1,63 @@
 from typing import Optional
 from io import BytesIO
 from datetime import datetime
-from urllib.parse import urlparse, urlunparse
 import boto3
 from botocore.client import Config
 
 from utils.log_format import log_json
+
+
+class AzureBlobStorageEngine:
+    """Azure Blob Storage client wrapper (prod)"""
+
+    def __init__(self, connection_string: str, container_name: str):
+        from azure.storage.blob import BlobServiceClient
+        self.container_name = container_name
+        self.client = BlobServiceClient.from_connection_string(connection_string)
+        log_json("azure_blob_connected", container=container_name)
+
+    def upload_file(
+        self, interview_id: str, user_id: str, audio_data: bytes, metadata: dict
+    ) -> Optional[tuple[str, str]]:
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_format = metadata.get("format", "webm")
+            blob_name = f"interviews/{user_id}/{interview_id}/{timestamp}.{file_format}"
+
+            blob_client = self.client.get_blob_client(container=self.container_name, blob=blob_name)
+            blob_client.upload_blob(BytesIO(audio_data), overwrite=True, metadata={
+                "interview-id": str(interview_id),
+                "user-id": str(user_id),
+                "uploaded-at": datetime.now().isoformat(),
+            })
+
+            object_url = blob_client.url
+            log_json("file_uploaded", interview_id=interview_id, blob_name=blob_name, size_bytes=len(audio_data))
+            return object_url, blob_name
+        except Exception as e:
+            log_json("file_upload_failed", interview_id=interview_id, error=str(e))
+            return None
+
+    def generate_presigned_url(self, object_key: str, method: str = "get_object", expiration: int = 3600, internal_access: bool = False) -> Optional[str]:  # noqa: ARG002
+        try:
+            from azure.storage.blob import generate_blob_sas, BlobSasPermissions
+            from datetime import timezone, timedelta
+            account_name = self.client.account_name
+            account_key = self.client.credential.account_key
+            sas_token = generate_blob_sas(
+                account_name=account_name,
+                container_name=self.container_name,
+                blob_name=object_key,
+                account_key=account_key,
+                permission=BlobSasPermissions(read=True),
+                expiry=datetime.now(timezone.utc) + timedelta(seconds=expiration),
+            )
+            url = f"https://{account_name}.blob.core.windows.net/{self.container_name}/{object_key}?{sas_token}"
+            log_json("presigned_url_generated", object_key=object_key)
+            return url
+        except Exception as e:
+            log_json("presigned_url_generation_failed", object_key=object_key, error=str(e))
+            return None
 
 
 class ObjectStorageEngine:

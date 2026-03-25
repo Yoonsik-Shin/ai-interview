@@ -10,6 +10,10 @@ resource "azurerm_postgresql_flexible_server" "db" {
 
   sku_name   = "GP_Standard_D2s_v3"
   storage_mb = 32768
+
+  lifecycle {
+    ignore_changes = [zone, administrator_password]
+  }
 }
 
 # AKS → Azure PostgreSQL 접근 허용 (Azure 내부 서비스 허용)

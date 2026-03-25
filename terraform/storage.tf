@@ -15,6 +15,6 @@ resource "azurerm_storage_account" "storage" {
 
 resource "azurerm_storage_container" "blob" {
   name                  = "unbrdn-blob"
-  storage_account_name  = azurerm_storage_account.storage.name
+  storage_account_id    = azurerm_storage_account.storage.id
   container_access_type = "private" # 보안을 위해 프라이빗 설정
 }

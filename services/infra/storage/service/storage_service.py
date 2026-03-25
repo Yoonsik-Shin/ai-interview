@@ -3,7 +3,7 @@ import redis
 
 import config
 from utils.log_format import log_json
-from engine.object_storage import ObjectStorageEngine
+from engine.object_storage import ObjectStorageEngine, AzureBlobStorageEngine
 from engine.mongodb import MongoDBEngine
 from event.consumer import init_redis_client
 from service.worker.queue_processor import process_audio_queue
@@ -36,15 +36,21 @@ class StorageService:
             sentinel_name=config.REDIS_SENTINEL_NAME,
         )
 
-        # Initialize Object Storage
-        self.storage_engine = ObjectStorageEngine(
-            endpoint=config.OBJECT_STORAGE_ENDPOINT,
-            access_key=config.OBJECT_STORAGE_ACCESS_KEY,
-            secret_key=config.OBJECT_STORAGE_SECRET_KEY,
-            bucket=config.OBJECT_STORAGE_BUCKET,
-            region=config.OBJECT_STORAGE_REGION,
-            public_endpoint=config.OBJECT_STORAGE_PUBLIC_ENDPOINT,
-        )
+        # Initialize Object Storage (Azure Blob if connection string set, else S3/MinIO)
+        if config.AZURE_STORAGE_CONNECTION_STRING:
+            self.storage_engine = AzureBlobStorageEngine(
+                connection_string=config.AZURE_STORAGE_CONNECTION_STRING,
+                container_name=config.AZURE_STORAGE_CONTAINER_NAME,
+            )
+        else:
+            self.storage_engine = ObjectStorageEngine(
+                endpoint=config.OBJECT_STORAGE_ENDPOINT,
+                access_key=config.OBJECT_STORAGE_ACCESS_KEY,
+                secret_key=config.OBJECT_STORAGE_SECRET_KEY,
+                bucket=config.OBJECT_STORAGE_BUCKET,
+                region=config.OBJECT_STORAGE_REGION,
+                public_endpoint=config.OBJECT_STORAGE_PUBLIC_ENDPOINT,
+            )
 
         # Initialize MongoDB
         self.mongodb_engine = MongoDBEngine(

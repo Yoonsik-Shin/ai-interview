@@ -1,39 +1,37 @@
-# Bitnami Redis Helm Chart - Track 2
+# Bitnami Redis Helm Chart - Track 2 (umbrella chart format)
 # 역할: LLM 전용 LangGraph Checkpoint (대화 히스토리, 에이전트 메모리)
 # 설계: appendonly yes (파드 재시작 후 복구), volatile-lru
 
-fullnameOverride: redis-track2
+redis:
+  fullnameOverride: redis-track2
 
-image:
-    tag: "8.6.2-debian-12-r0"
-
-auth:
+  auth:
     enabled: false
 
-architecture: standalone
+  architecture: standalone
 
-master:
+  master:
     nodeSelector:
-        role: app
+      role: app
     persistence:
-        enabled: true
-        size: 8Gi
+      enabled: true
+      size: 8Gi
     resources:
-        requests:
-            memory: "256Mi"
-            cpu: "100m"
-        limits:
-            memory: "512Mi"
-            cpu: "250m"
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "250m"
     configuration: |
-        bind 0.0.0.0
-        port 6379
-        appendonly yes
-        appendfsync everysec
-        maxmemory-policy volatile-lru
+      bind 0.0.0.0
+      port 6379
+      appendonly yes
+      appendfsync everysec
+      maxmemory-policy volatile-lru
 
-sentinel:
+  sentinel:
     enabled: false
 
-replica:
+  replica:
     replicaCount: 0

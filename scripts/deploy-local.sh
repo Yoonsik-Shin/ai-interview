@@ -721,11 +721,17 @@ INFRA_PIDS+=($!)
             helm repo add bitnami https://charts.bitnami.com/bitnami >/dev/null 2>&1 || true
             helm repo update bitnami >/dev/null 2>&1 || true
             
-            # 원격 Bitnami 차트와 로컬 values.yaml 사용
-            helm upgrade --install redis bitnami/redis \
+            # Track 1: Pub/Sub, Socket.io 어댑터, 웹소켓 세션 캐시, LLM 버퍼
+            helm upgrade --install redis-track1 k8s/infra/redis/track1 \
                 -n ${NAMESPACE} \
-                --values k8s/infra/redis/helm/values.yaml \
+                --dependency-update \
                 --wait --timeout 300s > "$LOG_FILE" 2>&1
+
+            # Track 2: LangGraph Checkpoint (LLM 전용)
+            helm upgrade --install redis-track2 k8s/infra/redis/track2 \
+                -n ${NAMESPACE} \
+                --dependency-update \
+                --wait --timeout 300s >> "$LOG_FILE" 2>&1
             
             REDIS_TIMEOUT=300
             REDIS_ELAPSED=0

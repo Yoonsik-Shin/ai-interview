@@ -21,13 +21,6 @@ spec:
         revision: main
         directories:
           - path: k8s/infra/*/prod
-    # 2. Redis 등 Helm 구조 (대표 폴더 구조인 경우)
-    - git:
-        repoURL: https://github.com/Yoonsik-Shin/ai-interview.git
-        revision: main
-        directories:
-          - path: k8s/apps/redis-*
-
   # 🎨 감지된 폴더를 기반으로 덮어씌울 템플릿
   template:
     metadata:

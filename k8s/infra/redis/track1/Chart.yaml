@@ -1,6 +1,6 @@
 apiVersion: v2
-name: redis-track2
-description: "Redis Track 2 - LLM 전용 LangGraph Checkpoint (대화 히스토리, 에이전트 메모리)"
+name: track1
+description: "Redis Track 1 - STT/TTS/LLM Pub/Sub, Socket.io 어댑터, 웹소켓 세션 캐시, LLM 버퍼"
 type: application
 version: 1.0.0
 dependencies:

@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: redis-apps
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/Yoonsik-Shin/ai-interview.git
+        revision: main
+        directories:
+          - path: k8s/infra/redis/track*
+  template:
+    metadata:
+      name: "{{path.basename}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/Yoonsik-Shin/ai-interview.git
+        targetRevision: main
+        path: "{{path}}"
+        helm:
+          releaseName: "{{path.basename}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: unbrdn
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

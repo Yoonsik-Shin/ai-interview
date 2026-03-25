@@ -1,14 +1,26 @@
 """
 OpenAI API 래퍼 (STT의 engine/ 패턴)
+Azure OpenAI가 설정된 경우(AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_DEPLOYMENT_ID)
+AzureOpenAI 클라이언트를 사용하고, 아닌 경우 기존 OpenAI 클라이언트를 사용.
 """
-from openai import OpenAI
-from config import OPENAI_API_KEY, OPENAI_MODEL, SYSTEM_PROMPT
+from config import OPENAI_API_KEY, OPENAI_MODEL, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT_ID
+
+
+def _build_client():
+    if AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT_ID:
+        from openai import AzureOpenAI
+        return AzureOpenAI(
+            api_key=AZURE_OPENAI_API_KEY,
+            azure_endpoint=AZURE_OPENAI_ENDPOINT,
+            api_version="2024-02-01",
+        ), AZURE_OPENAI_DEPLOYMENT_ID
+    from openai import OpenAI
+    return OpenAI(api_key=OPENAI_API_KEY), OPENAI_MODEL
 
 
 class OpenAIEngine:
     def __init__(self):
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
-        self.model = OPENAI_MODEL
+        self.client, self.model = _build_client()
 
     def generate_stream(self, user_text: str, history: list, stage: int = 5, persona: str = "COMFORTABLE", interviewer_count: int = 1, domain: str = "IT"):
         """OpenAI API 스트리밍 (Stage별 프롬프트 적용)"""

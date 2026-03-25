@@ -29,9 +29,14 @@ def _env_bool(name: str, default: bool = False) -> bool:
 # gRPC Settings
 GRPC_PORT = _env_int("GRPC_PORT", 50051)
 
-# OpenAI Settings
+# OpenAI Settings (local/dev)
 OPENAI_API_KEY = _env("OPENAI_API_KEY", "")
 OPENAI_MODEL = _env("OPENAI_MODEL", "gpt-4o-mini")
+
+# Azure OpenAI Settings (prod only - if all three are set, AzureChatOpenAI is used)
+AZURE_OPENAI_API_KEY = _env("AZURE_OPENAI_API_KEY", "")
+AZURE_OPENAI_ENDPOINT = _env("AZURE_OPENAI_ENDPOINT", "")
+AZURE_OPENAI_DEPLOYMENT_ID = _env("AZURE_OPENAI_DEPLOYMENT_ID", "")
 
 # Redis Settings
 REDIS_HOST = _env("REDIS_HOST", "redis")

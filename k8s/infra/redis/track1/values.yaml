@@ -1,124 +1,125 @@
-# Bitnami Redis Helm Chart - Track 1
+# Bitnami Redis Helm Chart - Track 1 (umbrella chart format)
 # 역할: STT/TTS/LLM Pub/Sub, Socket.io 어댑터, 웹소켓 세션 캐시, LLM 버퍼
 # 설계: appendonly no (디스크 쓰기 차단 → 극강 I/O), noeviction (TTL 지정 필수)
 
-fullnameOverride: redis-track1
+redis:
+  fullnameOverride: redis-track1
 
-auth:
+  auth:
     enabled: false
 
-architecture: replication
+  architecture: replication
 
-sentinel:
+  sentinel:
     enabled: true
     quorum: 2
     resources:
-        requests:
-            memory: "128Mi"
-            cpu: "100m"
-        limits:
-            memory: "256Mi"
-            cpu: "200m"
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
     configuration: |
-        bind 0.0.0.0
-        port 26379
-        sentinel down-after-milliseconds mymaster 10000
-        sentinel parallel-syncs mymaster 1
-        sentinel failover-timeout mymaster 10000
-        sentinel resolve-hostnames yes
-        sentinel announce-hostnames yes
+      bind 0.0.0.0
+      port 26379
+      sentinel down-after-milliseconds mymaster 10000
+      sentinel parallel-syncs mymaster 1
+      sentinel failover-timeout mymaster 10000
+      sentinel resolve-hostnames yes
+      sentinel announce-hostnames yes
     service:
+      enabled: true
+      type: ClusterIP
+      ports:
+        redis: 6379
+        sentinel: 26379
+      headless:
         enabled: true
-        type: ClusterIP
-        ports:
-            redis: 6379
-            sentinel: 26379
-        headless:
-            enabled: true
 
-master:
+  master:
     count: 1
     persistence:
-        enabled: false
+      enabled: false
     resources:
-        requests:
-            memory: "128Mi"
-            cpu: "200m"
-        limits:
-            memory: "256Mi"
-            cpu: "500m"
+      requests:
+        memory: "128Mi"
+        cpu: "200m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
     configuration: |
-        bind 0.0.0.0
-        port 6379
-        tcp-keepalive 60
-        timeout 0
-        appendonly no
-        save ""
-        maxmemory-policy noeviction
+      bind 0.0.0.0
+      port 6379
+      tcp-keepalive 60
+      timeout 0
+      appendonly no
+      save ""
+      maxmemory-policy noeviction
     affinity:
-        podAntiAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-                - labelSelector:
-                      matchExpressions:
-                          - key: app.kubernetes.io/name
-                            operator: In
-                            values:
-                                - redis-track1
-                          - key: app.kubernetes.io/component
-                            operator: In
-                            values:
-                                - master
-                  topologyKey: "kubernetes.io/hostname"
-        nodeAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-                nodeSelectorTerms:
-                    - matchExpressions:
-                          - key: role
-                            operator: In
-                            values:
-                                - app
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - redis-track1
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - master
+            topologyKey: "kubernetes.io/hostname"
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: role
+                  operator: In
+                  values:
+                    - app
 
-replica:
+  replica:
     replicaCount: 3
     persistence:
-        enabled: false
+      enabled: false
     resources:
-        requests:
-            memory: "128Mi"
-            cpu: "200m"
-        limits:
-            memory: "256Mi"
-            cpu: "500m"
+      requests:
+        memory: "128Mi"
+        cpu: "200m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
     configuration: |
-        bind 0.0.0.0
-        port 6379
-        tcp-keepalive 60
-        timeout 0
-        appendonly no
-        save ""
-        replica-read-only yes
+      bind 0.0.0.0
+      port 6379
+      tcp-keepalive 60
+      timeout 0
+      appendonly no
+      save ""
+      replica-read-only yes
     affinity:
-        podAntiAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-                - labelSelector:
-                      matchExpressions:
-                          - key: app.kubernetes.io/name
-                            operator: In
-                            values:
-                                - redis-track1
-                          - key: app.kubernetes.io/component
-                            operator: In
-                            values:
-                                - replica
-                  topologyKey: "kubernetes.io/hostname"
-        nodeAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-                nodeSelectorTerms:
-                    - matchExpressions:
-                          - key: role
-                            operator: In
-                            values:
-                                - app
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - redis-track1
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - replica
+            topologyKey: "kubernetes.io/hostname"
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: role
+                  operator: In
+                  values:
+                    - app
 
-metrics:
+  metrics:
     enabled: true
