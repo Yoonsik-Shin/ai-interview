@@ -46,7 +46,7 @@ spec:
 
       containers:
         - name: socket
-          image: unbrdnacr.azurecr.io/socket:da83cf4b0153372744ec201723940d23ee36ff85
+          image: unbrdnacr.azurecr.io/socket:b795eb95fdd594ae171f09e9097421e1f717cadc
           imagePullPolicy: Always
           ports:
             - containerPort: 4000
