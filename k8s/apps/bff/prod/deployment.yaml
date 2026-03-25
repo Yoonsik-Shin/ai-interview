@@ -40,7 +40,7 @@ spec:
 
       containers:
         - name: bff
-          image: unbrdnacr.azurecr.io/bff:728b871c186566f40b66c2824038593519fe6cf9
+          image: unbrdnacr.azurecr.io/bff:597239fe7627ee4f34d961359f6722c85ac784e4
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
