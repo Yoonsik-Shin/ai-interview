@@ -11,15 +11,33 @@ resource "azurerm_dns_a_record" "root" {
   zone_name           = azurerm_dns_zone.main.name
   resource_group_name = local.rg_name
   ttl                 = 300
-  records             = [var.ingress_ip]
+  target_resource_id  = azurerm_static_web_app.frontend.id
 }
 
-resource "azurerm_dns_a_record" "www" {
+resource "azurerm_dns_cname_record" "www" {
   name                = "www"
   zone_name           = azurerm_dns_zone.main.name
   resource_group_name = local.rg_name
   ttl                 = 300
+  record              = azurerm_static_web_app.frontend.default_host_name
+}
+
+resource "azurerm_dns_a_record" "api" {
+  name                = "api"
+  zone_name           = azurerm_dns_zone.main.name
+  resource_group_name = local.rg_name
+  ttl                 = 300
   records             = [var.ingress_ip]
+}
+
+resource "azurerm_dns_txt_record" "asuid_root" {
+  name                = "asuid"
+  zone_name           = azurerm_dns_zone.main.name
+  resource_group_name = local.rg_name
+  ttl                 = 300
+  record {
+    value = azurerm_static_web_app.frontend.default_host_name
+  }
 }
 
 resource "azurerm_dns_a_record" "argocd" {

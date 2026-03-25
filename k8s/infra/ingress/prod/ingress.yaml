@@ -26,10 +26,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - unbrdn.me
-      secretName: tls-secret
+        - api.unbrdn.me
+      secretName: api-tls-secret
   rules:
-    - host: unbrdn.me
+    - host: api.unbrdn.me
       http:
         paths:
           - path: /socket.io/

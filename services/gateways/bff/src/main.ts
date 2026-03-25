@@ -25,9 +25,8 @@ async function bootstrap() {
 
     app.use(cookieParser());
 
-    // TODO: 추후 프론트엔드 도메인으로 변경 필요
     app.enableCors({
-        origin: true,
+        origin: ["https://unbrdn.me", "https://www.unbrdn.me", "http://localhost:5173"],
         methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
         credentials: true,
