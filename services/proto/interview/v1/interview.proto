@@ -43,6 +43,12 @@ service InterviewService {
 
   // 면접 단건 조회 (상태 확인용)
   rpc GetInterview (GetInterviewRequest) returns (GetInterviewResponse);
+
+  // 면접 리포트 생성
+  rpc CreateInterviewReport (CreateInterviewReportRequest) returns (CreateInterviewReportResponse);
+
+  // 면접 리포트 조회
+  rpc GetInterviewReport (GetInterviewReportRequest) returns (GetInterviewReportResponse);
 }
 
 // === 메시지 정의 (DTO) ===
@@ -206,4 +212,29 @@ message GetInterviewResponse {
   repeated string participating_personas = 8;
   optional string created_at = 11;
   optional string resumed_at = 12;
+}
+
+// 면접 리포트 생성
+message CreateInterviewReportRequest {
+  string interview_id = 1;
+}
+
+message CreateInterviewReportResponse {
+  string report_id = 1;
+  string generation_status = 2;
+}
+
+// 면접 리포트 조회
+message GetInterviewReportRequest {
+  string interview_id = 1;
+  string report_id = 2;
+}
+
+message GetInterviewReportResponse {
+  string report_id = 1;
+  string generation_status = 2;
+  int32 total_score = 3;
+  string pass_fail_status = 4;
+  string summary_text = 5;
+  string resume_feedback = 6;
 }
