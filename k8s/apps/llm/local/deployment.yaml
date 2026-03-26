@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm
+  namespace: unbrdn
+  labels:
+    app: llm
+    environment: local
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: llm
+  template:
+    metadata:
+      labels:
+        app: llm
+        environment: local
+    spec:
+      containers:
+        - name: llm
+          image: llm:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50051
+              name: grpc
+              protocol: TCP
+          readinessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 45
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          envFrom:
+            - secretRef:
+                name: llm-secrets
+            - configMapRef:
+                name: llm-config
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+      restartPolicy: Always
