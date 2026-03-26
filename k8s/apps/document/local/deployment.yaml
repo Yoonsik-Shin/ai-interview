@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: document
+  namespace: unbrdn
+  labels:
+    app: document
+    environment: local
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: document
+  template:
+    metadata:
+      labels:
+        app: document
+        environment: local
+    spec:
+      containers:
+        - name: document
+          image: document:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8100
+              name: http
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8100
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8100
+            initialDelaySeconds: 40
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          envFrom:
+            - configMapRef:
+                name: document-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "1Gi"
+            limits:
+              cpu: "500m"
+              memory: "2Gi"
+      restartPolicy: Always
