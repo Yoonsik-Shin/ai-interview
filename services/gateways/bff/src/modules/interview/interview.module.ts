@@ -10,6 +10,9 @@ import { GetInterviewUseCase } from "./usecases/get-interview.usecase";
 import { ResumeInterviewUseCase } from "./usecases/resume-interview.usecase";
 import { CreateReportUseCase } from "./usecases/create-report.usecase";
 import { GetReportUseCase } from "./usecases/get-report.usecase";
+import { GetRecordingSegmentUploadUrlUseCase } from "./usecases/get-recording-segment-upload-url.usecase";
+import { CompleteRecordingSegmentUseCase } from "./usecases/complete-recording-segment.usecase";
+import { GetRecordingSegmentsUseCase } from "./usecases/get-recording-segments.usecase";
 import { GrpcModule } from "../../infra/grpc/grpc.module";
 
 @Module({
@@ -26,6 +29,9 @@ import { GrpcModule } from "../../infra/grpc/grpc.module";
         GetInterviewUseCase,
         CreateReportUseCase,
         GetReportUseCase,
+        GetRecordingSegmentUploadUrlUseCase,
+        CompleteRecordingSegmentUseCase,
+        GetRecordingSegmentsUseCase,
     ],
 })
 export class InterviewModule {}

@@ -7,6 +7,7 @@ import {
   type InterveneEvent,
 } from "@/hooks/useInterviewSocket";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { useInterviewProtection } from "@/hooks/useInterviewProtection";
 import { useInterviewSession } from "@/hooks/useInterviewSession";
 import { DevToolPanel } from "@/components/DevTool/DevToolPanel";
@@ -135,6 +136,7 @@ export function Interview() {
 
   const streamRef = useRef<MediaStream | null>(null);
   const isMountedRef = useRef(true);
+  const turnCountRef = useRef(0);
 
   const [currentStage, setCurrentStage] = useState<InterviewStage>(
     InterviewStage.WAITING,
@@ -258,6 +260,8 @@ export function Interview() {
     },
   );
 
+  const { startSegment, stopSegment, recoverPendingUploads } = useVideoRecorder(id, streamRef);
+
   useEffect(() => {
     recordingRef.current = recording;
   }, [recording]);
@@ -321,11 +325,21 @@ export function Interview() {
     speechStartTsRef.current = null;
     silenceStartTsRef.current = null;
 
+    // Stop video segment upload (fire-and-forget)
+    stopSegment().catch(console.error);
+
     // 약간의 지연 후 중복 방지 해제 (또는 다음 녹음 시작 시 해제)
     setTimeout(() => {
       isStoppingRef.current = false;
     }, 1000);
-  }, [recording, stop, sendFinal, finalizeStreamingMessage]);
+  }, [recording, stop, sendFinal, finalizeStreamingMessage, stopSegment]);
+
+  const answerStages = [
+    InterviewStage.CANDIDATE_GREETING,
+    InterviewStage.SELF_INTRO,
+    InterviewStage.IN_PROGRESS,
+    InterviewStage.LAST_ANSWER,
+  ];
 
   const startRecording = useCallback(async () => {
     if (recording || manualPaused) return;
@@ -335,7 +349,13 @@ export function Interview() {
     silenceStartTsRef.current = null;
     await start(selectedMicrophone || undefined);
     setConversationState("LISTENING");
-  }, [manualPaused, recording, start, selectedMicrophone]);
+
+    // Start video segment for answer stages
+    if (answerStages.includes(currentStageRef.current)) {
+      const turn = ++turnCountRef.current;
+      startSegment(turn).catch(console.error);
+    }
+  }, [manualPaused, recording, start, selectedMicrophone, startSegment]);
 
   // Video Stream Logic
   const initVideo = useCallback(async (deviceId?: string) => {
@@ -396,6 +416,7 @@ export function Interview() {
   // Initialize Devices & Stream on Mount
   useEffect(() => {
     isMountedRef.current = true;
+    recoverPendingUploads().catch(console.error);
     const init = async () => {
       // Load devices
       try {
@@ -456,7 +477,7 @@ export function Interview() {
       stopAllAudio();
       stop(); // useAudioRecorder의 stop 호출
     };
-  }, [id, location.state, initVideo, stop, stopAllAudio]);
+  }, [id, location.state, initVideo, stop, stopAllAudio, recoverPendingUploads]);
 
   // Change Device Handlers
   const handleChangeCamera = async (deviceId: string) => {

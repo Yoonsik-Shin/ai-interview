@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { createReport, getReport, GetReportRes } from "../api/interview";
+import { createReport, getReport, getRecordingSegments, GetReportRes, RecordingSegment } from "../api/interview";
 import styles from "./InterviewReport.module.css";
 
 const POLL_INTERVAL_MS = 3000;
@@ -16,6 +16,8 @@ export function InterviewReport() {
   const [_reportId, setReportId] = useState<string | null>(reportIdParam ?? null);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [segments, setSegments] = useState<RecordingSegment[]>([]);
+  const [selectedTurn, setSelectedTurn] = useState<number | null>(null);
 
   const stopPolling = () => {
     if (pollRef.current) {
@@ -77,6 +79,25 @@ export function InterviewReport() {
       stopPolling();
     }
   }, [report]);
+
+  // 리포트 COMPLETED 시 영상 세그먼트 로드
+  useEffect(() => {
+    if (report?.generationStatus !== "COMPLETED" || !interviewId) return;
+    getRecordingSegments(interviewId)
+      .then((segs) => {
+        setSegments(segs);
+        if (segs.length > 0) setSelectedTurn(segs[0].turnCount);
+      })
+      .catch(() => { /* 영상 없이 리포트는 정상 표시 */ });
+  }, [report?.generationStatus, interviewId]);
+
+  const handleVideoError = async () => {
+    if (!interviewId) return;
+    try {
+      const fresh = await getRecordingSegments(interviewId);
+      setSegments(fresh);
+    } catch { /* ignore */ }
+  };
 
   const scoreColor = (score: number) => {
     if (score >= 70) return styles.scorePass;
@@ -152,6 +173,61 @@ export function InterviewReport() {
               <h2 className={styles.sectionTitle}>이력서 기반 피드백</h2>
               <p className={styles.sectionText}>{report.resumeFeedback}</p>
             </section>
+
+            {/* 영상 다시 보기 */}
+            {segments.length > 0 && (
+              <section className={styles.section}>
+                <h2 className={styles.sectionTitle}>영상 다시 보기</h2>
+
+                <div className={styles.turnSelector}>
+                  {segments.map((seg) => (
+                    <button
+                      key={seg.turnCount}
+                      className={`${styles.turnBtn} ${selectedTurn === seg.turnCount ? styles.turnBtnActive : ""}`}
+                      onClick={() => setSelectedTurn(seg.turnCount)}
+                    >
+                      턴 {seg.turnCount}
+                    </button>
+                  ))}
+                </div>
+
+                {selectedTurn !== null && (() => {
+                  const seg = segments.find((s) => s.turnCount === selectedTurn);
+                  return seg ? (
+                    <video
+                      key={seg.recordingUrl}
+                      className={styles.videoPlayer}
+                      src={seg.recordingUrl}
+                      controls
+                      onError={handleVideoError}
+                    />
+                  ) : null;
+                })()}
+
+                <div className={styles.turnNav}>
+                  <button
+                    className={styles.navBtn}
+                    disabled={selectedTurn === segments[0]?.turnCount}
+                    onClick={() => {
+                      const idx = segments.findIndex((s) => s.turnCount === selectedTurn);
+                      if (idx > 0) setSelectedTurn(segments[idx - 1].turnCount);
+                    }}
+                  >
+                    ← 이전 턴
+                  </button>
+                  <button
+                    className={styles.navBtn}
+                    disabled={selectedTurn === segments[segments.length - 1]?.turnCount}
+                    onClick={() => {
+                      const idx = segments.findIndex((s) => s.turnCount === selectedTurn);
+                      if (idx < segments.length - 1) setSelectedTurn(segments[idx + 1].turnCount);
+                    }}
+                  >
+                    다음 턴 →
+                  </button>
+                </div>
+              </section>
+            )}
 
             <button
               className={styles.backBtn}

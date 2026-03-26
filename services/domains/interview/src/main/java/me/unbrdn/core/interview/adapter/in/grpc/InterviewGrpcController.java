@@ -35,10 +35,20 @@ import me.unbrdn.core.grpc.interview.v1.TransitionStageRequest;
 import me.unbrdn.core.grpc.interview.v1.TransitionStageResponse;
 import me.unbrdn.core.interview.application.dto.command.CreateInterviewCommand;
 import me.unbrdn.core.interview.application.dto.result.CreateInterviewResult;
+import me.unbrdn.core.grpc.interview.v1.CompleteRecordingSegmentUploadRequest;
+import me.unbrdn.core.grpc.interview.v1.CompleteRecordingSegmentUploadResponse;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewRecordingSegmentsRequest;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewRecordingSegmentsResponse;
+import me.unbrdn.core.grpc.interview.v1.GetRecordingSegmentUploadUrlRequest;
+import me.unbrdn.core.grpc.interview.v1.GetRecordingSegmentUploadUrlResponse;
+import me.unbrdn.core.grpc.interview.v1.RecordingSegment;
+import me.unbrdn.core.interview.application.port.in.CompleteSegmentUploadUseCase;
 import me.unbrdn.core.interview.application.port.in.CreateInterviewReportUseCase;
 import me.unbrdn.core.interview.application.port.in.CreateInterviewUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewHistoryUseCase;
+import me.unbrdn.core.interview.application.port.in.GetInterviewRecordingSegmentsUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewReportUseCase;
+import me.unbrdn.core.interview.application.port.in.GetUploadUrlForSegmentUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewHistoryUseCase.InterviewMessageDto;
 import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery;
@@ -75,6 +85,9 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             getInterviewUseCase;
     private final CreateInterviewReportUseCase createInterviewReportUseCase;
     private final GetInterviewReportUseCase getInterviewReportUseCase;
+    private final GetUploadUrlForSegmentUseCase getUploadUrlForSegmentUseCase;
+    private final CompleteSegmentUploadUseCase completeSegmentUploadUseCase;
+    private final GetInterviewRecordingSegmentsUseCase getInterviewRecordingSegmentsUseCase;
     private final InterviewGrpcMapper mapper;
 
     @Override
@@ -486,6 +499,80 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             log.error("Failed to get interview report", e);
             io.grpc.Status status = GlobalGrpcExceptionHandler.toGrpcStatus(e);
             responseObserver.onError(status.asRuntimeException());
+        }
+    }
+
+    @Override
+    public void getRecordingSegmentUploadUrl(
+            GetRecordingSegmentUploadUrlRequest request,
+            StreamObserver<GetRecordingSegmentUploadUrlResponse> responseObserver) {
+        try {
+            var command = new GetUploadUrlForSegmentUseCase.GetUploadUrlCommand(
+                    UUID.fromString(request.getInterviewId()), request.getTurnCount());
+            var result = getUploadUrlForSegmentUseCase.execute(command);
+
+            responseObserver.onNext(GetRecordingSegmentUploadUrlResponse.newBuilder()
+                    .setUploadUrl(result.uploadUrl())
+                    .setObjectKey(result.objectKey())
+                    .build());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("Failed to get recording segment upload URL", e);
+            responseObserver.onError(GlobalGrpcExceptionHandler.toGrpcStatus(e).asRuntimeException());
+        }
+    }
+
+    @Override
+    public void completeRecordingSegmentUpload(
+            CompleteRecordingSegmentUploadRequest request,
+            StreamObserver<CompleteRecordingSegmentUploadResponse> responseObserver) {
+        try {
+            var command = new CompleteSegmentUploadUseCase.CompleteSegmentCommand(
+                    UUID.fromString(request.getInterviewId()),
+                    request.getObjectKey(),
+                    request.getTurnCount(),
+                    request.getDurationSeconds() > 0 ? request.getDurationSeconds() : null,
+                    request.getStartedAtEpoch() > 0
+                            ? java.time.Instant.ofEpochMilli(request.getStartedAtEpoch())
+                            : null,
+                    request.getEndedAtEpoch() > 0
+                            ? java.time.Instant.ofEpochMilli(request.getEndedAtEpoch())
+                            : null);
+            completeSegmentUploadUseCase.execute(command);
+
+            responseObserver.onNext(
+                    CompleteRecordingSegmentUploadResponse.newBuilder().setSuccess(true).build());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("Failed to complete recording segment upload", e);
+            responseObserver.onError(GlobalGrpcExceptionHandler.toGrpcStatus(e).asRuntimeException());
+        }
+    }
+
+    @Override
+    public void getInterviewRecordingSegments(
+            GetInterviewRecordingSegmentsRequest request,
+            StreamObserver<GetInterviewRecordingSegmentsResponse> responseObserver) {
+        try {
+            var query = new GetInterviewRecordingSegmentsUseCase.GetSegmentsQuery(
+                    UUID.fromString(request.getInterviewId()));
+            var results = getInterviewRecordingSegmentsUseCase.execute(query);
+
+            var segments = results.stream()
+                    .map(r -> RecordingSegment.newBuilder()
+                            .setTurnCount(r.turnCount())
+                            .setRecordingUrl(r.recordingUrl() != null ? r.recordingUrl() : "")
+                            .setExpiresAtEpoch(r.expiresAtEpoch())
+                            .build())
+                    .toList();
+
+            responseObserver.onNext(GetInterviewRecordingSegmentsResponse.newBuilder()
+                    .addAllSegments(segments)
+                    .build());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("Failed to get interview recording segments", e);
+            responseObserver.onError(GlobalGrpcExceptionHandler.toGrpcStatus(e).asRuntimeException());
         }
     }
 }

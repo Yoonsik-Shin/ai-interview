@@ -94,3 +94,17 @@ export async function getReport(interviewId: string, reportId: string): Promise<
     method: "GET",
   });
 }
+
+export type RecordingSegment = {
+  turnCount: number;
+  recordingUrl: string;
+  expiresAt: number; // epoch ms
+};
+
+export async function getRecordingSegments(
+  interviewId: string,
+): Promise<RecordingSegment[]> {
+  return api<RecordingSegment[]>(
+    `/v1/interviews/${interviewId}/recording-segments`,
+  );
+}

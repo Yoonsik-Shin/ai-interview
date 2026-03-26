@@ -24,9 +24,19 @@ import {
 } from "./usecases/resume-interview.usecase";
 import { CreateReportUseCase, CreateReportCommand } from "./usecases/create-report.usecase";
 import { GetReportUseCase, GetReportQuery } from "./usecases/get-report.usecase";
+import {
+    GetRecordingSegmentUploadUrlUseCase,
+    GetRecordingSegmentUploadUrlCommand,
+} from "./usecases/get-recording-segment-upload-url.usecase";
+import {
+    CompleteRecordingSegmentUseCase,
+    CompleteRecordingSegmentCommand,
+} from "./usecases/complete-recording-segment.usecase";
+import { GetRecordingSegmentsUseCase } from "./usecases/get-recording-segments.usecase";
 import { CreateInterviewRequestDto } from "./dto/request/create-interview-request.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { ParseIntPipe } from "@nestjs/common";
 
 @Controller({ path: "interviews", version: "1" })
 export class InterviewController {
@@ -41,6 +51,9 @@ export class InterviewController {
         private readonly resumeInterviewUseCase: ResumeInterviewUseCase,
         private readonly createReportUseCase: CreateReportUseCase,
         private readonly getReportUseCase: GetReportUseCase,
+        private readonly getRecordingSegmentUploadUrlUseCase: GetRecordingSegmentUploadUrlUseCase,
+        private readonly completeRecordingSegmentUseCase: CompleteRecordingSegmentUseCase,
+        private readonly getRecordingSegmentsUseCase: GetRecordingSegmentsUseCase,
     ) {}
 
     @Get()
@@ -122,5 +135,48 @@ export class InterviewController {
     @UseGuards(JwtAuthGuard)
     async getReport(@Param("id") id: string, @Param("reportId") reportId: string) {
         return await this.getReportUseCase.execute(new GetReportQuery(id, reportId));
+    }
+
+    @Get(":id/recording-segments/upload-url")
+    @UseGuards(JwtAuthGuard)
+    async getRecordingSegmentUploadUrl(
+        @Param("id") id: string,
+        @Query("turn", ParseIntPipe) turn: number,
+    ) {
+        return await this.getRecordingSegmentUploadUrlUseCase.execute(
+            new GetRecordingSegmentUploadUrlCommand(id, turn),
+        );
+    }
+
+    @Post(":id/recording-segments/complete")
+    @UseGuards(JwtAuthGuard)
+    async completeRecordingSegment(
+        @Param("id") id: string,
+        @Body()
+        body: {
+            objectKey: string;
+            turnCount: number;
+            durationSeconds?: number;
+            startedAtEpoch?: number;
+            endedAtEpoch?: number;
+        },
+    ) {
+        await this.completeRecordingSegmentUseCase.execute(
+            new CompleteRecordingSegmentCommand(
+                id,
+                body.objectKey,
+                body.turnCount,
+                body.durationSeconds,
+                body.startedAtEpoch,
+                body.endedAtEpoch,
+            ),
+        );
+        return { success: true };
+    }
+
+    @Get(":id/recording-segments")
+    @UseGuards(JwtAuthGuard)
+    async getRecordingSegments(@Param("id") id: string) {
+        return await this.getRecordingSegmentsUseCase.execute(id);
     }
 }

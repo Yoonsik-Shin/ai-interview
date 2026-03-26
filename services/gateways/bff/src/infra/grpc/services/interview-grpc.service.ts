@@ -91,6 +91,42 @@ export class InterviewGrpcService implements OnModuleInit {
         return firstValueFrom(service.getInterviewReport({ interviewId, reportId }));
     }
 
+    async getRecordingSegmentUploadUrl(
+        interviewId: string,
+        turnCount: number,
+    ): Promise<{ uploadUrl: string; objectKey: string }> {
+        const service = this.interviewService as any;
+        return firstValueFrom(
+            service.getRecordingSegmentUploadUrl({ interviewId, turnCount }),
+        );
+    }
+
+    async completeRecordingSegmentUpload(
+        interviewId: string,
+        objectKey: string,
+        turnCount: number,
+        durationSeconds?: number,
+        startedAtEpoch?: number,
+        endedAtEpoch?: number,
+    ): Promise<void> {
+        const service = this.interviewService as any;
+        await firstValueFrom(
+            service.completeRecordingSegmentUpload({
+                interviewId,
+                objectKey,
+                turnCount,
+                durationSeconds: durationSeconds ?? 0,
+                startedAtEpoch: startedAtEpoch ?? 0,
+                endedAtEpoch: endedAtEpoch ?? 0,
+            }),
+        );
+    }
+
+    async getInterviewRecordingSegments(interviewId: string): Promise<any> {
+        const service = this.interviewService as any;
+        return firstValueFrom(service.getInterviewRecordingSegments({ interviewId }));
+    }
+
     // --- Mappings ---
 
     toProtoType(type: InterviewType): InterviewTypeProto {
