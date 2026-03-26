@@ -1211,6 +1211,7 @@ log_section "모니터링 스택"
 # Step 12: 모니터링 스택 배포
 start_spinner "모니터링 스택 배포 중..."
 kubectl apply -f k8s/infra/monitoring/common/ >/dev/null 2>&1
+[ -d "k8s/infra/monitoring/local" ] && kubectl apply -f k8s/infra/monitoring/local/ >/dev/null 2>&1
 stop_spinner "success" "모니터링 스택 매니페스트 적용 완료"
 
 # Prometheus 대기
