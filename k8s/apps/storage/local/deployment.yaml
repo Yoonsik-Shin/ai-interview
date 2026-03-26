@@ -1,0 +1,59 @@
+# 로컬(Kind) 전용 Storage Deployment
+# - image: storage:latest (로컬 빌드 이미지)
+# - node affinity 제거 (Kind 노드에 node-pool=main 없음)
+# - imagePullSecrets 제거 (로컬 이미지 사용)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storage
+  namespace: unbrdn
+  labels:
+    app: storage
+    environment: local
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: storage
+  template:
+    metadata:
+      labels:
+        app: storage
+        environment: local
+    spec:
+      containers:
+        - name: storage
+          image: storage:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+              name: http
+          readinessProbe:
+            grpc:
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            grpc:
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          envFrom:
+            - configMapRef:
+                name: storage-config
+            - secretRef:
+                name: storage-secrets
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      restartPolicy: Always
