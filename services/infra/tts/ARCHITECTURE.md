@@ -39,14 +39,14 @@ tts/
 ### 3.1 Input (From Core Service)
 
 - **Protocol**: Redis Queue (List) `BLPOP`
-- **Key**: `tts:sentence:queue`
+- **Key**: `interview:sentence:queue:tts`
 - **Payload**: `BotQuestion` 이벤트 기반 JSON
 
 ### 3.2 Output (To Socket Service)
 
 음성을 생성한 뒤 Redis Pub/Sub으로 발행합니다.
 
-- **Channel**: `interview:audio:{interviewId}`
+- **Channel**: `interview:audio:pubsub:{interviewId}`
 - **Purpose**: Socket 서비스가 구독 → 클라이언트로 오디오 전송
 
 **Payload 구조**:
@@ -73,8 +73,8 @@ tts/
 | 환경변수                     | 기본값                           | 설명                          |
 | :--------------------------- | :------------------------------- | :---------------------------- |
 | `TTS_GRPC_PORT`              | `50053`                          | gRPC Health 서버 포트         |
-| `TTS_INPUT_QUEUE`            | `tts:sentence:queue`             | Redis 입력 큐                 |
-| `TTS_PUBSUB_CHANNEL_TEMPLATE`| `interview:audio:{interviewId}`  | Pub/Sub 채널 템플릿           |
+| `TTS_INPUT_QUEUE`            | `interview:sentence:queue:tts`   | Redis 입력 큐                 |
+| `TTS_PUBSUB_CHANNEL_TEMPLATE`| `interview:audio:pubsub:{interviewId}` | Pub/Sub 채널 템플릿           |
 | `EDGE_TTS_ENABLED`           | `true`                           | Edge-TTS 사용 여부            |
 | `OPENAI_TTS_MODEL`           | `tts-1`                          | OpenAI TTS 모델               |
 | `OPENAI_TTS_SPEED`           | `1.0`                            | OpenAI 재생 속도              |
@@ -89,7 +89,7 @@ tts/
 2. **엔진 선택**:
    - `mode=real` → OpenAI TTS 시도, 실패 시 Edge-TTS 폴백
    - `mode=practice` → Edge-TTS 사용
-3. **발행**: Base64 오디오로 `interview:audio:{interviewId}` 발행
+3. **발행**: Base64 오디오로 `interview:audio:pubsub:{interviewId}` 발행
 4. **헬스 체크**: gRPC Health 서버에서 `SERVING` 상태 제공
 
 ---

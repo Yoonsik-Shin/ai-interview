@@ -24,10 +24,15 @@ def _get_float(name: str, default: float) -> float:
 
 TTS_GRPC_PORT = _get_int('TTS_GRPC_PORT', 50053)
 
-REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
+REDIS_HOST = os.getenv('REDIS_HOST', 'redis-track1.unbrdn.svc.cluster.local')
 REDIS_PORT = _get_int('REDIS_PORT', 6379)
-REDIS_DB = _get_int('REDIS_DB', 2)
+REDIS_DB = _get_int('REDIS_DB', 0)
 REDIS_PASSWORD = os.getenv('REDIS_PASSWORD') or None
+
+REDIS_TRACK3_HOST = os.getenv('REDIS_TRACK3_HOST', 'redis-track3.unbrdn.svc.cluster.local')
+REDIS_TRACK3_PORT = _get_int('REDIS_TRACK3_PORT', 6379)
+REDIS_TRACK3_SSL = _get_bool('REDIS_TRACK3_SSL', False)
+
 REDIS_SENTINEL_HOSTS = os.getenv('REDIS_SENTINEL_HOSTS', '')
 REDIS_SENTINEL_NAME = os.getenv('REDIS_SENTINEL_NAME', 'mymaster')
 REDIS_SOCKET_TIMEOUT = _get_int('REDIS_SOCKET_TIMEOUT', 0)
@@ -40,9 +45,9 @@ REDIS_TCP_KEEPCNT = _get_int('REDIS_TCP_KEEPCNT', 3)
 REDIS_BLOCKING_TIMEOUT = _get_int('REDIS_BLOCKING_TIMEOUT', 5)
 
 TTS_SENTENCE_STREAM = os.getenv('TTS_SENTENCE_STREAM', 'interview:sentence:stream')
-TTS_CONSUMER_GROUP = os.getenv('TTS_CONSUMER_GROUP', 'CG_TTS')
+TTS_CONSUMER_GROUP = os.getenv('TTS_CONSUMER_GROUP', 'interview:sentence:cg:tts')
 TTS_CONSUMER_NAME = os.getenv('TTS_CONSUMER_NAME', 'tts_worker_1')
-TTS_PUBSUB_CHANNEL_TEMPLATE = os.getenv('TTS_PUBSUB_CHANNEL_TEMPLATE', 'interview:audio:{interviewId}')
+TTS_PUBSUB_CHANNEL_TEMPLATE = os.getenv('TTS_PUBSUB_CHANNEL_TEMPLATE', 'interview:audio:pubsub:{interviewId}')
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 OPENAI_TTS_MODEL = os.getenv('OPENAI_TTS_MODEL', 'tts-1')
@@ -55,6 +60,7 @@ EDGE_VOLUME = os.getenv('EDGE_TTS_VOLUME', '+0%')
 
 OPENAI_VOICE_MAP = {
     'MAIN': os.getenv('TTS_OPENAI_VOICE_MAIN', 'alloy'),
+    'LEADER': os.getenv('TTS_OPENAI_VOICE_LEADER', 'alloy'),
     'TECH': os.getenv('TTS_OPENAI_VOICE_TECH', 'onyx'),
     'HR': os.getenv('TTS_OPENAI_VOICE_HR', 'nova'),
     'EXEC': os.getenv('TTS_OPENAI_VOICE_EXEC', 'echo'),
@@ -66,11 +72,15 @@ OPENAI_VOICE_MAP = {
 
 EDGE_VOICE_MAP = {
     'MAIN': os.getenv('TTS_EDGE_VOICE_MAIN', 'ko-KR-SunHiNeural'),
-    'TECH': os.getenv('TTS_EDGE_VOICE_TECH', 'ko-KR-InJoonNeural'),
+    'LEADER': os.getenv('TTS_EDGE_VOICE_LEADER', 'ko-KR-SunHiNeural'),
+    'TECH': os.getenv('TTS_EDGE_VOICE_TECH', 'ko-KR-HyunsuMultilingualNeural'),
     'HR': os.getenv('TTS_EDGE_VOICE_HR', 'ko-KR-SunHiNeural'),
     'EXEC': os.getenv('TTS_EDGE_VOICE_EXEC', 'ko-KR-InJoonNeural'),
-    # Legacy Fallback
-    'PRESSURE': os.getenv('TTS_EDGE_VOICE_PRESSURE', EDGE_VOICE_DEFAULT),
-    'COMFORTABLE': os.getenv('TTS_EDGE_VOICE_COMFORTABLE', EDGE_VOICE_DEFAULT),
-    'RANDOM': os.getenv('TTS_EDGE_VOICE_RANDOM', EDGE_VOICE_DEFAULT),
+}
+
+EDGE_CUSTOM_SETTINGS = {
+    'MAIN': {'rate': '+0%', 'pitch': '+0Hz'},
+    'HR': {'rate': '+10%', 'pitch': '+5Hz'},
+    'TECH': {'rate': '-5%', 'pitch': '-2Hz'},
+    'EXEC': {'rate': '+0%', 'pitch': '+0Hz'},
 }

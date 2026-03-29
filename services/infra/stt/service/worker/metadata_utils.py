@@ -16,6 +16,7 @@ def extract_metadata(chunk) -> dict:
         interview_id = ctx.interview.interview_id
         user_id = ctx.interview.user_id
         stage = ctx.interview.stage or "unknown"
+        retry_count = ctx.interview.retry_count or 0
     elif ctx.HasField('general'):
         # 일반 컨텍스트는 향후 확장용
         pass
@@ -24,6 +25,7 @@ def extract_metadata(chunk) -> dict:
         "interview_id": interview_id,
         "user_id": user_id,
         "stage": stage,
+        "retry_count": retry_count,
         "trace_id": ctx.trace_id,
         "audio_format": chunk.audio_format or "pcm16",
         "sample_rate": chunk.sample_rate or SAMPLE_RATE,

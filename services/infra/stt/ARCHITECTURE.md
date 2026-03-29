@@ -58,11 +58,11 @@ stt/
 전처리 및 STT 변환 후, 결과(Transcript)를 Redis 채널로 발행합니다.
 
 1. **Redis Pub/Sub**
-   - **Channel**: `stt:transcript:pubsub`
+   - **Channel**: `interview:transcript:pubsub`
    - **Purpose**: 실시간 클라이언트 전송 (ProcessAudioService가 구독)
 
 2. **Redis Streams**
-   - **Stream Key**: `stt:transcript:stream`
+   - **Stream Key**: `interview:transcript:process`
    - **Purpose**: 신뢰성 있는 메시지 처리 및 로그 저장
 
 **Payload 구조**:
@@ -88,8 +88,8 @@ stt/
 
 | 환경변수            | 기본값                  | 설명                 |
 | :------------------ | :---------------------- | :------------------- |
-| `STT_REDIS_CHANNEL` | `stt:transcript:pubsub` | Redis Pub/Sub 채널   |
-| `STT_REDIS_STREAM`  | `stt:transcript:stream` | Redis Stream 키      |
+| `STT_REDIS_CHANNEL` | `interview:transcript:pubsub` | Redis Pub/Sub 채널   |
+| `STT_REDIS_STREAM`  | `interview:transcript:process` | Redis Stream 키      |
 | `STT_GRPC_PORT`     | `50052`                 | gRPC 서버 포트       |
 | `SAMPLE_RATE`       | `16000`                 | 오디오 샘플링 레이트 |
 

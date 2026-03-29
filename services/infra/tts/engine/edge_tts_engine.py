@@ -7,16 +7,20 @@ from config import EDGE_RATE, EDGE_VOLUME, EDGE_VOICE_MAP
 from utils.log_format import log_json
 
 
-async def synthesize_edge(text: str, persona: str) -> bytes:
-    voice = EDGE_VOICE_MAP.get(persona, EDGE_VOICE_MAP['RANDOM'])
+async def synthesize_edge(text: str, persona: str, rate: str = None, pitch: str = None) -> bytes:
+    voice = EDGE_VOICE_MAP.get(persona, EDGE_VOICE_MAP['MAIN'])
     started_at = datetime.now()
+
+    final_rate = rate or EDGE_RATE
+    final_pitch = pitch or "+0Hz" # Default pitch if not provided
 
     log_json(
         'edge_tts_start',
         text_length=len(text),
         persona=persona,
         voice=voice,
-        rate=EDGE_RATE,
+        rate=final_rate,
+        pitch=final_pitch,
         volume=EDGE_VOLUME,
     )
 
@@ -24,7 +28,8 @@ async def synthesize_edge(text: str, persona: str) -> bytes:
         communicate = edge_tts.Communicate(
             text=text,
             voice=voice,
-            rate=EDGE_RATE,
+            rate=final_rate,
+            pitch=final_pitch,
             volume=EDGE_VOLUME,
         )
         audio_buffer = io.BytesIO()

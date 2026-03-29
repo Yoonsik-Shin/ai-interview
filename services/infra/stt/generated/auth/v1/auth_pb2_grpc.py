@@ -54,6 +54,16 @@ class AuthServiceStub(object):
                 request_serializer=auth_dot_v1_dot_auth__pb2.RefreshTokenRequest.SerializeToString,
                 response_deserializer=auth_dot_v1_dot_auth__pb2.RefreshTokenResponse.FromString,
                 _registered_method=True)
+        self.LoginWithOAuth = channel.unary_unary(
+                '/auth.v1.AuthService/LoginWithOAuth',
+                request_serializer=auth_dot_v1_dot_auth__pb2.LoginWithOAuthRequest.SerializeToString,
+                response_deserializer=auth_dot_v1_dot_auth__pb2.LoginWithOAuthResponse.FromString,
+                _registered_method=True)
+        self.CompleteOAuthProfile = channel.unary_unary(
+                '/auth.v1.AuthService/CompleteOAuthProfile',
+                request_serializer=auth_dot_v1_dot_auth__pb2.CompleteOAuthProfileRequest.SerializeToString,
+                response_deserializer=auth_dot_v1_dot_auth__pb2.AuthenticateUserResponse.FromString,
+                _registered_method=True)
 
 
 class AuthServiceServicer(object):
@@ -83,6 +93,18 @@ class AuthServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def LoginWithOAuth(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CompleteOAuthProfile(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -105,6 +127,16 @@ def add_AuthServiceServicer_to_server(servicer, server):
                     servicer.RefreshToken,
                     request_deserializer=auth_dot_v1_dot_auth__pb2.RefreshTokenRequest.FromString,
                     response_serializer=auth_dot_v1_dot_auth__pb2.RefreshTokenResponse.SerializeToString,
+            ),
+            'LoginWithOAuth': grpc.unary_unary_rpc_method_handler(
+                    servicer.LoginWithOAuth,
+                    request_deserializer=auth_dot_v1_dot_auth__pb2.LoginWithOAuthRequest.FromString,
+                    response_serializer=auth_dot_v1_dot_auth__pb2.LoginWithOAuthResponse.SerializeToString,
+            ),
+            'CompleteOAuthProfile': grpc.unary_unary_rpc_method_handler(
+                    servicer.CompleteOAuthProfile,
+                    request_deserializer=auth_dot_v1_dot_auth__pb2.CompleteOAuthProfileRequest.FromString,
+                    response_serializer=auth_dot_v1_dot_auth__pb2.AuthenticateUserResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -215,6 +247,60 @@ class AuthService(object):
             '/auth.v1.AuthService/RefreshToken',
             auth_dot_v1_dot_auth__pb2.RefreshTokenRequest.SerializeToString,
             auth_dot_v1_dot_auth__pb2.RefreshTokenResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def LoginWithOAuth(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/auth.v1.AuthService/LoginWithOAuth',
+            auth_dot_v1_dot_auth__pb2.LoginWithOAuthRequest.SerializeToString,
+            auth_dot_v1_dot_auth__pb2.LoginWithOAuthResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CompleteOAuthProfile(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/auth.v1.AuthService/CompleteOAuthProfile',
+            auth_dot_v1_dot_auth__pb2.CompleteOAuthProfileRequest.SerializeToString,
+            auth_dot_v1_dot_auth__pb2.AuthenticateUserResponse.FromString,
             options,
             channel_credentials,
             insecure,

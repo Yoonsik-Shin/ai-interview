@@ -85,6 +85,16 @@ class InterviewServiceStub(object):
                 request_serializer=interview_dot_v1_dot_interview__pb2.ResumeInterviewRequest.SerializeToString,
                 response_deserializer=interview_dot_v1_dot_interview__pb2.ResumeInterviewResponse.FromString,
                 _registered_method=True)
+        self.ProcessUserAnswer = channel.unary_unary(
+                '/interview.v1.InterviewService/ProcessUserAnswer',
+                request_serializer=interview_dot_v1_dot_interview__pb2.ProcessUserAnswerRequest.SerializeToString,
+                response_deserializer=interview_dot_v1_dot_interview__pb2.ProcessUserAnswerResponse.FromString,
+                _registered_method=True)
+        self.SaveInterviewMessage = channel.unary_unary(
+                '/interview.v1.InterviewService/SaveInterviewMessage',
+                request_serializer=interview_dot_v1_dot_interview__pb2.SaveInterviewMessageRequest.SerializeToString,
+                response_deserializer=interview_dot_v1_dot_interview__pb2.SaveInterviewMessageResponse.FromString,
+                _registered_method=True)
         self.ForceStage = channel.unary_unary(
                 '/interview.v1.InterviewService/ForceStage',
                 request_serializer=interview_dot_v1_dot_interview__pb2.ForceStageRequest.SerializeToString,
@@ -94,6 +104,31 @@ class InterviewServiceStub(object):
                 '/interview.v1.InterviewService/GetInterview',
                 request_serializer=interview_dot_v1_dot_interview__pb2.GetInterviewRequest.SerializeToString,
                 response_deserializer=interview_dot_v1_dot_interview__pb2.GetInterviewResponse.FromString,
+                _registered_method=True)
+        self.CreateInterviewReport = channel.unary_unary(
+                '/interview.v1.InterviewService/CreateInterviewReport',
+                request_serializer=interview_dot_v1_dot_interview__pb2.CreateInterviewReportRequest.SerializeToString,
+                response_deserializer=interview_dot_v1_dot_interview__pb2.CreateInterviewReportResponse.FromString,
+                _registered_method=True)
+        self.GetInterviewReport = channel.unary_unary(
+                '/interview.v1.InterviewService/GetInterviewReport',
+                request_serializer=interview_dot_v1_dot_interview__pb2.GetInterviewReportRequest.SerializeToString,
+                response_deserializer=interview_dot_v1_dot_interview__pb2.GetInterviewReportResponse.FromString,
+                _registered_method=True)
+        self.GetRecordingSegmentUploadUrl = channel.unary_unary(
+                '/interview.v1.InterviewService/GetRecordingSegmentUploadUrl',
+                request_serializer=interview_dot_v1_dot_interview__pb2.GetRecordingSegmentUploadUrlRequest.SerializeToString,
+                response_deserializer=interview_dot_v1_dot_interview__pb2.GetRecordingSegmentUploadUrlResponse.FromString,
+                _registered_method=True)
+        self.CompleteRecordingSegmentUpload = channel.unary_unary(
+                '/interview.v1.InterviewService/CompleteRecordingSegmentUpload',
+                request_serializer=interview_dot_v1_dot_interview__pb2.CompleteRecordingSegmentUploadRequest.SerializeToString,
+                response_deserializer=interview_dot_v1_dot_interview__pb2.CompleteRecordingSegmentUploadResponse.FromString,
+                _registered_method=True)
+        self.GetInterviewRecordingSegments = channel.unary_unary(
+                '/interview.v1.InterviewService/GetInterviewRecordingSegments',
+                request_serializer=interview_dot_v1_dot_interview__pb2.GetInterviewRecordingSegmentsRequest.SerializeToString,
+                response_deserializer=interview_dot_v1_dot_interview__pb2.GetInterviewRecordingSegmentsResponse.FromString,
                 _registered_method=True)
 
 
@@ -170,6 +205,20 @@ class InterviewServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ProcessUserAnswer(self, request, context):
+        """사용자 답변 직접 처리 (자기소개 완료/스킵 등 Socket에서 직접 트리거 시)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SaveInterviewMessage(self, request, context):
+        """프론트에서 재생된 시스템 음성/텍스트를 대화 히스토리에 저장
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ForceStage(self, request, context):
         """[DevTool] 면접 단계 강제 변경 (개발 환경 전용)
         """
@@ -179,6 +228,41 @@ class InterviewServiceServicer(object):
 
     def GetInterview(self, request, context):
         """면접 단건 조회 (상태 확인용)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateInterviewReport(self, request, context):
+        """면접 리포트 생성
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetInterviewReport(self, request, context):
+        """면접 리포트 조회
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetRecordingSegmentUploadUrl(self, request, context):
+        """면접 영상 세그먼트 업로드 URL 발급
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CompleteRecordingSegmentUpload(self, request, context):
+        """면접 영상 세그먼트 업로드 완료 신고
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetInterviewRecordingSegments(self, request, context):
+        """면접 영상 세그먼트 목록 조회 (다시 보기)
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -237,6 +321,16 @@ def add_InterviewServiceServicer_to_server(servicer, server):
                     request_deserializer=interview_dot_v1_dot_interview__pb2.ResumeInterviewRequest.FromString,
                     response_serializer=interview_dot_v1_dot_interview__pb2.ResumeInterviewResponse.SerializeToString,
             ),
+            'ProcessUserAnswer': grpc.unary_unary_rpc_method_handler(
+                    servicer.ProcessUserAnswer,
+                    request_deserializer=interview_dot_v1_dot_interview__pb2.ProcessUserAnswerRequest.FromString,
+                    response_serializer=interview_dot_v1_dot_interview__pb2.ProcessUserAnswerResponse.SerializeToString,
+            ),
+            'SaveInterviewMessage': grpc.unary_unary_rpc_method_handler(
+                    servicer.SaveInterviewMessage,
+                    request_deserializer=interview_dot_v1_dot_interview__pb2.SaveInterviewMessageRequest.FromString,
+                    response_serializer=interview_dot_v1_dot_interview__pb2.SaveInterviewMessageResponse.SerializeToString,
+            ),
             'ForceStage': grpc.unary_unary_rpc_method_handler(
                     servicer.ForceStage,
                     request_deserializer=interview_dot_v1_dot_interview__pb2.ForceStageRequest.FromString,
@@ -246,6 +340,31 @@ def add_InterviewServiceServicer_to_server(servicer, server):
                     servicer.GetInterview,
                     request_deserializer=interview_dot_v1_dot_interview__pb2.GetInterviewRequest.FromString,
                     response_serializer=interview_dot_v1_dot_interview__pb2.GetInterviewResponse.SerializeToString,
+            ),
+            'CreateInterviewReport': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateInterviewReport,
+                    request_deserializer=interview_dot_v1_dot_interview__pb2.CreateInterviewReportRequest.FromString,
+                    response_serializer=interview_dot_v1_dot_interview__pb2.CreateInterviewReportResponse.SerializeToString,
+            ),
+            'GetInterviewReport': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetInterviewReport,
+                    request_deserializer=interview_dot_v1_dot_interview__pb2.GetInterviewReportRequest.FromString,
+                    response_serializer=interview_dot_v1_dot_interview__pb2.GetInterviewReportResponse.SerializeToString,
+            ),
+            'GetRecordingSegmentUploadUrl': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetRecordingSegmentUploadUrl,
+                    request_deserializer=interview_dot_v1_dot_interview__pb2.GetRecordingSegmentUploadUrlRequest.FromString,
+                    response_serializer=interview_dot_v1_dot_interview__pb2.GetRecordingSegmentUploadUrlResponse.SerializeToString,
+            ),
+            'CompleteRecordingSegmentUpload': grpc.unary_unary_rpc_method_handler(
+                    servicer.CompleteRecordingSegmentUpload,
+                    request_deserializer=interview_dot_v1_dot_interview__pb2.CompleteRecordingSegmentUploadRequest.FromString,
+                    response_serializer=interview_dot_v1_dot_interview__pb2.CompleteRecordingSegmentUploadResponse.SerializeToString,
+            ),
+            'GetInterviewRecordingSegments': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetInterviewRecordingSegments,
+                    request_deserializer=interview_dot_v1_dot_interview__pb2.GetInterviewRecordingSegmentsRequest.FromString,
+                    response_serializer=interview_dot_v1_dot_interview__pb2.GetInterviewRecordingSegmentsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -530,6 +649,60 @@ class InterviewService(object):
             _registered_method=True)
 
     @staticmethod
+    def ProcessUserAnswer(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/interview.v1.InterviewService/ProcessUserAnswer',
+            interview_dot_v1_dot_interview__pb2.ProcessUserAnswerRequest.SerializeToString,
+            interview_dot_v1_dot_interview__pb2.ProcessUserAnswerResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SaveInterviewMessage(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/interview.v1.InterviewService/SaveInterviewMessage',
+            interview_dot_v1_dot_interview__pb2.SaveInterviewMessageRequest.SerializeToString,
+            interview_dot_v1_dot_interview__pb2.SaveInterviewMessageResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
     def ForceStage(request,
             target,
             options=(),
@@ -573,6 +746,141 @@ class InterviewService(object):
             '/interview.v1.InterviewService/GetInterview',
             interview_dot_v1_dot_interview__pb2.GetInterviewRequest.SerializeToString,
             interview_dot_v1_dot_interview__pb2.GetInterviewResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateInterviewReport(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/interview.v1.InterviewService/CreateInterviewReport',
+            interview_dot_v1_dot_interview__pb2.CreateInterviewReportRequest.SerializeToString,
+            interview_dot_v1_dot_interview__pb2.CreateInterviewReportResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetInterviewReport(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/interview.v1.InterviewService/GetInterviewReport',
+            interview_dot_v1_dot_interview__pb2.GetInterviewReportRequest.SerializeToString,
+            interview_dot_v1_dot_interview__pb2.GetInterviewReportResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetRecordingSegmentUploadUrl(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/interview.v1.InterviewService/GetRecordingSegmentUploadUrl',
+            interview_dot_v1_dot_interview__pb2.GetRecordingSegmentUploadUrlRequest.SerializeToString,
+            interview_dot_v1_dot_interview__pb2.GetRecordingSegmentUploadUrlResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CompleteRecordingSegmentUpload(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/interview.v1.InterviewService/CompleteRecordingSegmentUpload',
+            interview_dot_v1_dot_interview__pb2.CompleteRecordingSegmentUploadRequest.SerializeToString,
+            interview_dot_v1_dot_interview__pb2.CompleteRecordingSegmentUploadResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetInterviewRecordingSegments(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/interview.v1.InterviewService/GetInterviewRecordingSegments',
+            interview_dot_v1_dot_interview__pb2.GetInterviewRecordingSegmentsRequest.SerializeToString,
+            interview_dot_v1_dot_interview__pb2.GetInterviewRecordingSegmentsResponse.FromString,
             options,
             channel_credentials,
             insecure,

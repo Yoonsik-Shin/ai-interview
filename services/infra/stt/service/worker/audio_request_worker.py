@@ -4,9 +4,6 @@ from stt.v1 import stt_pb2
 from config import (
     SAMPLE_RATE,
     SERVER_VAD_SILENCE_THRESHOLD,
-    OUTPUT_TOPIC,
-    KAFKA_ENABLED,
-    STT_REDIS_CHANNEL,
     STT_REDIS_STREAM,
 )
 from engine.stt_engine import select_engine
@@ -57,6 +54,9 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
     # Silero VAD Iterator 초기화 (stage별 동적 임계값 적용 전 임시)
     vad_engine = VadEngine()
     vad_iterator = None  # stage 확인 후 초기화
+    
+    start_time = time.time()
+    MAX_RECORDING_SECONDS = 90  # 하드 타임아웃 (90초)
 
     for chunk in request_iterator:
         # 최초 청크에서 interview_id 등 메타데이터 추출
@@ -74,9 +74,11 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
             
             # Stage별 동적 VAD 임계값 적용
             if stage == "SELF_INTRO":
-                min_silence_ms = 1000  # 1.0초 (생각할 시간 필요)
+                min_silence_ms = 3000  # 3.0초 (VAD 감지 속도 향상을 위해 5.0 -> 3.0 단축)
+            elif stage == "CANDIDATE_GREETING":
+                min_silence_ms = 600   # 0.6초 (인사 단계는 매우 빠르게 전환)
             else:
-                min_silence_ms = 700   # 0.7초 (티키타카)
+                min_silence_ms = 1200   # 1.2초 (일반 Q&A 턴 종료)
             
             vad_iterator = vad_engine.get_iterator_with_silence(min_silence_ms)
 
@@ -84,6 +86,9 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
             log_json("stt_empty_chunk_ignored", interview_id=interview_id)
             continue
         
+        # [FIX] 오디오 데이터를 누적하는 로직 추가 (누락되어 있었음)
+        audio_chunks.append(chunk.audio_data)
+
         # 마지막 청크의 타임스탬프 갱신
         if chunk.timestamp:
             last_chunk_timestamp = chunk.timestamp
@@ -118,6 +123,15 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
                     if 'start' in speech_dict:
                         log_json("stt_vad_speech_start", interview_id=interview_id, timestamp=speech_dict['start'])
                         has_vad_speech = True
+                        
+                        # [NEW] 실시간 VAD 시작 신호를 Redis Pub/Sub으로 즉시 발행 (녹화 시작 트리거)
+                        if interview_id:
+                            vad_start_payload = {
+                                "interviewId": interview_id,
+                                "event": "VAD_START",
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                            publisher.publish(vad_start_payload, key=str(interview_id))
                     
                     if 'end' in speech_dict:
                         log_json("stt_vad_speech_end", interview_id=interview_id, timestamp=speech_dict['end'])
@@ -129,10 +143,32 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
 
         if chunk.is_final:
             break
+            
+        # [NEW] 하드 타임아웃 체크
+        if (time.time() - start_time) > MAX_RECORDING_SECONDS:
+            log_json("stt_hard_timeout_reached", interview_id=interview_id, duration=MAX_RECORDING_SECONDS)
+            break
 
     # 2. 입력 없음 처리 (오디오 청크가 하나도 없거나 VAD가 말을 감지하지 못했을 때)
     if not audio_chunks or not has_vad_speech:
         log_transcription_complete("none (vad_rejected)", interview_id or "", "", None)
+        
+        # [FIX] VAD 거절 시에도 이벤트를 발행하여 Core 서버가 '답변 수신 대기'에서 벗어날 수 있도록 함
+        if interview_id:
+            stt_payload = {
+                "interviewId": interview_id,
+                "text": "",
+                "isFinal": True,
+                "timestamp": datetime.now().isoformat(),
+                "engine": "none",
+                "isEmpty": True,
+                "traceId": trace_id or "unknown",
+                "userId": user_id or "unknown",
+                "retryCount": meta.get("retry_count", 0),
+                "audioReceivedAt": last_chunk_timestamp,
+            }
+            publisher.publish(stt_payload, key=str(interview_id))
+
         return stt_pb2.STTResponse(
             text="",
             interview_id=interview_id or "",
@@ -171,6 +207,7 @@ def process_audio_request(request_iterator) -> stt_pb2.STTResponse:
             # Socket 서비스에는 없는 필드지만 Trace용으로 유지
             "traceId": trace_id,
             "userId": user_id,
+            "retryCount": meta.get("retry_count", 0),
             "audioReceivedAt": last_chunk_timestamp,
         }
         

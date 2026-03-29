@@ -10,7 +10,7 @@ import grpc
 from grpc_health.v1 import health, health_pb2, health_pb2_grpc
 
 from config import TTS_GRPC_PORT
-from event.redis_client import create_redis_client
+from event.redis_client import create_redis_client, create_track3_client
 from service.tts_service import run_consumer
 from utils.log_format import log_json
 
@@ -28,7 +28,8 @@ async def start_health_server() -> grpc.aio.Server:
 
 async def main() -> None:
     log_json('tts_starting')
-    redis_client = await create_redis_client()
+    track1_client = await create_redis_client()
+    track3_client = await create_track3_client()
     health_server = await start_health_server()
 
     stop_event = asyncio.Event()
@@ -40,7 +41,7 @@ async def main() -> None:
     for sig in (signal.SIGINT, signal.SIGTERM):
         signal.signal(sig, lambda *_: _signal_handler())
 
-    consumer_task = asyncio.create_task(run_consumer(redis_client, stop_event))
+    consumer_task = asyncio.create_task(run_consumer(track1_client, track3_client, stop_event))
     health_task = asyncio.create_task(health_server.wait_for_termination())
 
     done, pending = await asyncio.wait(
@@ -52,7 +53,8 @@ async def main() -> None:
         task.cancel()
 
     await health_server.stop(grace=5)
-    await redis_client.close()
+    await track1_client.close()
+    await track3_client.close()
     log_json('tts_stopped')
 
 

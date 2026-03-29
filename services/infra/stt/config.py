@@ -76,23 +76,22 @@ SILERO_VAD_THRESHOLD = _env_float("SILERO_VAD_THRESHOLD", 0.6)
 SILERO_VAD_MIN_SILENCE_DURATION_MS = _env_int("SILERO_VAD_MIN_SILENCE_DURATION_MS", 500)
 SILERO_VAD_SPEECH_PAD_MS = _env_int("SILERO_VAD_SPEECH_PAD_MS", 50)
 
-KAFKA_BROKER = _env("KAFKA_BROKER", "kafka:29092")
-KAFKA_ENABLED = _env_bool("KAFKA_ENABLED", False)
-INPUT_TOPIC = _env_first(["STT_INPUT_TOPIC", "INPUT_TOPIC"], "interview.audio.input")
-OUTPUT_TOPIC = _env_first(
-    ["STT_OUTPUT_TOPIC", "OUTPUT_TOPIC"], "interview.stt.transcript.created.v1"
-)
-
-REDIS_HOST = _env("REDIS_HOST", "redis")
+# Redis Configuration
+REDIS_HOST = _env("REDIS_HOST", "redis-track1.unbrdn.svc.cluster.local")
 REDIS_PORT = _env_int("REDIS_PORT", 6379)
-REDIS_DB = _env_int("REDIS_DB", 1)
+REDIS_DB = _env_int("REDIS_DB", 0)
 REDIS_PASSWORD = _env("REDIS_PASSWORD", None)
+
+REDIS_TRACK3_HOST = _env("REDIS_TRACK3_HOST", "redis-track3.unbrdn.svc.cluster.local")
+REDIS_TRACK3_PORT = _env_int("REDIS_TRACK3_PORT", 6379)
+REDIS_TRACK3_SSL = _env_bool("REDIS_TRACK3_SSL", False)
 
 REDIS_SENTINEL_HOSTS = _env("REDIS_SENTINEL_HOSTS", None)
 REDIS_SENTINEL_HOST = _env("REDIS_SENTINEL_HOST", None)
 REDIS_SENTINEL_PORT = _env_int("REDIS_SENTINEL_PORT", 26379)
 REDIS_SENTINEL_NAME = _env("REDIS_SENTINEL_NAME", "mymaster")
-STT_REDIS_CHANNEL = _env("STT_REDIS_CHANNEL", "stt:transcript:pubsub")
-STT_REDIS_STREAM = _env("STT_REDIS_STREAM", "stt:transcript:stream")
+STT_REDIS_CHANNEL = _env("STT_REDIS_CHANNEL", "interview:transcript:pubsub")
+STT_PUBSUB_CHANNEL_TEMPLATE = _env("STT_PUBSUB_CHANNEL_TEMPLATE", "interview:transcript:pubsub:{interviewId}")
+STT_REDIS_STREAM = _env("STT_REDIS_STREAM", "interview:transcript:process")
 
 GRPC_PORT = STT_GRPC_PORT

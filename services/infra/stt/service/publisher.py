@@ -1,12 +1,10 @@
 import json
 from config import (
-    KAFKA_ENABLED,
-    OUTPUT_TOPIC,
     STT_REDIS_STREAM,
     STT_REDIS_CHANNEL,
+    STT_PUBSUB_CHANNEL_TEMPLATE,
 )
 from utils.log_format import log_json
-from event.producer import publish_event
 from event.redis_pub import publish_redis
 from event.redis_stream import publish_stream
 
@@ -14,7 +12,7 @@ from event.redis_stream import publish_stream
 class SttPublisher:
     """
     STT 결과 발행을 전담하는 클래스
-    - Kafka (Event)파
+    - Kafka (Event) Publishing
     - Redis Stream (Log/Reliability)
     - Redis Pub/Sub (Real-time)
     """
@@ -29,18 +27,11 @@ class SttPublisher:
         """
         interview_id = payload.get("interviewId")
 
-        # debug-로 시작하면 Kafka/RedisStream 발행을 건너뜀 (core 서비스 에러 방지)
+        # debug-로 시작하면 RedisStream 발행을 건너뜀 (core 서비스 에러 방지)
         if str(interview_id).startswith("debug-"):
             log_json("stt_debug_publish_skip_sf", interview_id=interview_id)
         else:
-            # 1. Kafka Publish
-            if KAFKA_ENABLED:
-                try:
-                    publish_event(topic=OUTPUT_TOPIC, value=payload, key=key)
-                except Exception as exc:
-                    log_json("kafka_publish_error", error=str(exc), interview_id=interview_id)
-
-            # 2. Redis Stream Publish
+            # 1. Redis Stream Publish
             try:
                 publish_stream(STT_REDIS_STREAM, payload)
             except Exception as exc:
@@ -48,6 +39,7 @@ class SttPublisher:
 
         # 3. Redis Pub/Sub Publish
         try:
-            publish_redis(STT_REDIS_CHANNEL, json.dumps(payload))
+            channel = STT_PUBSUB_CHANNEL_TEMPLATE.format(interviewId=interview_id)
+            publish_redis(channel, json.dumps(payload))
         except Exception as exc:
             log_json("redis_publish_error", error=str(exc), interview_id=interview_id)

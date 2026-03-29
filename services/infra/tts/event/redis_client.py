@@ -18,6 +18,9 @@ from config import (
     REDIS_TCP_KEEPCNT,
     REDIS_TCP_KEEPIDLE,
     REDIS_TCP_KEEPINTVL,
+    REDIS_TRACK3_HOST,
+    REDIS_TRACK3_PORT,
+    REDIS_TRACK3_SSL,
 )
 from utils.log_format import log_json
 
@@ -88,4 +91,20 @@ async def create_redis_client() -> Redis:
     )
     await client.ping()
     log_json('redis_connected', host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+    return client
+async def create_track3_client() -> Redis:
+    """Track 3 Redis (Azure Cache for Redis) 클라이언트 생성"""
+    client = Redis(
+        host=REDIS_TRACK3_HOST,
+        port=REDIS_TRACK3_PORT,
+        db=0, # Track 3 always uses DB 0
+        password=REDIS_PASSWORD,
+        ssl=REDIS_TRACK3_SSL,
+        decode_responses=True,
+        socket_connect_timeout=REDIS_CONNECT_TIMEOUT,
+        retry_on_timeout=True,
+        health_check_interval=REDIS_HEALTH_CHECK_INTERVAL,
+    )
+    await client.ping()
+    log_json('redis_track3_connected', host=REDIS_TRACK3_HOST, port=REDIS_TRACK3_PORT)
     return client

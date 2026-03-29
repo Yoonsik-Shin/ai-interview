@@ -17,6 +17,8 @@ async def process_tts_event(event: dict[str, Any], redis_client) -> None:
     mode = event.get('mode', 'practice')
     trace_id = event.get('traceId')
     user_id = event.get('userId')
+    turn_count = event.get('turnCount', 0)
+    stage = event.get('stage', '')
 
     if not interview_id or not sentence:
         log_json('tts_event_missing_fields', interview_id=interview_id, sentence_index=sentence_index)
@@ -38,14 +40,20 @@ async def process_tts_event(event: dict[str, Any], redis_client) -> None:
             log_json('openai_tts_fallback', error=str(exc), interview_id=interview_id)
 
     if audio_bytes is None and EDGE_TTS_ENABLED:
-        audio_bytes = await synthesize_edge(sentence, persona)
+        from config import EDGE_CUSTOM_SETTINGS
+        settings = EDGE_CUSTOM_SETTINGS.get(persona, EDGE_CUSTOM_SETTINGS['MAIN'])
+        audio_bytes = await synthesize_edge(
+            sentence, 
+            persona, 
+            rate=settings.get('rate'), 
+            pitch=settings.get('pitch')
+        )
 
     if not audio_bytes:
         log_json('tts_generation_failed', interview_id=interview_id)
         return
 
-    # interviewId를 사용하여 채널 이름 생성
-    channel = f'interview:audio:{interview_id}'
+    channel = TTS_PUBSUB_CHANNEL_TEMPLATE.format(interviewId=interview_id)
     payload = {
         'interviewId': interview_id,
         'sentenceIndex': sentence_index,
@@ -67,6 +75,30 @@ async def process_tts_event(event: dict[str, Any], redis_client) -> None:
         interview_id=interview_id,
         sentence_index=sentence_index,
         size=len(audio_bytes),
+    )
+
+    # Persistence: Push to Storage Queue
+    queue_key = f"interview:audio:queue:storage:{interview_id}"
+    storage_payload = {
+        "interviewId": interview_id,
+        "audioData": base64.b64encode(audio_bytes).decode('utf-8'),
+        "metadata": {
+            "role": "AI",
+            "turnCount": turn_count,
+            "sentenceIndex": sentence_index,
+            "persona": persona,
+            "stage": stage,
+            "format": "mp3",  # edge-tts and openai-tts often return mp3
+            "timestamp": datetime.now().isoformat()
+        },
+        "isFinal": True # Each sentence is a separate "final" chunk for storage
+    }
+    await redis_client.lpush(queue_key, json.dumps(storage_payload, ensure_ascii=False))
+    log_json(
+        'tts_pushed_to_storage_queue',
+        queue_key=queue_key,
+        interview_id=interview_id,
+        sentence_index=sentence_index
     )
 
 

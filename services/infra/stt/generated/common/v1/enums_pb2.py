@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x63ommon/v1/enums.proto\x12\tcommon.v1*\x94\x02\n\x13InterviewStageProto\x12\x1f\n\x1bINTERVIEW_STAGE_UNSPECIFIED\x10\x00\x12\x0b\n\x07WAITING\x10\x01\x12\x0c\n\x08GREETING\x10\x02\x12\x16\n\x12\x43\x41NDIDATE_GREETING\x10\x03\x12\x15\n\x11INTERVIEWER_INTRO\x10\x04\x12\x15\n\x11SELF_INTRO_PROMPT\x10\x05\x12\x0e\n\nSELF_INTRO\x10\x06\x12\x15\n\x11IN_PROGRESS_STAGE\x10\x07\x12\x18\n\x14LAST_QUESTION_PROMPT\x10\x08\x12\x0f\n\x0bLAST_ANSWER\x10\t\x12\x14\n\x10\x43LOSING_GREETING\x10\x0b\x12\x13\n\x0f\x43OMPLETED_STAGE\x10\n*R\n\x12InterviewRoleProto\x12\x1e\n\x1aINTERVIEW_ROLE_UNSPECIFIED\x10\x00\x12\x08\n\x04TECH\x10\x01\x12\x06\n\x02HR\x10\x02\x12\n\n\x06LEADER\x10\x03*m\n\x19InterviewPersonalityProto\x12%\n!INTERVIEW_PERSONALITY_UNSPECIFIED\x10\x00\x12\x0c\n\x08PRESSURE\x10\x01\x12\x0f\n\x0b\x43OMFORTABLE\x10\x02\x12\n\n\x06RANDOM\x10\x03*~\n\x14InterviewStatusProto\x12 \n\x1cINTERVIEW_STATUS_UNSPECIFIED\x10\x00\x12\t\n\x05READY\x10\x01\x12\x0f\n\x0bIN_PROGRESS\x10\x02\x12\n\n\x06PAUSED\x10\x05\x12\r\n\tCOMPLETED\x10\x03\x12\r\n\tCANCELLED\x10\x04*L\n\x12InterviewTypeProto\x12\x1e\n\x1aINTERVIEW_TYPE_UNSPECIFIED\x10\x00\x12\x08\n\x04REAL\x10\x01\x12\x0c\n\x08PRACTICE\x10\x02\x42\x33\n\x1dme.unbrdn.core.grpc.common.v1B\x10\x43ommonEnumsProtoP\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x63ommon/v1/enums.proto\x12\tcommon.v1*\x94\x02\n\x13InterviewStageProto\x12\x1f\n\x1bINTERVIEW_STAGE_UNSPECIFIED\x10\x00\x12\x0b\n\x07WAITING\x10\x01\x12\x0c\n\x08GREETING\x10\x02\x12\x16\n\x12\x43\x41NDIDATE_GREETING\x10\x03\x12\x15\n\x11INTERVIEWER_INTRO\x10\x04\x12\x15\n\x11SELF_INTRO_PROMPT\x10\x05\x12\x0e\n\nSELF_INTRO\x10\x06\x12\x15\n\x11IN_PROGRESS_STAGE\x10\x07\x12\x18\n\x14LAST_QUESTION_PROMPT\x10\x08\x12\x0f\n\x0bLAST_ANSWER\x10\t\x12\x14\n\x10\x43LOSING_GREETING\x10\x0b\x12\x13\n\x0f\x43OMPLETED_STAGE\x10\n*\\\n\x12InterviewRoleProto\x12\x1e\n\x1aINTERVIEW_ROLE_UNSPECIFIED\x10\x00\x12\x08\n\x04TECH\x10\x01\x12\x06\n\x02HR\x10\x02\x12\n\n\x06LEADER\x10\x03\x12\x08\n\x04\x45XEC\x10\x04*s\n\x13InterviewRoundProto\x12\x1f\n\x1bINTERVIEW_ROUND_UNSPECIFIED\x10\x00\x12\x13\n\x0fTECHNICAL_ROUND\x10\x01\x12\x11\n\rCULTURE_ROUND\x10\x02\x12\x13\n\x0f\x45XECUTIVE_ROUND\x10\x03*m\n\x19InterviewPersonalityProto\x12%\n!INTERVIEW_PERSONALITY_UNSPECIFIED\x10\x00\x12\x0c\n\x08PRESSURE\x10\x01\x12\x0f\n\x0b\x43OMFORTABLE\x10\x02\x12\n\n\x06RANDOM\x10\x03*~\n\x14InterviewStatusProto\x12 \n\x1cINTERVIEW_STATUS_UNSPECIFIED\x10\x00\x12\t\n\x05READY\x10\x01\x12\x0f\n\x0bIN_PROGRESS\x10\x02\x12\n\n\x06PAUSED\x10\x05\x12\r\n\tCOMPLETED\x10\x03\x12\r\n\tCANCELLED\x10\x04*\xb5\x01\n\x18InterviewTurnStatusProto\x12%\n!INTERVIEW_TURN_STATUS_UNSPECIFIED\x10\x00\x12\x0e\n\nTURN_READY\x10\x01\x12\r\n\tLISTENING\x10\x02\x12\x0c\n\x08THINKING\x10\x03\x12\x0c\n\x08SPEAKING\x10\x04\x12\x0f\n\x0bTURN_PAUSED\x10\x05\x12\x12\n\x0eTURN_COMPLETED\x10\x06\x12\x12\n\x0eTURN_CANCELLED\x10\x07*L\n\x12InterviewTypeProto\x12\x1e\n\x1aINTERVIEW_TYPE_UNSPECIFIED\x10\x00\x12\x08\n\x04REAL\x10\x01\x12\x0c\n\x08PRACTICE\x10\x02\x42\x33\n\x1dme.unbrdn.core.grpc.common.v1B\x10\x43ommonEnumsProtoP\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,11 +35,15 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_INTERVIEWSTAGEPROTO']._serialized_start=37
   _globals['_INTERVIEWSTAGEPROTO']._serialized_end=313
   _globals['_INTERVIEWROLEPROTO']._serialized_start=315
-  _globals['_INTERVIEWROLEPROTO']._serialized_end=397
-  _globals['_INTERVIEWPERSONALITYPROTO']._serialized_start=399
-  _globals['_INTERVIEWPERSONALITYPROTO']._serialized_end=508
-  _globals['_INTERVIEWSTATUSPROTO']._serialized_start=510
-  _globals['_INTERVIEWSTATUSPROTO']._serialized_end=636
-  _globals['_INTERVIEWTYPEPROTO']._serialized_start=638
-  _globals['_INTERVIEWTYPEPROTO']._serialized_end=714
+  _globals['_INTERVIEWROLEPROTO']._serialized_end=407
+  _globals['_INTERVIEWROUNDPROTO']._serialized_start=409
+  _globals['_INTERVIEWROUNDPROTO']._serialized_end=524
+  _globals['_INTERVIEWPERSONALITYPROTO']._serialized_start=526
+  _globals['_INTERVIEWPERSONALITYPROTO']._serialized_end=635
+  _globals['_INTERVIEWSTATUSPROTO']._serialized_start=637
+  _globals['_INTERVIEWSTATUSPROTO']._serialized_end=763
+  _globals['_INTERVIEWTURNSTATUSPROTO']._serialized_start=766
+  _globals['_INTERVIEWTURNSTATUSPROTO']._serialized_end=947
+  _globals['_INTERVIEWTYPEPROTO']._serialized_start=949
+  _globals['_INTERVIEWTYPEPROTO']._serialized_end=1025
 # @@protoc_insertion_point(module_scope)

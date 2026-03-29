@@ -5,6 +5,6 @@ from event.redis_pub import get_redis_client
 import json
 
 def publish_stream(stream_name: str, payload: dict):
-    """Redis Stream 발행"""
+    """Redis Stream 발행 (Track 1)"""
     client = get_redis_client()
     client.xadd(stream_name, {"payload": json.dumps(payload)})
