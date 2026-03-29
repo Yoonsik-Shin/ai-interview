@@ -176,14 +176,16 @@ public class ResumeVectorService {
      * @return 이력서 ID -> 임베딩 벡터 Map
      */
     public Map<UUID, float[]> getEmbeddingsByUserId(UUID userId) {
+        // DISTINCT ON으로 resumeId당 임베딩 1개만 조회 (timestamp ASC = 최초 저장 = 프론트 WASM 임베딩)
         String sql =
                 """
-                SELECT
+                SELECT DISTINCT ON (metadata->>'resumeId')
                     metadata->>'resumeId' as resume_id,
                     embedding
                 FROM resume.vector_store
                 WHERE metadata->>'userId' = ?
                 AND metadata->>'category' = 'VALIDATION'
+                ORDER BY metadata->>'resumeId', (metadata->>'timestamp') ASC
                 """;
 
         List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, userId.toString());
@@ -192,11 +194,7 @@ public class ResumeVectorService {
                 .collect(
                         java.util.stream.Collectors.toMap(
                                 row -> UUID.fromString((String) row.get("resume_id")),
-                                row -> {
-                                    Object embeddingObj = row.get("embedding");
-                                    return parseEmbedding(embeddingObj);
-                                },
-                                (existing, replacement) -> existing)); // Duplicate key strategy
+                                row -> parseEmbedding(row.get("embedding"))));
     }
 
     private float[] parseEmbedding(Object embeddingObj) {

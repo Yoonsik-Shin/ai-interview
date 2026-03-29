@@ -136,9 +136,11 @@ public class CompleteUploadInteractor implements CompleteUploadUseCase {
             // Using ID as key for partitioning order
             kafkaTemplate.send(TOPIC_RESUME_UPLOADED, newResume.getId().toString(), event);
 
-            // 6. Save Embedding if provided by Frontend (Same-Source Strategy)
+            // 6. Save Embedding provided by Frontend as the authoritative VALIDATION embedding.
+            // Comparison is always done with a frontend (WASM) embedding, so the stored
+            // embedding must also be frontend-generated to ensure same-runtime cosine similarity.
             if (command.getEmbedding() != null && command.getEmbedding().length > 0) {
-                log.info("Saving frontend-provided embedding for resume: {}", newResume.getId());
+                log.info("Saving frontend-provided VALIDATION embedding for resume: {}", newResume.getId());
                 resumeVectorService.saveEmbedding(
                         newResume.getUserId(),
                         newResume.getId().toString(),

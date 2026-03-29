@@ -67,10 +67,13 @@ public class DocumentProcessedConsumer {
             int savedCount = 0;
 
             if (event.getValidationEmbedding() != null && !event.getValidationEmbedding().isEmpty()) {
+                // Save as BACKEND_VALIDATION to avoid overwriting the frontend WASM embedding
+                // (VALIDATION category). Duplicate detection compares frontend WASM embeddings,
+                // so the authoritative VALIDATION embedding must remain frontend-generated.
                 resumeVectorService.saveEmbedding(
                         resume.getUserId(), resumeId.toString(), event.getContent(),
                         toFloatArray(event.getValidationEmbedding()),
-                        EmbeddingCategory.VALIDATION.name());
+                        "BACKEND_VALIDATION");
                 savedCount++;
             }
 
