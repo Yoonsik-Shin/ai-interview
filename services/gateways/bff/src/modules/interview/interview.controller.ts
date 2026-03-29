@@ -95,8 +95,10 @@ export class InterviewController {
                 dto.participatingPersonas,
                 dto.personality,
                 dto.scheduledDurationMinutes,
+                dto.round,
                 dto.resumeId,
                 dto.companyName,
+                dto.jobPostingUrl,
             ),
         );
     }

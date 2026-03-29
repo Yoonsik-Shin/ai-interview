@@ -1,4 +1,7 @@
-import { LoginResult } from "../../usecases/login.usecase";
+interface AuthResult {
+    accessToken: string;
+    user: { id: string; email: string; nickname: string; role: string };
+}
 
 class UserDto {
     id: string;
@@ -11,7 +14,7 @@ export class LoginResponseDto {
     accessToken: string;
     user: UserDto;
 
-    constructor(result: LoginResult) {
+    constructor(result: AuthResult) {
         this.accessToken = result.accessToken;
         this.user = {
             id: result.user.id.toString(),

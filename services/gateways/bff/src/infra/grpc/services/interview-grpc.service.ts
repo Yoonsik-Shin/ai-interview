@@ -14,6 +14,7 @@ import {
     InterviewTypeProto,
     InterviewRoleProto,
     InterviewPersonalityProto,
+    InterviewRoundProto,
     InterviewStatusProto,
     InterviewStageProto,
 } from "@grpc-types/common/v1/enums";
@@ -21,6 +22,7 @@ import {
     InterviewType,
     InterviewRole,
     InterviewPersonality,
+    InterviewRound,
     InterviewStage,
 } from "../../../modules/interview/enum/interview.enum";
 
@@ -159,6 +161,8 @@ export class InterviewGrpcService implements OnModuleInit {
                 return InterviewRoleProto.HR;
             case InterviewRole.LEADER:
                 return InterviewRoleProto.LEADER;
+            case InterviewRole.EXEC:
+                return InterviewRoleProto.EXEC;
             default:
                 return InterviewRoleProto.INTERVIEW_ROLE_UNSPECIFIED;
         }
@@ -172,8 +176,36 @@ export class InterviewGrpcService implements OnModuleInit {
                 return InterviewRole.HR;
             case InterviewRoleProto.LEADER:
                 return InterviewRole.LEADER;
+            case InterviewRoleProto.EXEC:
+                return InterviewRole.EXEC;
             default:
                 return InterviewRole.TECH;
+        }
+    }
+
+    toProtoRound(round: InterviewRound): InterviewRoundProto {
+        switch (round) {
+            case InterviewRound.TECHNICAL:
+                return InterviewRoundProto.TECHNICAL_ROUND;
+            case InterviewRound.CULTURE_FIT:
+                return InterviewRoundProto.CULTURE_ROUND;
+            case InterviewRound.EXECUTIVE:
+                return InterviewRoundProto.EXECUTIVE_ROUND;
+            default:
+                return InterviewRoundProto.INTERVIEW_ROUND_UNSPECIFIED;
+        }
+    }
+
+    fromProtoRound(proto: InterviewRoundProto): InterviewRound {
+        switch (proto) {
+            case InterviewRoundProto.TECHNICAL_ROUND:
+                return InterviewRound.TECHNICAL;
+            case InterviewRoundProto.CULTURE_ROUND:
+                return InterviewRound.CULTURE_FIT;
+            case InterviewRoundProto.EXECUTIVE_ROUND:
+                return InterviewRound.EXECUTIVE;
+            default:
+                return InterviewRound.TECHNICAL;
         }
     }
 

@@ -2,6 +2,9 @@ import {
     AuthServiceClient,
     AuthenticateUserRequest,
     AuthenticateUserResponse,
+    CompleteOAuthProfileRequest,
+    LoginWithOAuthRequest,
+    LoginWithOAuthResponse,
     RegisterCandidateRequest,
     RegisterRecruiterRequest,
     RegisterResponse,
@@ -39,5 +42,13 @@ export class AuthGrpcService implements OnModuleInit {
 
     async refreshToken(request: RefreshTokenRequest): Promise<RefreshTokenResponse> {
         return firstValueFrom(this.authService.refreshToken(request));
+    }
+
+    async loginWithOAuth(request: LoginWithOAuthRequest): Promise<LoginWithOAuthResponse> {
+        return firstValueFrom(this.authService.loginWithOAuth(request));
+    }
+
+    async completeOAuthProfile(request: CompleteOAuthProfileRequest): Promise<AuthenticateUserResponse> {
+        return firstValueFrom(this.authService.completeOAuthProfile(request));
     }
 }

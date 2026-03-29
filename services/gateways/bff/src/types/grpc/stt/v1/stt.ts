@@ -17,6 +17,8 @@ export interface InterviewContext {
   userId: string;
   /** "SELF_INTRO", "IN_PROGRESS", "LAST_ANSWER", etc. */
   stage: string;
+  /** 현재 리트라이 시도 횟수 (0부터 시작) */
+  retryCount: number;
 }
 
 /** 일반 STT 컨텍스트 (향후 확장용) */

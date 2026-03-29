@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import { InterviewType, InterviewRole, InterviewPersonality } from "../enum/interview.enum";
+import {
+    InterviewType,
+    InterviewRole,
+    InterviewPersonality,
+    InterviewRound,
+} from "../enum/interview.enum";
 import { InterviewGrpcService } from "src/infra/grpc/services/interview-grpc.service";
 
 export class CreateInterviewCommand {
@@ -10,8 +15,10 @@ export class CreateInterviewCommand {
         public readonly participatingPersonas: InterviewRole[],
         public readonly personality: InterviewPersonality,
         public readonly scheduledDurationMinutes: number,
+        public readonly round: InterviewRound,
         public readonly resumeId?: string,
         public readonly companyName?: string,
+        public readonly jobPostingUrl?: string,
     ) {}
 }
 
@@ -35,6 +42,8 @@ export class CreateInterviewUseCase {
             participatingPersonas: command.participatingPersonas.map((r) => r.toString()),
             scheduledDurationMinutes: command.scheduledDurationMinutes,
             resumeId: command.resumeId,
+            round: this.interviewGrpcService.toProtoRound(command.round),
+            jobPostingUrl: command.jobPostingUrl,
         });
 
         return new CreateInterviewResult(

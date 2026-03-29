@@ -9,7 +9,12 @@ import {
     IsArray,
     IsUUID,
 } from "class-validator";
-import { InterviewType, InterviewRole, InterviewPersonality } from "../../enum/interview.enum";
+import {
+    InterviewType,
+    InterviewRole,
+    InterviewPersonality,
+    InterviewRound,
+} from "../../enum/interview.enum";
 
 export class CreateInterviewRequestDto {
     @IsString()
@@ -34,6 +39,13 @@ export class CreateInterviewRequestDto {
 
     @IsEnum(InterviewPersonality)
     personality: InterviewPersonality;
+
+    @IsEnum(InterviewRound)
+    round: InterviewRound;
+
+    @IsString()
+    @IsOptional()
+    jobPostingUrl?: string;
 
     @IsInt()
     @Min(10)

@@ -5,6 +5,10 @@ export interface RecordingSegmentResult {
     turnCount: number;
     recordingUrl: string;
     expiresAt: number;
+    questionContent: string;
+    answerContent: string;
+    questionAudioUrl: string;
+    answerAudioUrl: string;
 }
 
 @Injectable()
@@ -18,6 +22,10 @@ export class GetRecordingSegmentsUseCase {
             turnCount: s.turnCount,
             recordingUrl: s.recordingUrl,
             expiresAt: s.expiresAtEpoch,
+            questionContent: s.questionContent,
+            answerContent: s.answerContent,
+            questionAudioUrl: s.questionAudioUrl,
+            answerAudioUrl: s.answerAudioUrl,
         }));
     }
 }

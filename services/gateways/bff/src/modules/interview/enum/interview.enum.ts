@@ -7,6 +7,13 @@ export enum InterviewRole {
     TECH = "TECH",
     HR = "HR",
     LEADER = "LEADER",
+    EXEC = "EXEC",
+}
+
+export enum InterviewRound {
+    TECHNICAL = "TECHNICAL",
+    CULTURE_FIT = "CULTURE_FIT",
+    EXECUTIVE = "EXECUTIVE",
 }
 
 export enum InterviewPersonality {

@@ -21,6 +21,12 @@ export const envValidationSchema = Joi.object({
     JWT_JWKS_REQUESTS_PER_MINUTE: Joi.number().default(10),
     JWT_JWKS_TIMEOUT_MS: Joi.number().default(30000), // 30 seconds
 
+    // Google OAuth Configuration
+    GOOGLE_CLIENT_ID: Joi.string().required(),
+    GOOGLE_CLIENT_SECRET: Joi.string().required(),
+    GOOGLE_CALLBACK_URL: Joi.string().required(),
+    FRONTEND_URL: Joi.string().required(),
+
     // gRPC Configuration
     CORE_GRPC_HOST: Joi.string().default("core"),
     CORE_GRPC_PORT: Joi.number().default(9090),
