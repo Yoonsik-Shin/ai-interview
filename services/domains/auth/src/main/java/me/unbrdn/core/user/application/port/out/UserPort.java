@@ -23,6 +23,14 @@ public interface UserPort {
     Optional<User> loadByEmail(String email);
 
     /**
+     * 닉네임으로 사용자를 조회합니다.
+     *
+     * @param nickname 닉네임
+     * @return 사용자 (없으면 Optional.empty())
+     */
+    Optional<User> loadByNickname(String nickname);
+
+    /**
      * ID로 사용자를 조회합니다.
      *
      * @param userId 사용자 ID (UUID)

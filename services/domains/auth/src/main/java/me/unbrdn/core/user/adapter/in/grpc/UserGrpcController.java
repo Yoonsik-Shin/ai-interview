@@ -13,6 +13,7 @@ import me.unbrdn.core.grpc.user.v1.RegisterCandidateRequest;
 import me.unbrdn.core.grpc.user.v1.RegisterRecruiterRequest;
 import me.unbrdn.core.grpc.user.v1.RegisterUserResponse;
 import me.unbrdn.core.grpc.user.v1.UserServiceGrpc;
+import me.unbrdn.core.user.application.exception.InvalidInputException;
 import me.unbrdn.core.user.application.exception.UserAlreadyExistsException;
 import me.unbrdn.core.user.application.interactor.dto.command.FindUserByEmailCommand;
 import me.unbrdn.core.user.application.interactor.dto.command.FindUserByIdCommand;
@@ -93,6 +94,9 @@ public class UserGrpcController extends UserServiceGrpc.UserServiceImplBase {
                             .build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
+        } catch (InvalidInputException ex) {
+            responseObserver.onError(
+                    Status.INVALID_ARGUMENT.withDescription(ex.getMessage()).asRuntimeException());
         } catch (UserAlreadyExistsException ex) {
             responseObserver.onError(
                     Status.ALREADY_EXISTS.withDescription(ex.getMessage()).asRuntimeException());
@@ -119,6 +123,9 @@ public class UserGrpcController extends UserServiceGrpc.UserServiceImplBase {
                             .build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
+        } catch (InvalidInputException ex) {
+            responseObserver.onError(
+                    Status.INVALID_ARGUMENT.withDescription(ex.getMessage()).asRuntimeException());
         } catch (UserAlreadyExistsException ex) {
             responseObserver.onError(
                     Status.ALREADY_EXISTS.withDescription(ex.getMessage()).asRuntimeException());

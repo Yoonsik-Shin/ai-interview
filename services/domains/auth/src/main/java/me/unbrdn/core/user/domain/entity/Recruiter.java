@@ -19,6 +19,24 @@ public class Recruiter extends User {
     private String nickname;
     private String companyCode;
 
+    /** OAuth 소셜 로그인으로 가입하는 팩토리 메서드 (비밀번호는 잠금 계정용 랜덤 해시) */
+    public static Recruiter createWithOAuth(
+            String email,
+            String nickname,
+            String phoneNumber,
+            String profileImageUrl,
+            PasswordEncoder encoder) {
+        return Recruiter.builder()
+                .email(email)
+                .password(encoder.encode(java.util.UUID.randomUUID().toString()))
+                .nickname(nickname)
+                .role(UserRole.RECRUITER)
+                .phoneNumber(phoneNumber)
+                .profileImageUrl(profileImageUrl)
+                .isActive(AccountStatus.ACTIVE)
+                .build();
+    }
+
     /** 비밀번호 해시화까지 책임지는 팩토리 메서드 */
     public static Recruiter createWithRawPassword(
             String email,

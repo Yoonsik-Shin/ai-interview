@@ -14,7 +14,7 @@ import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 @Configuration
 public class RedisConfig {
 
-    @Value("${redis.stream.interview-result:stt:transcript:stream}")
+    @Value("${redis.stream.interview-result:interview:transcript:process}")
     private String interviewResultStreamKey;
 
     @Value("${redis.stream.interview-result-group:core-interview-result-group}")

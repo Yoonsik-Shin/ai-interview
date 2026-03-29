@@ -24,6 +24,12 @@ public class UserPersistenceAdapter implements UserPort {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<User> loadByNickname(String nickname) {
+        return usersRepository.findByNickname(nickname).map(userMapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<User> loadById(UUID userId) {
         return usersRepository.findById(userId).map(userMapper::toDomain);
     }

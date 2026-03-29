@@ -19,6 +19,27 @@ public class Candidate extends User {
 
     private CandidateOptions candidateOptions;
 
+    /** OAuth 소셜 로그인으로 가입하는 팩토리 메서드 (비밀번호는 잠금 계정용 랜덤 해시) */
+    public static Candidate createWithOAuth(
+            String email,
+            String nickname,
+            String phoneNumber,
+            String profileImageUrl,
+            PasswordEncoder encoder) {
+        Candidate candidate =
+                Candidate.builder()
+                        .email(email)
+                        .password(encoder.encode(java.util.UUID.randomUUID().toString()))
+                        .nickname(nickname)
+                        .role(UserRole.CANDIDATE)
+                        .phoneNumber(phoneNumber)
+                        .profileImageUrl(profileImageUrl)
+                        .isActive(AccountStatus.ACTIVE)
+                        .build();
+        candidate.candidateOptions = CandidateOptions.create(candidate);
+        return candidate;
+    }
+
     /** 비밀번호 해시화까지 책임지는 팩토리 메서드 */
     public static Candidate createWithRawPassword(
             String email,

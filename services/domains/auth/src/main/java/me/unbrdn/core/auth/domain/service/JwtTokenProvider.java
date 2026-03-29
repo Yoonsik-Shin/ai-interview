@@ -9,6 +9,8 @@ import io.jsonwebtoken.SigningKeyResolverAdapter;
 import java.security.Key;
 import java.time.Duration;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import me.unbrdn.core.auth.domain.service.JwtKeyProvider.JwtKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -75,6 +77,52 @@ public class JwtTokenProvider implements TokenProvider {
             throw new IllegalArgumentException("Invalid token type");
         }
         return claims.getSubject();
+    }
+
+    /** OAuth 소셜 로그인 pending token 발급 (5분 유효, typ="oauth_pending") */
+    public String generateOAuthPendingToken(
+            String provider,
+            String providerUserId,
+            String email,
+            String name,
+            String pictureUrl,
+            String accessToken,
+            long tokenExpiresAt) {
+        Date now = new Date();
+        Date expiresAt = new Date(now.getTime() + Duration.ofMinutes(30).toMillis());
+        JwtKey activeKey = keyProvider.getActiveKey();
+        return Jwts.builder()
+                .setHeaderParam("kid", activeKey.getKid())
+                .setIssuedAt(now)
+                .setExpiration(expiresAt)
+                .claim("typ", "oauth_pending")
+                .claim("provider", provider)
+                .claim("providerUserId", providerUserId)
+                .claim("email", email)
+                .claim("name", name)
+                .claim("pictureUrl", pictureUrl)
+                .claim("accessToken", accessToken)
+                .claim("tokenExpiresAt", tokenExpiresAt)
+                .signWith(activeKey.getPrivateKey(), SignatureAlgorithm.RS256)
+                .compact();
+    }
+
+    /** OAuth pending token 검증 및 claims 추출 */
+    public Map<String, Object> verifyOAuthPendingToken(String token) {
+        Claims claims = jwtParser.parseClaimsJws(token).getBody();
+        String type = claims.get("typ", String.class);
+        if (!"oauth_pending".equals(type)) {
+            throw new IllegalArgumentException("Invalid token type");
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("provider", claims.get("provider", String.class));
+        result.put("providerUserId", claims.get("providerUserId", String.class));
+        result.put("email", claims.get("email", String.class));
+        result.put("name", claims.get("name", String.class));
+        result.put("pictureUrl", claims.get("pictureUrl", String.class));
+        result.put("accessToken", claims.get("accessToken", String.class));
+        result.put("tokenExpiresAt", claims.get("tokenExpiresAt", Long.class));
+        return result;
     }
 
     private static final class JwtSigningKeyResolver extends SigningKeyResolverAdapter {
