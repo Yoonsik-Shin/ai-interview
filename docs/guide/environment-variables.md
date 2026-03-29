@@ -100,11 +100,10 @@
 ### STT Worker
 
 - `STT_INPUT_TOPIC`: 오디오 입력 토픽 (기본: `interview.audio.input`)
-- `STT_OUTPUT_TOPIC`: 텍스트 출력 토픽 (기본: `UserAnswer`)
 - `WHISPER_MODEL_SIZE`: Faster-Whisper 모델 크기 (기본: `tiny`, 옵션: `base`, `small`, `medium`)
 - `WHISPER_DEVICE`: 디바이스 (기본: `cpu`)
 - `WHISPER_COMPUTE_TYPE`: 연산 타입 (기본: `int8`)
-- `REDIS_DB`: Redis DB 번호 (기본: `1`)
+- `REDIS_DB`: Redis DB 번호 (기본: `0`)
 
 ### STT gRPC Server
 
@@ -116,10 +115,9 @@
 ## 🛠️ tts
 
 - `KAFKA_BROKER`: Kafka 브로커 (기본: `kafka:29092`)
-- `TTS_INPUT_TOPIC`: 텍스트 입력 토픽 (기본: `BotQuestion`)
 - `REDIS_HOST`: Redis 호스트 (기본: `redis`)
 - `REDIS_PORT`: Redis 포트 (기본: `6379`)
-- `REDIS_DB`: Redis DB 번호 (기본: `3`)
+- `REDIS_DB`: Redis DB 번호 (기본: `0`)
 - `OPENAI_API_KEY`: OpenAI TTS API 키 (real 모드용, 시크릿)
 - `EDGE_TTS_ENABLED`: Edge-TTS 사용 여부 (기본: `true`)
 - `PORT`: HTTP 헬스 체크 포트 (기본: `8000`)
@@ -186,8 +184,6 @@ kubectl create secret generic bff-secrets \
 ### 사용 토픽 목록
 
 - `interview.audio.input`: Fast Path 오디오 스트리밍
-- `UserAnswer`: STT 결과 (사용자 응답)
-- `BotQuestion`: AI 응답 문장 (TTS 입력)
 - `storage.completed`: 아카이빙 완료 알림
 - `interview.started`: 면접 시작 이벤트
 - `interview.completed`: 면접 완료 이벤트
@@ -196,12 +192,9 @@ kubectl create secret generic bff-secrets \
 
 ---
 
-## 📊 Redis 데이터베이스 분리
-
-- **DB 0**: Storage Worker 큐 (`interview:audio:*`)
-- **DB 1**: STT Worker 임시 데이터
-- **DB 2**: Core 서비스 대화 맥락
-- **DB 3**: Session Store (Socket.IO Adapter)
+## 📊 Redis 데이터베이스 통합
+- **DB 0**: 모든 서비스 공통 (실시간 파이프라인, 상태 관리, 큐 등 합산 관리)
+  - 3-Track 아키텍처에 따라 호스트로 구분하고 DB 번호는 0으로 통일함.
 
 ---
 

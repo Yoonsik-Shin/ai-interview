@@ -41,7 +41,7 @@
 #### [입력 단계: Hybrid Dual-Write]
 
 1. **⚡ Fast Path (실시간성)**: 클라이언트 → Socket → **gRPC Stream** → STT.
-   - STT 결과는 **Redis Streams**(`stt:transcript:stream`)와 **Pub/Sub**에 즉시 발행됩니다.
+   - STT 결과는 **Redis Streams**(`interview:transcript:process`)와 **Pub/Sub**에 즉시 발행됩니다.
 2. **🛡️ Safe Path (안정성)**: 클라이언트 → Socket → **Redis Queue** → Storage Worker → **OCI Object Storage**.
    - 데이터 유실을 방지하며 비동기로 원본 영상을 저장합니다.
 
@@ -49,11 +49,11 @@
 
 1. **Core Service**: Redis Stream에서 STT 결과를 읽어 LLM에 **gRPC Streaming**으로 요청합니다.
 2. **LLM**: 토큰 단위로 응답을 생성하여 Core에 전달합니다.
-3. **Smart Buffering**: Core는 문장 부호(`.`, `?`, `!`) 감지 시 즉시 문장을 잘라 **Redis Queue**(`tts:sentence:queue`)로 발행합니다. (체감 대기 시간 1초 미만)
+3. **Smart Buffering**: Core는 문장 부호(`.`, `?`, `!`) 감지 시 즉시 문장을 잘라 **Redis Streams**(`interview:sentence:generate`)로 발행합니다. (체감 대기 시간 1초 미만)
 
 #### [출력 단계: Event-driven Audio]
 
-1. **TTS**: Redis Queue에서 문장을 가져와 음성으로 변환 후 **Redis Pub/Sub**에 발행합니다.
+1. **TTS**: Redis Streams에서 문장을 가져와 음성으로 변환 후 **Redis Pub/Sub**(`interview:audio:pubsub:*`)에 발행합니다.
 2. **Socket**: Pub/Sub을 구독하여 클라이언트에 오디오를 실시간으로 스트리밍합니다.
 
 ---
@@ -82,16 +82,15 @@ flowchart LR
         Kafka[("Kafka (Events)")]
     end
 
-    STT -- "Publish" --> Redis
+    STT -- "interview:transcript:process" --> Redis
     Redis -- "Stream" --> Core["Core Service (Java)"]
     Core -- gRPC --> LLM["LLM Service (FastAPI)"]
-    Core -- "Sentence Queue" --> Redis
-    Redis -- "Queue" --> TTS["TTS Service"]
-    TTS -- "Audio PubSub" --> Redis
+    Core -- "interview:sentence:generate" --> Redis
+    Redis -- "Stream" --> TTS["TTS Service"]
+    TTS -- "interview:audio:pubsub:*" --> Redis
     Redis -- "Subscribe" --> Gateway
 
-    Core -- Kafka --> Document["Document (VLM)"]
-    Core -- Persistence --> DB[(Oracle / PostgreSQL)]
+    Core -- Kafka --> DB[(Oracle / PostgreSQL)]
 ```
 
 ### 4.2 실시간 스트리밍 흐름
@@ -111,14 +110,14 @@ sequenceDiagram
     S->>S: Stream to STT
     S->>C: Real-time Caption (PubSub)
 
-    R->>CS: Transcript (Stream)
+    R->>CS: Transcript (Stream: interview:transcript:process)
     CS->>L: Generate (gRPC Stream)
     L-->>CS: Token Stream
     CS->>R: Real-time Text (PubSub)
-    CS->>R: Sentence (Queue)
+    CS->>R: Sentence (Stream: interview:sentence:generate)
 
     R->>T: Synthesize
-    T->>R: Audio (PubSub)
+    T->>R: Audio (PubSub: interview:audio:pubsub:*)
     R->>S: Subscribe
     S->>C: Play Audio
 ```

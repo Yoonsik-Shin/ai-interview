@@ -1,6 +1,162 @@
-# Changelog
+# CHANGELOG
 
-## [2026-03-26]
+## [2026-03-30]
+
+### 수정 (안정화)
+
+- **자기소개 리트라이 시 실시간 상태 동기화 및 UI 고착 해결 (근본 원인 해결)**:
+  - **[Core] 지연 데이터(Residue) 처리 로직 수정**: 지연된 STT 결과 처리 시 로컬 상태 객체가 `COMPLETED`로 남아있는 문제를 해결하여 잘못된 `turn_state` 발행 차단.
+  - **[FE] 완료 신호 방어 가드 강화**: `SELF_INTRO` 단계에서 타이머 작동 중 도착하는 서버의 `COMPLETED` 메시지를 무시하도록 핸들러 수정.
+  - **[FE] 상태 동기화 가드 제거**: 안내 음성(`pendingAiPlayback`) 재생 중에도 서버 상태 업데이트를 백그라운드에서 허용하여 오디오 종료 후 즉시 복구되도록 개선.
+  - **[Core] 리트라이 상태 발행 강제**: `RetrySelfIntroInteractor`에서 리트라이 처리 후 `turn_state` 이벤트를 명시적 발행.
+  - **[FE] UI 초기화**: `onRetryAnswer` 수신 시 `timeLeft` 타이머(90초), STT 히스토리 및 자막 초기화.
+
+- **인터뷰 스테이지 및 녹음 상태 정합성 정밀 강화 (근본 원인 해결)**:
+    - **실효 상태(Effective State) 도입**: 서버 상태와 로컬 재생 상태(`pendingAiPlayback`, `ttsPlaying`)를 결합한 가상 상태를 UI에 적용하여 "Listening..." 오표기 및 불필요한 입력 활성화 완전 차단.
+    - **Stale Closure 근본 해결**: `playNextTts` 스케줄러 내부에서 `Ref`(`pendingAiPlaybackRef.current`)를 직접 참조하도록 수정하여 비동기 타이밍 이슈로 인한 `IDLE` 강제 전이 및 녹음 교착 상태 해결.
+    - **인터벤션 락(Intervention Lock) 가드 강화**: AI 발화 중 서버의 `COMPLETED`, `LISTENING` 메시지를 무시하도록 핸들러 가드 조건 정밀화.
+    - **UI/UX 일관성**: 아바타 글로우, 상단 타이머 라벨, 전송 버튼 비활성화 로직을 `effectiveStatus` 기준으로 통합.
+
+### 수정
+
+- **인터뷰 메시지 저장 경로 이원화 및 자기소개(Turn 0) 정감성 확보**:
+    - **저장 경로 이원화**: 시스템 정적 안내 메시지는 비즈니스 로직(`Interactor`)에서 즉시 직접 저장하고, LLM 생성 문장은 기존처럼 Redis Stream(`CoreDbSaverWorker`)을 통해 비동기 저장하는 이원화 구조를 채택하여 데이터 무결성을 강화함.
+    - **자기소개(Turn 0) 시퀀스 규격화**: 리트라이 회차(1, 2회) 및 최종 종료(3회 또는 정상 완료) 시나리오별로 AI 메시지와 사용자 발화를 `turnCount=0` 내의 `sequence_number`(0~2) 규칙에 따라 정확히 기록하도록 개선함.
+    - **비동기 저장소 최적화**: `CoreDbSaverWorker`에서 취약한 텍스트 기반 필터링을 제거하고 `InterviewMessagePersistencePolicy`를 통한 정책 기반 저장 검증 로직으로 전환하여 안정성을 높임.
+    - **리트라이 인터랙터 정합성**: `RetrySelfIntroInteractor`에도 동일한 직접 저장 로직을 적용하여, 패스트 패스(Fast-Path) 리트라이 시에도 면접 히스토리가 누락 없이 관리되도록 보장함.
+
+- **AI 면접 자기소개 안정화 및 데이터 정합성(Turn Hijacking) 근본 해결**:
+  - **원자적 상태 관리 (Atomic State Management)**: Redis `HINCRBY` 및 `HSET`을 이용한 원자적 업데이트(`incrementSelfIntroRetryCount`, `updateStatus`)를 도입하여, 병렬 STT 처리 중 리트라이 카운트가 뒤섞이는 레이스 컨디션을 완벽히 차단함.
+  - **데이터 정합성 보장 (Turn Hijacking 방지)**: 시스템 안내 메시지(타이아웃 등)가 대화 내역(`InterviewTranscript`)의 AI 턴을 차지하지 않도록 `CoreDbSaverWorker`에 필터링 가드를 추가하고, `SaveInterviewMessageInteractor`의 화자 소스(`SYSTEM`) 하드코딩 버그를 수정함.
+  - **첫 질문 생성 신뢰성 향상**: `IN_PROGRESS` 단계 전이 시 자기소개 텍스트(`selfIntroText`)를 명령 객체로 직접 전달하여 Redis 읽기 지연을 방지하고, `turnCount == 0` 가드를 통해 중복된 첫 질문 생성을 차단함.
+  - **리트라이 로직 강화**: 최대 3회 시도(리트라이 2회) 및 90초 타임아웃 제한을 엄격히 적용하여 무한 루프를 방지하고, 실패 시에도 자연스럽게 본 면접으로 전이되도록 개선함.
+
+< line 5's original content >
+
+- **자기소개 패스트 패스(Fast-Path) 리트라이 구현 (지연 시간 10초 -> 1초 단축)**:
+  - **고속 판단 로직**: STT 전사 결과를 기다리지 않고, 프론트엔드에서 측정한 발화 시간(30초 미만)을 기반으로 즉시 리트라이를 결정하는 패스트 패스 도입.
+  - **전용 gRPC 메서드 (`RetrySelfIntro`)**: 기존의 무거운 `processUserAnswer` 파이프라인을 우회하고 Redis 상태만 즉시 갱신하는 고성능 리트라이 전용 API 구현.
+  - **UI 즉각 응답**: 리트라이 요청 시 백엔드 응답을 기다리는 동안의 체감 지연을 제거하고, `00:00` 타이머 리셋 및 안내 팝업을 즉시 노출하도록 개선.
+- **레이스 컨디션 근본 해결 (Residue Guard)**: 단계 전례(`STAGE_CHANGE`) 직후 3초 이내에 도착하는 이전 단계의 잔여 발화 데이터를 무시하는 가드를 도입하여, `turnCount`가 튀는 현상 해결.
+
+- **AI 면접 지연 안내(Filler Voice) 및 유휴 타이머 최적화**:
+  - **프론트엔드 유휴 타이머 개선**: 유휴 안내 임계값을 10초에서 **60초**로 상향하고, AI가 생각 중(`THINKING`)이거나 말하는 중(`SPEAKING`)일 때는 타이머가 작동하지 않도록 상태 가드(`isUserSpeaking` 등)를 강화하여 불필요한 시스템 개입을 최소화함.
+  - **백엔드 자동 필러(Filler) 비활성화**: AI 답변 생성 지연 시 발생하던 자동 중재(`INTERVENE`) 신호의 소켓 전송을 BFF 레이어(`SendTranscriptUseCase`)에서 차단하여, 답변 직후의 부- [Core] 인사 단계(`CANDIDATE_GREETING`) VAD 무음 임계값 단축 (1.2s -> 0.6s)으로 다음 단계 전이 속도 대폭 개선
+- [Core/Socket] 면접 시작 흐름 정비 및 연쇄 자동 전이 구현 (`GREETING` -> `CANDIDATE_GREETING` -> `INTERVIEWER_INTRO` -> `SELF_INTRO_PROMPT` -> `SELF_INTRO` -> `IN_PROGRESS`)
+- [Core] 데이터 보존 정책 확립: 자기소개 전 단계는 미저장, 본격 자기소개부터 `Turn 0`으로 시작하여 저장
+- [UI/UX] 인사 단계에서 불필요한 `Thinking...` 배지 노출 방지 및 마이크 제어 안정화
+- [Common] 면접화면 이탈 시 오디오 재생 및 녹음 중단 클린업 로직 추가
+ **필수 기능 보존**: 자기소개 인식 실패 시의 리트라이(`RETRY_ANSWER`) 로직과 수동 "건너뛰기" 기능은 그대로 유지하여 면접 진행의 정합성과 사용자 제어권을 보장함.
+
+- **AI 면접 진행 흐름 안정화 및 UI/UX 버그 수정**:
+  - **마이크 하이라이트(초록 박스) 오류 해결**: 스테이지 전환 시(`setOnStageChanged`) 지원자 발화 단계가 아닌 경우 즉시 `stopRecording()`을 호출하고, 특히 `IN_PROGRESS` 진입 시 선제적으로 `PROCESSING` 상태로 전환하여 면접관 발화 전 마이크 오작동을 차단함.
+  - **자기소개 리트라이 로직 정상화 및 판정 임계값 최적화**: `ttsPlaying` 상태를 `Ref`에서 `State`로 전환하여 동기화 이슈를 해결하고, 백엔드 리트라이 판정 시간을 30초에서 **35초**로 상향하여 VAD 지연으로 인한 오판정을 방지함.
+  - **VAD 응답성 향상**: 자기소개 단계의 무음 대기 시간을 5초에서 **3초**로 단축하여 사용자 발화 종료를 더 빠르게 인식하도록 개선함.
+  - **첫 질문 생성 최적화**: `TransitionInterviewStageInteractor`의 LLM 프롬프트를 수정하여 중복 인사말("자기소개 잘 들었습니다" 등)을 배제하고 즉각적인 이력서 기반 질문이 생성되도록 지침 강화.
+  - **인사 단계(`CANDIDATE_GREETING`) 전이 로직 보강**: 백엔드에서 텍스트 수신 시 내용의 유무와 상관없이 즉각적으로 다음 단계로 전이하도록 가드를 완화하여 진행 지연 현상 완화.
+  - **오디오 클린업 및 자원 관리**: 면접 화면 이탈(Unmount) 시 재생 중인 모든 오디오를 즉시 중지하고 큐를 비우도록 클린업 로직을 추가하여 브라우저 리소스 낭비 및 소리 잔류 현상 해결.
+
+### 수정
+
+- **자기소개 결과 기반 오디오 분기 및 VAD 최적화**:
+  - **결과별 오디오 차별화**: 자기소개 종료 시 성공(30초 이상) 여부와 리트라이 횟수를 판단하여 `transition_intro`(성공) 또는 `intervene_intro`(실패/중단) 오디오를 선택적으로 재생하도록 로직 구현.
+  - **단계별 VAD 레이턴시 최적화**: `useAudioRecorder`에 `redemptionMs` 옵션을 도입하여, 인사(`CANDIDATE_GREETING`)는 **400ms**, 자기소개(`SELF_INTRO`)는 **800ms**로 설정함으로써 발화 종료 감지 및 단계 전이 속도를 대폭 향상시킴.
+  - **면접관 소개 멘트 표준화**: 모든 면접관의 자기소개 오디오에 "안녕하세요. 저는" 접두어를 추가하고, 이를 반영하여 전체 정적 오디오 에셋을 재생성함.
+  - **리트라이 가이드 구체화**: 자기소개 부족 시 제공되는 안내 문구를 "답변이 너무 짧습니다. 내용을 조금 더 구체적으로 말씀해 주시겠어요?"로 변경하고 음성 에셋과 백엔드 메시지를 동기화함.
+  - **UI 텍스트 정제**: 인사 단계의 예시 문구를 사용자가 요청한 간결한 형태(`(예: "안녕하세요!")`)로 수정함.
+  - **소켓 데이터 파이프라인 보강**: `SendTranscriptUseCase`를 수정하여 `STAGE_CHANGE` 및 `RETRY_ANSWER` 이벤트 시 자기소개 통계 데이터(`selfIntroRetryCount`, `selfIntroElapsedSeconds`)가 누락 없이 프론트엔드로 전달되도록 개선함.
+
+- **Interview 서비스 빌드 오류 해결 (Compilation Fix)**:
+  - `TransitionInterviewStageInteractor.java`에서 `interviewId` 변수가 정의되지 않은 채 로그 출력에 사용되어 발생하던 컴파일 오류를 해결함.
+  - 변수 정의 및 세션 ID 추출 로직을 추가하여 정상적인 빌드 프로세스를 복구함.
+
+## [2026-03-28]
+
+### 최적화 및 버그 수정
+
+- **AI 면접 흐름 정밀화 및 자연스러운 대화 유도**:
+  - **음성 재생 순서 보정**: 프론트엔드 `ttsQueue`에 `sentenceIndex` 기반 정렬 로직을 도입하여, 짧은 문장이 긴 문장보다 먼저 수신되더라도 원래 순서대로 재생되도록 보장함.
+  - **실시간 자막 신뢰성 향상**: `TranscriptPubSubConsumer`와 프론트엔드에서 `token`뿐만 아니라 완성된 `text`, `content` 필드도 자막으로 출력하도록 개선하여 자막 누락 현상 해결.
+  - **발화 간섭 차단 (Double-Guard)**: AI 발화 시작 시 Core 서비스에서 즉시 `canCandidateSpeak: false` 상태를 Redis에 반영하고, 프론트엔드에서도 `isInterviewerSpeaking` 가드를 추가하여 AI 발화 중 사용자 음성 유입을 원천 차단함.
+  - **대화 지연(Latency) 및 타이밍 최적화**: STT 침묵 감지 시간(VAD)을 1.5초에서 **1.2초**로 단축하여 응답성을 개선하고, 사용자 답변 종료 후 약 **800ms**의 지연 후 추임새(Filler)를 재생하여 기계적인 느낌을 줄이고 자연스러운 턴 전환 구현.
+  - **스테이지 전이 버그 해결**: `LAST_QUESTION_PROMPT` 단계에서 종료 신호 수신 시 무한 루프에 빠지지 않고 정상적으로 `LAST_ANSWER` 단계로 전이되도록 로직 수정.
+
+### 수정 (인프라 및 도메인)
+
+- **AI 면접 음성 인프라 전면 개편 및 레거시 제거**:
+    - **레거시 제거**: 시스템 전반에서 `PRESSURE`, `RANDOM` 관련 오디오 파일, LLM 프롬프트(`personalities.yaml`), API 타입을 삭제하여 엔진을 단순화함.
+    - **역할 기반 실시간 TTS 튜닝**: `Edge TTS` 엔진에 속도(`rate`) 및 피치(`pitch`) 제어 로직을 추가하여 4가지 면접관 역할(`MAIN`, `HR`, `TECH`, `EXEC`)별로 고유한 목소리 프로필을 구현.
+    - **자산 구조화**: 기존 카테고리 중심 폴더 구조를 역할 중심(`/audio/{ROLE}/{category}/{action}_edge.mp3`)으로 개편하여 관리 편의성 향상.
+    - **정적 자산 재생성**: `rebuild_audio_assets.py` 스크립트를 통해 모든 페르소나별 안내 음성(`greeting`, `guide` 등)을 신규 구조에 맞춰 일괄 재생성.
+    - **프론트엔드 연동**: `Interview.tsx` 및 `InterviewSetup.tsx`에 신규 경로 체계 및 기본 성향(`COMFORTABLE`)을 적용하여 안정적인 오디오 재생 환경 구축.
+
+- **AI 면접 진행 안정화 및 8대 주요 버그 해결**:
+  - **데이터 저장 복구**: AI 답변 발행 시 `role` 필드 누락으로 인한 DB 저장 실패 문제를 해결하기 위해 `SaveSentenceStreamPort` 및 `RedisStreamsSentenceAdapter`에 `role` 파라미터를 추가하고 파이프라인 전반에 반영.
+  - **화자(Persona) 및 목소리 식별 강화**: `ProcessLlmTokenInteractor`에 Persona Fallback 로직을 추가하고, `PersonaResolver`에서 `LEADER` 우선순위 로직을 강화하여 면접관별 맞춤형 목소리 출력이 보장되도록 개선.
+  - **자기소개 흐름 제어**: STT 워커에 90초 하드 타임아웃을 도입하고, `ProcessUserAnswerInteractor`에서 30초 경과 및 90초 초과 시의 스테이지 강제 전이 로직을 정교화하여 무한 발화 현상 해결.
+  - **VAD 최적화**: 자기소개 단계에서 충분한 생각 시간을 확보할 수 있도록 VAD 침묵 임계값을 5초로 설정하고, 일반 질문 환경(1.5초)과 차별화.
+  - **프론트엔드 UI 싱크**: `clear_turn` 처리 시 STT 히스토리 및 자막 버퍼를 초기화하고, 유휴 상태 안내("잠시만 기다려주세요")가 중복 재생되지 않도록 `isUserSpeaking` 상태 기반의 가드 로직 적용.
+
+- **인터뷰 생성 400 에러 해결 (BFF 필드 동기화)**:
+  - 프론트엔드에서 전송하는 `round` 및 `jobPostingUrl` 필드가 BFF의 `CreateInterviewRequestDto`에 정의되지 않아 발생하던 `400 Bad Request` 에러를 해결.
+  - **gRPC 타입 재생성**: `npm run proto:generate`를 실행하여 최신 `.proto` 파일의 변경사항(round, job_posting_url 등)을 BFF의 TypeScript 타입으로 강제 동기화.
+  - **도메인 모델 확장**: `InterviewRound` 열거형을 신설하고 `InterviewRole`에 `EXEC`(임원) 역할을 추가하여 비즈니스 로직 정합성 확보.
+  - **데이터 매핑 보강**: `CreateInterviewUseCase` 및 `InterviewGrpcService`를 수정하여 신규 필드들이 gRPC 통신을 통해 Core 서비스로 누락 없이 전달되도록 파이프라인 완성.
+- **Core 서비스 인터뷰 생성 Enum 매핑 오류 해결**:
+  - gRPC Proto Enum 이름(`TECHNICAL_ROUND`)과 Java Domain Enum 이름(`TECHNICAL`) 불일치로 인한 `400 Bad Request` 에러를 해결.
+  - `CreateInterviewCommand`의 필드 타입을 `String`에서 전용 Enum 타입으로 변경하여 타입 안정성 강화.
+  - `InterviewGrpcController` 및 `InterviewGrpcMapper`에 도메인 Enum 변환 로직을 적용하여 명시적인 매핑 절차 구축.
+- **인터뷰 시작 확인 모달 원상 복구 (Pixel-Perfect Restoration)**:
+  - 커밋 `6c2651b`를 바이블 삼아 `InterviewSetup.tsx` 및 `InterviewSetup.module.css`를 통째로 덮어씌워 레이아웃 및 디자인 복구.
+  - **이력서 상태 처리 로직 복원**: `PROCESSING` 및 `PENDING` 상태에서의 3초 간격 자동 폴링 로직 및 안내 메시지 가시성 확보.
+  - **체크리스트 강화**: 이력서 분석 미완료 시 '위험 감수' 체크박스를 통해서만 면접 시작이 가능하도록 제약 사항 복원.
+- **자기소개 로직 최적화 및 비용 절감 (정적 음성 적용)**:
+  - **비용 최적화**: 자기소개 30초 미만 리트라이 시 LLM 호출을 제거하고 정적 안내 음성(`retry_short`)만 사용하도록 개편하여 토큰 비용 절감.
+  - **Socket 서버 중복 전송 원천 차단**: 다중 Pod 환경에서 동일한 Redis Pub/Sub 메시지를 중복 수신하더라도, 각 Pod이 자신에게 연결된 클라이언트에게만 전송하도록 `server.local.to(room).emit()` 적용하여 오디오 중복 재생 해결.
+  - **안전한 오디오 버퍼링**: VAD 프리롤 버퍼 플러싱 시 Socket 객체가 `null`인 경우를 대비하여 `SttStorageService` 내 null-safe 로직 및 메타데이터 활용 로직 추가 (TypeError 방지).
+  - **첫 질문 프롬프트 강화**: 자기소개 완료 후 첫 질문 시 LLM이 페르소나를 변경하거나 중복 인사를 하지 않도록 시스템 지침 강화.
+  - **Frontend 멱등성 보장**: 스테이지 전이 이벤트 중복 수신 시 브라우저 오디오 재생이 겹치지 않도록 `stageReadyCalledRef` 가드를 전체 스테이지로 확대 적용.
+- **최종 확인 모달 스크롤 이슈 해결**:
+  - 화면 크기가 작아질 경우 본문 내용에 가려져 하단 버튼(취소, 시작)이 보이지 않던 현상 해결.
+  - `.confirmBody`에 `flex: 1` 및 `overflow-y: auto`를 적용하여 본문 영역만 개별 스크롤되도록 구조 개선.
+- **면접 진행 화면 레이아웃 최적화**:
+  - 면접관 카드와 지원자 영상이 한눈에 보이지 않던 레이아웃 이슈 해결.
+  - `.body` 영역에 `overflow-y: auto` 및 `align-items: flex-start`를 적용하여 스크롤 접근성 확보.
+  - `.videoGrid`의 높이 제약을 해제하고 하단 컨트롤 바를 고려한 `padding-bottom` 추가.
+
+## [2026-03-27]
+
+### 추가
+
+- **인터뷰 설정 화면 모달 및 스크롤 개선 (UI/UX)**:
+  - **Portal 도입**: `PageFrame`의 `transform` 애니메이션으로 인해 `fixed` 모달이 뷰포트가 아닌 페이지 흐름을 따르던 현상을 해결하기 위해 `Portal` 컴포넌트 구현 및 적용.
+  - **바디 스크롤 차단**: 이력서 상세 보기 및 면접 시작 확인 모달이 열릴 때 `document.body`의 스크롤을 차단하여 배경 흔들림 현상 원천 봉쇄.
+  - **모달 내부 스크롤 최적화**: `.modalBody`에 `min-height: 0`을 추가하여 플렉스박스 내에서도 내부 스크롤(이력서 미리보기 등)이 정상 작동하도록 개선.
+- **인터뷰 데이터 파이프라인 정합성 보강 (Backend)**:
+  - **Protobuf 재컴파일**: `self_intro_text` 필드 추가에 따른 자바 클래스 불일치 문제를 `generateProto` 실행을 통해 해결하고, `InterviewGrpcController` 및 `InterviewGrpcMapper`의 컴파일 에러 수정.
+
+- **MSA 데이터 격리 원칙 준수 및 공유 Redis 안티패턴 척결**:
+  - **데이터 격리 (Data Isolation)**: LLM 서비스가 Core 서비스의 Redis 키를 직접 조회하던 공유 데이터베이스 안티패턴을 완전히 폐지하여 서비스 간 독립성 확보.
+  - **gRPC 컨텍스트 전달 (Explicit Context)**: `GenerateRequest`에 `job_posting_url` 및 `self_intro_text` 필드를 추가하여, Core 서비스가 필요한 시점에 LLM으로 명시적인 데이터를 전송하도록 연동 모델 개선.
+  - **지능적 상태 보존 (LangGraph Caching)**: LLM 서비스는 gRPC로 수신한 초기 컨텍스트를 자신의 LangGraph 체크포인트(Track 2)에 저장하여, 이후 턴부터는 외부 의존성 없이 자립적으로 정보를 활용하도록 최적화.
+  - **Redis 키 공간 분리 및 표준화**: 서비스 간 데이터 간섭을 원천 차단하기 위해 Redis 키 프리픽스를 격리 표준화 (Core: `interview:session:hash:`, Socket: `interview:rt:`, LLM: `checkpoint:`).
+  - **UI 개선**: 사용자 요청에 따라 면접 설정 화면의 부자연스러운 설명글을 제거하고, 채용 공고 URL 입력 필드를 직관적으로 배치.
+  - **DTO 및 매퍼 갱신**: `InterviewSummary`, `GetInterviewResult`, `InterviewGrpcMapper` 등에 `jobPostingUrl` 필드를 추가하여 전체 서비스 레이어에서 URL 연동 보장.
+- **인터뷰 화면 디버깅 UI 제거 및 최적화**:
+  - 프로덕션 환경에서 불필요한 디버깅용 UI 요소들을 `import.meta.env.DEV` 플래그를 통해 숨김 처리.
+  - **제거된 요소**: `DevToolPanel` (🛠️ 아이콘), 세션 정보 배지, '진행 단계' 인디케이터, 연결 상태 점.
+  - **로그 최적화**: 인터뷰 진행 중 발생하는 빈번한 `console.log` 호출들을 개발 환경에서만 출력되도록 제한.
+  - **라우팅 보호**: `/debug` 경로를 개발 환경에서만 활성화되도록 수정.
+- **로컬 하드웨어 가속 (MPS) 지원**:
+  - Document 서비스의 임베딩 엔진에 Apple Silicon GPU 가속(MPS) 지원 추가.
+  - `torch.backends.mps.is_available()`을 통한 동적 디바이스 선택 로직 구현.
+
+### 수정
+
+- **Redis 데이터베이스 설정 표준화 (DB 0 통합)**: 모든 마이크로서비스의 Redis DB 설정을 `0`으로 통일하여 통신 오류 해결.
+- **인터뷰 일시정지(Pause) 성능 최적화**: 트런잭션 분리 및 백엔드 가드 추가를 통해 시스템 안정성 확보.
+- **인터뷰 로그 출력 최적화**: 실시간 스트리밍 로그 레벨을 `DEBUG`로 하향 조정하여 터미널 가독성 개선.
+
 
 ### 수정
 
@@ -595,7 +751,7 @@
 
 ---
 
-# Changelog
+---
 
 ## [2026-02-02] Frontend Interview 컴포넌트 구현
 

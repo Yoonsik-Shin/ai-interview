@@ -419,21 +419,19 @@ Client → Socket.IO: interview:audio_chunk (PCM16, 16kHz)
   └─ Safe Path: Socket → Redis Queue → Storage → Object Storage (안전 저장)
 
 [Phase 2: STT 변환]
-STT → Redis Pub/Sub/Streams: stt:transcript:pubsub
+STT → Redis Pub/Sub/Streams: interview:transcript:process
 Socket 구독 → Client: interview:stt_result (실시간 자막)
 
 [Phase 3: LLM 응답 생성]
-STT → Kafka: UserAnswer 이벤트
 Core → LLM: gRPC Streaming 요청
 LLM → Core: 토큰 단위 스트리밍 (THINKING + CONTENT)
 Core → Redis:
   ├─ Cache (APPEND): 네트워크 끊김 대비 백업
-  ├─ Pub/Sub: 실시간 자막 (interview:transcript:{id})
-  └─ Queue: TTS용 문장 단위 (tts:sentence:queue)
+  ├─ Pub/Sub: 실시간 자막 (interview:transcript:pubsub:{id})
+  └─ Queue: TTS용 문장 단위 (interview:sentence:queue:tts)
 
 [Phase 4: TTS 생성]
-Core → Kafka: BotQuestion 이벤트 (문장 단위)
-TTS → Redis Pub/Sub: interview:audio:{interviewId}
+TTS → Redis Pub/Sub: interview:audio:pubsub:{interviewId}
 Socket 구독 → Client: interview:ai_response_audio_chunk
 
 [Phase 5: 최종 저장]
@@ -455,9 +453,9 @@ Storage → Kafka: storage.completed 이벤트
    - Redis 다중 발행으로 안정성 확보
 
 3. **이벤트 기반 출력**:
-   - Kafka: 비동기 이벤트 (UserAnswer, BotQuestion)
+   - Kafka: 비동기 이벤트 (storage.completed, interview.result 등)
    - Redis Pub/Sub: 실시간 전달 (자막, 오디오)
-   - Redis Streams: 신뢰성 있는 메시지 처리
+   - Redis Streams: 신뢰성 있는 메시지 처리 (interview:transcript:process)
 
 ### 4.1 Request Flow (외부 → Domain → 외부)
 
@@ -577,15 +575,7 @@ SendInterviewEmailUseCase → EmailServerAdapter → 이메일 발송
 
 **토픽 구조:**
 
-- `UserAnswer`: STT → Core (사용자 발화 텍스트)
-- `BotQuestion`: Core → TTS (AI 응답 문장, 문장 단위)
 - `storage.completed`: Storage → Core (파일 업로드 완료)
-
-**파티션 키 필수:**
-
-- **반드시 `sessionId` 또는 `interviewId`를 파티션 키로 지정**
-- 이유: 같은 면접의 메시지가 순서대로 처리되어야 함 (문맥 보존)
-- 예시: `kafka.producer.send({ key: interviewId, value: message })`
 
 **이벤트 스키마:**
 
