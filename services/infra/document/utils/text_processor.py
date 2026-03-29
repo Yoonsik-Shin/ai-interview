@@ -8,6 +8,8 @@ def normalize_text(text: str) -> str:
     """
     # 1. NFC Normalization (Fix NFD issue from Mac)
     text = unicodedata.normalize('NFC', text)
+    # Remove NULL bytes for PostgreSQL UTF-8 compatibility
+    text = text.replace('\x00', '')
     
     # 2. Cleanup whitespace
     # Remove all whitespace between Korean characters (e.g., '가 나 다' -> '가나다')
@@ -18,7 +20,7 @@ def normalize_text(text: str) -> str:
     
     # 3. Collapse multiple whitespaces (including newlines) into single space
     text = re.sub(r'\s+', ' ', text)
-    
+
     return text.strip()
 
 def mask_pii(text: str) -> str:

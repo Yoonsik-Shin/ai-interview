@@ -33,6 +33,4 @@ MIN_IMAGE_HEIGHT = int(os.getenv("MIN_IMAGE_HEIGHT", 200))
 
 # Model Settings
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "paraphrase-multilingual-MiniLM-L12-v2")
-VLM_MODEL_NAME = os.getenv("VLM_MODEL_NAME", "gpt-4o") # or "claude-3-5-sonnet-20240620"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 HF_TOKEN = os.getenv("HF_TOKEN", "")

@@ -44,15 +44,15 @@ class LlmServiceStub(object):
                 request_serializer=llm_dot_v1_dot_llm__pb2.TTSRequest.SerializeToString,
                 response_deserializer=llm_dot_v1_dot_llm__pb2.TTSChunk.FromString,
                 _registered_method=True)
-        self.GetEmbedding = channel.unary_unary(
-                '/llm.v1.LlmService/GetEmbedding',
-                request_serializer=llm_dot_v1_dot_llm__pb2.GetEmbeddingRequest.SerializeToString,
-                response_deserializer=llm_dot_v1_dot_llm__pb2.GetEmbeddingResponse.FromString,
-                _registered_method=True)
         self.ClassifyResume = channel.unary_unary(
                 '/llm.v1.LlmService/ClassifyResume',
                 request_serializer=llm_dot_v1_dot_llm__pb2.ClassifyResumeRequest.SerializeToString,
                 response_deserializer=llm_dot_v1_dot_llm__pb2.ClassifyResumeResponse.FromString,
+                _registered_method=True)
+        self.GenerateReport = channel.unary_unary(
+                '/llm.v1.LlmService/GenerateReport',
+                request_serializer=llm_dot_v1_dot_llm__pb2.GenerateReportRequest.SerializeToString,
+                response_deserializer=llm_dot_v1_dot_llm__pb2.GenerateReportResponse.FromString,
                 _registered_method=True)
 
 
@@ -71,14 +71,15 @@ class LlmServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetEmbedding(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+    def ClassifyResume(self, request, context):
+        """이력서 분류 및 판별
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ClassifyResume(self, request, context):
-        """이력서 분류 및 판별
+    def GenerateReport(self, request, context):
+        """면접 리포트 생성
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -97,15 +98,15 @@ def add_LlmServiceServicer_to_server(servicer, server):
                     request_deserializer=llm_dot_v1_dot_llm__pb2.TTSRequest.FromString,
                     response_serializer=llm_dot_v1_dot_llm__pb2.TTSChunk.SerializeToString,
             ),
-            'GetEmbedding': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetEmbedding,
-                    request_deserializer=llm_dot_v1_dot_llm__pb2.GetEmbeddingRequest.FromString,
-                    response_serializer=llm_dot_v1_dot_llm__pb2.GetEmbeddingResponse.SerializeToString,
-            ),
             'ClassifyResume': grpc.unary_unary_rpc_method_handler(
                     servicer.ClassifyResume,
                     request_deserializer=llm_dot_v1_dot_llm__pb2.ClassifyResumeRequest.FromString,
                     response_serializer=llm_dot_v1_dot_llm__pb2.ClassifyResumeResponse.SerializeToString,
+            ),
+            'GenerateReport': grpc.unary_unary_rpc_method_handler(
+                    servicer.GenerateReport,
+                    request_deserializer=llm_dot_v1_dot_llm__pb2.GenerateReportRequest.FromString,
+                    response_serializer=llm_dot_v1_dot_llm__pb2.GenerateReportResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -173,33 +174,6 @@ class LlmService(object):
             _registered_method=True)
 
     @staticmethod
-    def GetEmbedding(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/llm.v1.LlmService/GetEmbedding',
-            llm_dot_v1_dot_llm__pb2.GetEmbeddingRequest.SerializeToString,
-            llm_dot_v1_dot_llm__pb2.GetEmbeddingResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
     def ClassifyResume(request,
             target,
             options=(),
@@ -216,6 +190,33 @@ class LlmService(object):
             '/llm.v1.LlmService/ClassifyResume',
             llm_dot_v1_dot_llm__pb2.ClassifyResumeRequest.SerializeToString,
             llm_dot_v1_dot_llm__pb2.ClassifyResumeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GenerateReport(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/llm.v1.LlmService/GenerateReport',
+            llm_dot_v1_dot_llm__pb2.GenerateReportRequest.SerializeToString,
+            llm_dot_v1_dot_llm__pb2.GenerateReportResponse.FromString,
             options,
             channel_credentials,
             insecure,

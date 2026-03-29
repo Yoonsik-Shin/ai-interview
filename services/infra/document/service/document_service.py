@@ -6,7 +6,6 @@ import config
 from utils.log_format import log_json
 from engine.extraction_engine import ExtractionEngine
 from engine.embedding_engine import EmbeddingEngine
-from engine.image_analysis_engine import ImageAnalysisEngine
 
 def simple_hash(text: str) -> int:
     """Matches JS Math.imul(31, h) + charCodeAt logic for debugging"""
@@ -26,11 +25,13 @@ class DocumentService:
         self.producer = None
         self.extraction_engine = None
         self.embedding_engine = None
-        self.image_analysis_engine = None
         self.running = False
 
     def initialize(self):
-        """Initialize all components"""
+        """Initialize all components if not already done"""
+        if self.embedding_engine and self.extraction_engine:
+            return
+            
         log_json("document_service_initializing")
         
         # 1. Kafka Consumer
@@ -48,7 +49,6 @@ class DocumentService:
         # 3. Engines
         self.extraction_engine = ExtractionEngine()
         self.embedding_engine = EmbeddingEngine()
-        self.image_analysis_engine = ImageAnalysisEngine()
 
         log_json("document_service_initialized")
 
@@ -112,7 +112,7 @@ class DocumentService:
             # --- Type A: Validation Embedding (Global for duplicate check) ---
             # Use preprocessed validation text from event if available (Source Parity)
             val_masked = event.get("validationText")
-            if val_masked:
+            if val_masked and val_masked.strip():
                 log_json("debug_use_provided_validation_text", resume_id=resume_id, text_len=len(val_masked))
             else:
                 val_processed = normalize_text(concatenated_text)
@@ -154,22 +154,9 @@ class DocumentService:
                     all_rag_chunks.extend(text_chunks)
                     enriched_full_content.append(p_masked)
                 
-                # 2. Process Page Images
+                # 2. Process Page Images (Metadata only, no analysis)
                 for img in page_images:
-                    log_json("step_image_analysis", resume_id=resume_id, page=page_num, url=img["url"])
-                    desc = self.image_analysis_engine.analyze_image(img["url"])
-                    img["description"] = desc # Update image object for reference
-                    
-                    # Create a specific chunk for this image location
-                    desc_norm = normalize_text(f"[Page {page_num} Image] {desc}")
-                    desc_masked = mask_pii(desc_norm)
-                    
-                    img_chunk = {
-                        "content": desc_masked,
-                        "metadata": {"page_num": page_num, "type": "IMAGE", "url": img["url"]}
-                    }
-                    all_rag_chunks.append(img_chunk)
-                    enriched_full_content.append(desc_masked)
+                    enriched_full_content.append(f"[Page {page_num} Image: {img['url']}]")
 
             # 3. Encode all RAG chunks
             log_json("step_rag_encoding", resume_id=resume_id, total_chunks=len(all_rag_chunks))

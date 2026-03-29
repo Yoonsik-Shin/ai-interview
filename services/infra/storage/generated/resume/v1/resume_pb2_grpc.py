@@ -64,6 +64,11 @@ class ResumeServiceStub(object):
                 request_serializer=resume_dot_v1_dot_resume__pb2.ValidateResumeRequest.SerializeToString,
                 response_deserializer=resume_dot_v1_dot_resume__pb2.ValidateResumeResponse.FromString,
                 _registered_method=True)
+        self.GetResumeChunks = channel.unary_unary(
+                '/resume.v1.ResumeService/GetResumeChunks',
+                request_serializer=resume_dot_v1_dot_resume__pb2.GetResumeChunksRequest.SerializeToString,
+                response_deserializer=resume_dot_v1_dot_resume__pb2.GetResumeChunksResponse.FromString,
+                _registered_method=True)
 
 
 class ResumeServiceServicer(object):
@@ -111,6 +116,13 @@ class ResumeServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetResumeChunks(self, request, context):
+        """이력서 청크 조회 (RAG 용)
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ResumeServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -143,6 +155,11 @@ def add_ResumeServiceServicer_to_server(servicer, server):
                     servicer.ValidateResume,
                     request_deserializer=resume_dot_v1_dot_resume__pb2.ValidateResumeRequest.FromString,
                     response_serializer=resume_dot_v1_dot_resume__pb2.ValidateResumeResponse.SerializeToString,
+            ),
+            'GetResumeChunks': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetResumeChunks,
+                    request_deserializer=resume_dot_v1_dot_resume__pb2.GetResumeChunksRequest.FromString,
+                    response_serializer=resume_dot_v1_dot_resume__pb2.GetResumeChunksResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -307,6 +324,33 @@ class ResumeService(object):
             '/resume.v1.ResumeService/ValidateResume',
             resume_dot_v1_dot_resume__pb2.ValidateResumeRequest.SerializeToString,
             resume_dot_v1_dot_resume__pb2.ValidateResumeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetResumeChunks(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/resume.v1.ResumeService/GetResumeChunks',
+            resume_dot_v1_dot_resume__pb2.GetResumeChunksRequest.SerializeToString,
+            resume_dot_v1_dot_resume__pb2.GetResumeChunksResponse.FromString,
             options,
             channel_credentials,
             insecure,

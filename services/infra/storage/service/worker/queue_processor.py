@@ -53,6 +53,8 @@ def process_audio_queue(
     audio_chunks: List[bytes] = []
     metadata = {}
 
+    actual_user_id = user_id
+    
     # BLPOP to sequentially process chunks (blocking, with timeout)
     while True:
         try:
@@ -68,6 +70,11 @@ def process_audio_queue(
             # Treat as uncompressed JSON
             message = json.loads(message_bytes.decode("utf-8"))
 
+            # Extract actual userId from message if available
+            if "userId" in message and (actual_user_id == interview_id or not actual_user_id):
+                actual_user_id = message["userId"]
+                log_json("actual_user_id_extracted", user_id=actual_user_id, interview_id=interview_id)
+
             # Update metadata
             if "metadata" in message:
                 metadata.update(extract_metadata(message))
@@ -77,8 +84,6 @@ def process_audio_queue(
                 if isinstance(message["audioData"], str):
                      chunk_data = base64.b64decode(message["audioData"])
                 else:
-                     # Already binary (if using a different serializer in future, currently usage is JSON so it's string)
-                     # But logically wait, JSON loads returns string for base64.
                      chunk_data = base64.b64decode(message["audioData"])
                 
                 audio_chunks.append(chunk_data)
@@ -122,7 +127,7 @@ def process_audio_queue(
 
         # Upload to Object Storage
         upload_result = storage_engine.upload_file(
-            interview_id, user_id, total_audio, metadata
+            interview_id, actual_user_id, total_audio, metadata
         )
 
         if upload_result:
@@ -136,11 +141,23 @@ def process_audio_queue(
                 "interviewId": interview_id,
                 "objectUrl": presigned_url or object_url,
                 "objectKey": object_key,
-                "timestamp": metadata.get("timestamp")
+                "timestamp": metadata.get("timestamp"),
+                "metadata": metadata
             }
             redis_client.publish(
                 f"interview:audio:completed:{interview_id}", 
                 json.dumps(notification_payload)
+            )
+
+            # Publish to Kafka for Core service (Persistence)
+            from event.kafka_producer import get_kafka_producer
+            producer = get_kafka_producer()
+            producer.publish_storage_completed(
+                interview_id=interview_id,
+                user_id=actual_user_id,
+                object_url=presigned_url or object_url,
+                object_key=object_key,
+                metadata=metadata
             )
 
             log_json(

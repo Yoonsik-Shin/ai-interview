@@ -50,7 +50,7 @@ storage/
 ### 3.1 Input (From Socket Service)
 
 - **Protocol**: Redis Queue (BLPOP)
-- **Queue Pattern**: `interview:audio:{interview_id}`
+- **Queue Pattern**: `interview:audio:queue:storage:{interview_id}`
 - **Format**: JSON messages with base64-encoded audio chunks
 
 **Message Structure**:
@@ -69,7 +69,7 @@ storage/
 
 ### 3.2 Processing Flow
 
-1. **Queue Scanning**: 주기적으로 Redis를 스캔하여 `interview:audio:*` 패턴의 큐 탐색
+1. **Queue Scanning**: 주기적으로 Redis를 스캔하여 `interview:audio:queue:storage:*` 패턴의 큐 탐색
 2. **Chunk Assembly**: BLPOP으로 청크를 순차 수신하고 조립
 3. **Object Upload**: 조립된 오디오를 OCI/MinIO Object Storage에 업로드
 4. **Event Publishing**: Kafka로 `storage.completed` 이벤트 발행
@@ -106,7 +106,7 @@ storage/
 | `REDIS_HOST`               | `redis`              | Redis 호스트              |
 | `REDIS_PORT`               | `6379`               | Redis 포트                |
 | `REDIS_DB`                 | `0`                  | Redis 데이터베이스 번호   |
-| `REDIS_AUDIO_QUEUE_PREFIX` | `interview:audio`    | 오디오 큐 프리픽스        |
+| `REDIS_AUDIO_QUEUE_PREFIX` | `interview:audio:queue:storage` | 오디오 큐 프리픽스        |
 | `OBJECT_STORAGE_ENDPOINT`  | -                    | Object Storage 엔드포인트 |
 | `OBJECT_STORAGE_BUCKET`    | `interview-archives` | 버킷 이름                 |
 | `KAFKA_BROKER`             | `kafka:29092`        | Kafka 브로커 주소         |

@@ -104,16 +104,19 @@ class StorageService:
                 log_json("redis_scan_found_keys", pattern=pattern, count=len(keys), keys=[k.decode("utf-8") if isinstance(k, bytes) else k for k in keys])
 
             for key in keys:
-                # Parse key: interview:audio:queue:{interview_id}
+                # Parse key: interview:audio:queue:storage:{interview_id}
                 key_str = key.decode("utf-8") if isinstance(key, bytes) else key
                 parts = key_str.split(":")
 
-                if len(parts) >= 4:
+                if len(parts) >= 5:
                     try:
-                        interview_id = parts[3]
+                        # Extract interview_id from the last part of the key
+                        # Format: interview:audio:queue:storage:{interview_id}
+                        interview_id = parts[-1]
                         log_json("processing_interview_queue", interview_id=interview_id, key=key_str)
-                        # TODO: Retrieve actual user_id from metadata or separate Redis key
-                        user_id = interview_id  # Placeholder
+                        
+                        # Use interview_id as user_id if not separately provided in metadata
+                        user_id = interview_id 
 
                         # Process the queue
                         success = process_audio_queue(

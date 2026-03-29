@@ -42,7 +42,7 @@ REDIS_HOST = _env("REDIS_HOST", "redis")
 REDIS_PORT = _env_int("REDIS_PORT", 6379)
 REDIS_DB = _env_int("REDIS_DB", 0)
 REDIS_PASSWORD = _env("REDIS_PASSWORD", "") or None
-REDIS_AUDIO_QUEUE_PREFIX = _env("REDIS_AUDIO_QUEUE_PREFIX", "interview:audio")
+REDIS_AUDIO_QUEUE_PREFIX = _env("REDIS_AUDIO_QUEUE_PREFIX", "interview:audio:queue:storage")
 
 # Redis Sentinel Configuration
 REDIS_SENTINEL_HOSTS = _env("REDIS_SENTINEL_HOSTS", "")

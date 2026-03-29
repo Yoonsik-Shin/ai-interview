@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from common.v1 import enums_pb2 as common_dot_v1_dot_enums__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10llm/v1/llm.proto\x12\x06llm.v1\x1a\x15\x63ommon/v1/enums.proto\"%\n\x15\x43lassifyResumeRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\"J\n\x16\x43lassifyResumeResponse\x12\x11\n\tis_resume\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t\x12\r\n\x05score\x18\x03 \x01(\x02\"#\n\x13GetEmbeddingRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\")\n\x14GetEmbeddingResponse\x12\x11\n\tembedding\x18\x01 \x03(\x02\"F\n\x0ePersonaProfile\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04role\x18\x03 \x01(\t\x12\x0c\n\x04tone\x18\x04 \x01(\t\"\x84\x04\n\x0fGenerateRequest\x12\x14\n\x0cinterview_id\x18\x01 \x01(\t\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x11\n\tuser_text\x18\x03 \x01(\t\x12,\n\x07history\x18\x05 \x03(\x0b\x32\x1b.llm.v1.ConversationHistory\x12-\n\x05stage\x18\x06 \x01(\x0e\x32\x1e.common.v1.InterviewStageProto\x12\x1e\n\x11interviewer_count\x18\x07 \x01(\x05H\x00\x88\x01\x01\x12\x13\n\x06\x64omain\x18\x08 \x01(\tH\x01\x88\x01\x01\x12\x1e\n\x16remaining_time_seconds\x18\n \x01(\x03\x12\x1e\n\x16total_duration_seconds\x18\x0b \x01(\x03\x12 \n\x18\x63urrent_difficulty_level\x18\x0c \x01(\x05\x12\x1b\n\x13last_interviewer_id\x18\r \x01(\t\x12\x36\n\x0f\x61vailable_roles\x18\x0e \x03(\x0e\x32\x1d.common.v1.InterviewRoleProto\x12\x39\n\x0bpersonality\x18\x0f \x01(\x0e\x32$.common.v1.InterviewPersonalityProto\x12\x12\n\ninput_role\x18\x10 \x01(\tB\x14\n\x12_interviewer_countB\t\n\x07_domain\"4\n\x13\x43onversationHistory\x12\x0c\n\x04role\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\"\xcc\x01\n\nTokenChunk\x12\r\n\x05token\x18\x01 \x01(\t\x12\x10\n\x08is_final\x18\x02 \x01(\x08\x12\x17\n\x0fis_sentence_end\x18\x03 \x01(\x08\x12\x10\n\x08thinking\x18\x04 \x01(\t\x12\x1a\n\x12\x63urrent_persona_id\x18\x05 \x01(\t\x12\x1d\n\x15next_difficulty_level\x18\x06 \x01(\x05\x12\x19\n\x11reduce_total_time\x18\x07 \x01(\x08\x12\x1c\n\x14interview_end_signal\x18\x08 \x01(\x08\"H\n\nTTSRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x0c\n\x04mode\x18\x02 \x01(\t\x12\x0f\n\x07persona\x18\x03 \x01(\t\x12\r\n\x05speed\x18\x04 \x01(\x01\"0\n\x08TTSChunk\x12\x12\n\naudio_data\x18\x01 \x01(\x0c\x12\x10\n\x08is_final\x18\x02 \x01(\x08\x32\xa3\x02\n\nLlmService\x12\x41\n\x10GenerateResponse\x12\x17.llm.v1.GenerateRequest\x1a\x12.llm.v1.TokenChunk0\x01\x12\x36\n\x0cTextToSpeech\x12\x12.llm.v1.TTSRequest\x1a\x10.llm.v1.TTSChunk0\x01\x12I\n\x0cGetEmbedding\x12\x1b.llm.v1.GetEmbeddingRequest\x1a\x1c.llm.v1.GetEmbeddingResponse\x12O\n\x0e\x43lassifyResume\x12\x1d.llm.v1.ClassifyResumeRequest\x1a\x1e.llm.v1.ClassifyResumeResponseB(\n\x1ame.unbrdn.core.grpc.llm.v1B\x08LlmProtoP\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10llm/v1/llm.proto\x12\x06llm.v1\x1a\x15\x63ommon/v1/enums.proto\"V\n\x15GenerateReportRequest\x12\x14\n\x0cinterview_id\x18\x01 \x01(\t\x12\'\n\x08messages\x18\x02 \x03(\x0b\x32\x15.llm.v1.ReportMessage\".\n\rReportMessage\x12\x0c\n\x04role\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\"v\n\x16GenerateReportResponse\x12\x13\n\x0btotal_score\x18\x01 \x01(\x05\x12\x18\n\x10pass_fail_status\x18\x02 \x01(\t\x12\x14\n\x0csummary_text\x18\x03 \x01(\t\x12\x17\n\x0fresume_feedback\x18\x04 \x01(\t\"%\n\x15\x43lassifyResumeRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\"J\n\x16\x43lassifyResumeResponse\x12\x11\n\tis_resume\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t\x12\r\n\x05score\x18\x03 \x01(\x02\"F\n\x0ePersonaProfile\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04role\x18\x03 \x01(\t\x12\x0c\n\x04tone\x18\x04 \x01(\t\"\xd7\x04\n\x0fGenerateRequest\x12\x14\n\x0cinterview_id\x18\x01 \x01(\t\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x11\n\tuser_text\x18\x03 \x01(\t\x12\x1e\n\x16participating_personas\x18\x04 \x03(\t\x12-\n\x05stage\x18\x06 \x01(\x0e\x32\x1e.common.v1.InterviewStageProto\x12\x13\n\x06\x64omain\x18\x08 \x01(\tH\x00\x88\x01\x01\x12\x1e\n\x16remaining_time_seconds\x18\n \x01(\x03\x12\"\n\x1ascheduled_duration_minutes\x18\x0b \x01(\x05\x12 \n\x18\x63urrent_difficulty_level\x18\x0c \x01(\x05\x12\x1b\n\x13last_interviewer_id\x18\r \x01(\t\x12\x14\n\x0c\x63ompany_name\x18\x0e \x01(\t\x12\x12\n\ninput_role\x18\x10 \x01(\t\x12\x12\n\npersona_id\x18\x11 \x01(\t\x12\x11\n\tresume_id\x18\x12 \x01(\t\x12-\n\x05round\x18\x13 \x01(\x0e\x32\x1e.common.v1.InterviewRoundProto\x12\x1c\n\x0fjob_posting_url\x18\x14 \x01(\tH\x01\x88\x01\x01\x12\x1c\n\x0fself_intro_text\x18\x15 \x01(\tH\x02\x88\x01\x01\x12\x1e\n\x11\x66orced_speaker_id\x18\x16 \x01(\tH\x03\x88\x01\x01\x42\t\n\x07_domainB\x12\n\x10_job_posting_urlB\x12\n\x10_self_intro_textB\x14\n\x12_forced_speaker_id\"\xcc\x01\n\nTokenChunk\x12\r\n\x05token\x18\x01 \x01(\t\x12\x10\n\x08is_final\x18\x02 \x01(\x08\x12\x17\n\x0fis_sentence_end\x18\x03 \x01(\x08\x12\x10\n\x08thinking\x18\x04 \x01(\t\x12\x1a\n\x12\x63urrent_persona_id\x18\x05 \x01(\t\x12\x1d\n\x15next_difficulty_level\x18\x06 \x01(\x05\x12\x19\n\x11reduce_total_time\x18\x07 \x01(\x08\x12\x1c\n\x14interview_end_signal\x18\x08 \x01(\x08\"H\n\nTTSRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x0c\n\x04mode\x18\x02 \x01(\t\x12\x0f\n\x07persona\x18\x03 \x01(\t\x12\r\n\x05speed\x18\x04 \x01(\x01\"0\n\x08TTSChunk\x12\x12\n\naudio_data\x18\x01 \x01(\x0c\x12\x10\n\x08is_final\x18\x02 \x01(\x08\x32\xa9\x02\n\nLlmService\x12\x41\n\x10GenerateResponse\x12\x17.llm.v1.GenerateRequest\x1a\x12.llm.v1.TokenChunk0\x01\x12\x36\n\x0cTextToSpeech\x12\x12.llm.v1.TTSRequest\x1a\x10.llm.v1.TTSChunk0\x01\x12O\n\x0e\x43lassifyResume\x12\x1d.llm.v1.ClassifyResumeRequest\x1a\x1e.llm.v1.ClassifyResumeResponse\x12O\n\x0eGenerateReport\x12\x1d.llm.v1.GenerateReportRequest\x1a\x1e.llm.v1.GenerateReportResponseB(\n\x1ame.unbrdn.core.grpc.llm.v1B\x08LlmProtoP\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,26 +33,26 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'llm.v1.llm_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n\032me.unbrdn.core.grpc.llm.v1B\010LlmProtoP\001'
-  _globals['_CLASSIFYRESUMEREQUEST']._serialized_start=51
-  _globals['_CLASSIFYRESUMEREQUEST']._serialized_end=88
-  _globals['_CLASSIFYRESUMERESPONSE']._serialized_start=90
-  _globals['_CLASSIFYRESUMERESPONSE']._serialized_end=164
-  _globals['_GETEMBEDDINGREQUEST']._serialized_start=166
-  _globals['_GETEMBEDDINGREQUEST']._serialized_end=201
-  _globals['_GETEMBEDDINGRESPONSE']._serialized_start=203
-  _globals['_GETEMBEDDINGRESPONSE']._serialized_end=244
-  _globals['_PERSONAPROFILE']._serialized_start=246
-  _globals['_PERSONAPROFILE']._serialized_end=316
-  _globals['_GENERATEREQUEST']._serialized_start=319
-  _globals['_GENERATEREQUEST']._serialized_end=835
-  _globals['_CONVERSATIONHISTORY']._serialized_start=837
-  _globals['_CONVERSATIONHISTORY']._serialized_end=889
-  _globals['_TOKENCHUNK']._serialized_start=892
-  _globals['_TOKENCHUNK']._serialized_end=1096
-  _globals['_TTSREQUEST']._serialized_start=1098
-  _globals['_TTSREQUEST']._serialized_end=1170
-  _globals['_TTSCHUNK']._serialized_start=1172
-  _globals['_TTSCHUNK']._serialized_end=1220
-  _globals['_LLMSERVICE']._serialized_start=1223
-  _globals['_LLMSERVICE']._serialized_end=1514
+  _globals['_GENERATEREPORTREQUEST']._serialized_start=51
+  _globals['_GENERATEREPORTREQUEST']._serialized_end=137
+  _globals['_REPORTMESSAGE']._serialized_start=139
+  _globals['_REPORTMESSAGE']._serialized_end=185
+  _globals['_GENERATEREPORTRESPONSE']._serialized_start=187
+  _globals['_GENERATEREPORTRESPONSE']._serialized_end=305
+  _globals['_CLASSIFYRESUMEREQUEST']._serialized_start=307
+  _globals['_CLASSIFYRESUMEREQUEST']._serialized_end=344
+  _globals['_CLASSIFYRESUMERESPONSE']._serialized_start=346
+  _globals['_CLASSIFYRESUMERESPONSE']._serialized_end=420
+  _globals['_PERSONAPROFILE']._serialized_start=422
+  _globals['_PERSONAPROFILE']._serialized_end=492
+  _globals['_GENERATEREQUEST']._serialized_start=495
+  _globals['_GENERATEREQUEST']._serialized_end=1094
+  _globals['_TOKENCHUNK']._serialized_start=1097
+  _globals['_TOKENCHUNK']._serialized_end=1301
+  _globals['_TTSREQUEST']._serialized_start=1303
+  _globals['_TTSREQUEST']._serialized_end=1375
+  _globals['_TTSCHUNK']._serialized_start=1377
+  _globals['_TTSCHUNK']._serialized_end=1425
+  _globals['_LLMSERVICE']._serialized_start=1428
+  _globals['_LLMSERVICE']._serialized_end=1725
 # @@protoc_insertion_point(module_scope)
