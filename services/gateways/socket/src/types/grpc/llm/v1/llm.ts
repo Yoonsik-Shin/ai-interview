@@ -8,9 +8,28 @@
 import type { Metadata } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
-import { InterviewStageProto } from "../../common/v1/enums";
+import { InterviewRoundProto, InterviewStageProto } from "../../common/v1/enums";
 
 export const protobufPackage = "llm.v1";
+
+export interface GenerateReportRequest {
+  interviewId: string;
+  messages: ReportMessage[];
+}
+
+export interface ReportMessage {
+  /** USER / AI */
+  role: string;
+  content: string;
+}
+
+export interface GenerateReportResponse {
+  totalScore: number;
+  /** PASS / FAIL / HOLD */
+  passFailStatus: string;
+  summaryText: string;
+  resumeFeedback: string;
+}
 
 export interface ClassifyResumeRequest {
   text: string;
@@ -20,14 +39,6 @@ export interface ClassifyResumeResponse {
   isResume: boolean;
   reason: string;
   score: number;
-}
-
-export interface GetEmbeddingRequest {
-  text: string;
-}
-
-export interface GetEmbeddingResponse {
-  embedding: number[];
 }
 
 export interface PersonaProfile {
@@ -58,6 +69,11 @@ export interface GenerateRequest {
   personaId: string;
   /** 이력서 IDe */
   resumeId: string;
+  /** 면접 차수/유형 (Round) */
+  round: InterviewRoundProto;
+  jobPostingUrl?: string | undefined;
+  selfIntroText?: string | undefined;
+  forcedSpeakerId?: string | undefined;
 }
 
 export interface TokenChunk {
@@ -95,11 +111,13 @@ export interface LlmServiceClient {
 
   textToSpeech(request: TTSRequest, metadata?: Metadata): Observable<TTSChunk>;
 
-  getEmbedding(request: GetEmbeddingRequest, metadata?: Metadata): Observable<GetEmbeddingResponse>;
-
   /** 이력서 분류 및 판별 */
 
   classifyResume(request: ClassifyResumeRequest, metadata?: Metadata): Observable<ClassifyResumeResponse>;
+
+  /** 면접 리포트 생성 */
+
+  generateReport(request: GenerateReportRequest, metadata?: Metadata): Observable<GenerateReportResponse>;
 }
 
 export interface LlmServiceController {
@@ -107,22 +125,24 @@ export interface LlmServiceController {
 
   textToSpeech(request: TTSRequest, metadata?: Metadata): Observable<TTSChunk>;
 
-  getEmbedding(
-    request: GetEmbeddingRequest,
-    metadata?: Metadata,
-  ): Promise<GetEmbeddingResponse> | Observable<GetEmbeddingResponse> | GetEmbeddingResponse;
-
   /** 이력서 분류 및 판별 */
 
   classifyResume(
     request: ClassifyResumeRequest,
     metadata?: Metadata,
   ): Promise<ClassifyResumeResponse> | Observable<ClassifyResumeResponse> | ClassifyResumeResponse;
+
+  /** 면접 리포트 생성 */
+
+  generateReport(
+    request: GenerateReportRequest,
+    metadata?: Metadata,
+  ): Promise<GenerateReportResponse> | Observable<GenerateReportResponse> | GenerateReportResponse;
 }
 
 export function LlmServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["generateResponse", "textToSpeech", "getEmbedding", "classifyResume"];
+    const grpcMethods: string[] = ["generateResponse", "textToSpeech", "classifyResume", "generateReport"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("LlmService", method)(constructor.prototype[method], method, descriptor);

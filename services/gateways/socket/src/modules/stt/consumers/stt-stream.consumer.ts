@@ -21,7 +21,7 @@ export class SttStreamConsumer implements OnModuleInit, OnModuleDestroy {
         const source = (process.env.STT_RESPONSE_SOURCE || "pubsub").toLowerCase();
         this.isEnabled = source === "stream" || source === "both";
 
-        this.sttRedisStream = process.env.STT_REDIS_STREAM || "stt:transcript:stream";
+        this.sttRedisStream = process.env.STT_REDIS_STREAM || "interview:stt:transcript:stream";
         this.sttRedisGroup = process.env.STT_REDIS_GROUP || "stt:transcript:group";
         this.sttRedisConsumer =
             process.env.STT_REDIS_CONSUMER ||

@@ -8,4 +8,5 @@ export class AudioChunkDto {
     threshold?: number;
     chunkId?: string;
     mode?: "real" | "practice"; // Engine selection
+    retryCount?: number; // Versioning for retry attempts
 }

@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from "@nestjs/commo
 import { RedisClient } from "../../../infra/redis/redis.clients.js";
 import { InterviewGateway } from "../interview.gateway.js";
 import { SendAudioDataUseCase, SendAudioDataCommand } from "../usecases/send-audio-data.usecase.js";
+import { DebugTraceGateway } from "../../debug/debug-trace.gateway";
 
 /**
  * Audio Pub/Sub Consumer
@@ -16,6 +17,7 @@ export class AudioPubSubConsumer implements OnModuleInit, OnModuleDestroy {
         private readonly redisClient: RedisClient,
         private readonly interviewGateway: InterviewGateway,
         private readonly sendAudioDataUseCase: SendAudioDataUseCase,
+        private readonly debugTraceGateway: DebugTraceGateway,
     ) {}
 
     async onModuleInit() {
@@ -26,8 +28,9 @@ export class AudioPubSubConsumer implements OnModuleInit, OnModuleDestroy {
             this.handleAudio(message);
         });
 
-        // 패턴 구독: interview:audio:*
-        await this.subscriber.psubscribe("interview:audio:*");
+        // 패턴 구독: interview:tts:pubsub:* (표준화된 경로)
+        const ttsPattern = process.env.REDIS_TTS_PUBSUB_PATTERN || "interview:audio:pubsub:*";
+        await this.subscriber.psubscribe(ttsPattern);
 
         this.logger.log("Audio PubSub Consumer started");
     }
@@ -53,6 +56,16 @@ export class AudioPubSubConsumer implements OnModuleInit, OnModuleDestroy {
                     payload.text,
                 ),
             );
+
+            // 트레이스 발행 (개발 환경 전용, 비차단)
+            if (process.env.NODE_ENV === "development") {
+                this.debugTraceGateway.broadcastTrace(interviewId, "TTS", {
+                    sentenceIndex: payload.sentenceIndex,
+                    text: payload.text,
+                    duration: payload.duration,
+                    persona: payload.persona,
+                });
+            }
         } catch (error) {
             this.logger.error(`Audio handling error: ${error.message}`, error.stack);
         }

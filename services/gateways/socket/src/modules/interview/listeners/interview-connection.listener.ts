@@ -6,6 +6,7 @@ import { ConnectionEventType } from "../../modules.enum";
 import {
     InterviewGrpcService,
     InterviewStage,
+    InterviewTurnStatus,
 } from "../../../infra/grpc/services/interview-grpc.service";
 import { RedisClient } from "../../../infra/redis/redis.clients";
 
@@ -97,7 +98,8 @@ export class InterviewConnectionListener {
      */
     private async syncStandardSession(client: any, interviewId: string, sessionKey: string) {
         // 현재 단계 확인
-        const { stage: currentStage } = await this.stageService.getStage(interviewId);
+        const stageState = await this.stageService.getStage(interviewId);
+        const currentStage = stageState.stage;
 
         // Redis에 Stage 정보도 업데이트 (Cache Warm-up)
         await this.redisClient.hset(sessionKey, "stage", currentStage);
@@ -123,11 +125,23 @@ export class InterviewConnectionListener {
                 previousStage: currentStage,
                 currentStage: currentStage,
             });
+            await this.cacheTurnState(interviewId, stageState);
+            client.emit("interview:turn_state", {
+                interviewId,
+                stage: stageState.stage,
+                status: stageState.turnStatus,
+                canCandidateSpeak: stageState.canCandidateSpeak,
+                turnCount: stageState.turnCount,
+                activePersonaId: stageState.activePersonaId,
+            });
 
-            // SELF_INTRO 재접속 시 타이머 동기화 — 프론트가 setTimeLeft(90)으로 초기화하므로
+            // SELF_INTRO 재접속 시 타이머 동기화 — 프론트가 hard timeout 기준으로 초기화하므로
             // Redis의 실제 selfIntroStart 기준으로 남은 시간을 보정 전송
             if (currentStage === InterviewStage.SELF_INTRO) {
-                const selfIntroStart = await this.redisClient.hget(sessionKey, "selfIntroStart");
+                const selfIntroStart = await this.redisClient.hget(
+                    `interview:rt:${interviewId}`,
+                    "selfIntroStart",
+                );
                 if (selfIntroStart) {
                     const elapsed = Math.floor((Date.now() - Number(selfIntroStart)) / 1000);
                     const timeLeft = Math.max(0, 90 - elapsed);
@@ -135,6 +149,27 @@ export class InterviewConnectionListener {
                 }
             }
         }
+    }
+
+    private async cacheTurnState(
+        interviewId: string,
+        stageState: {
+            stage: InterviewStage;
+            turnStatus: InterviewTurnStatus;
+            canCandidateSpeak: boolean;
+            turnCount: number;
+            activePersonaId?: string;
+        },
+    ) {
+        const rtKey = `interview:rt:${interviewId}`;
+        await this.redisClient.hset(rtKey, {
+            stage: stageState.stage,
+            status: stageState.turnStatus,
+            canCandidateSpeak: String(stageState.canCandidateSpeak),
+            turnCount: String(stageState.turnCount ?? 0),
+            activePersonaId: stageState.activePersonaId || "",
+        });
+        await this.redisClient.expire(rtKey, 3600);
     }
 
     /**

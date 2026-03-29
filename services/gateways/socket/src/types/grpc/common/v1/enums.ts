@@ -45,6 +45,20 @@ export enum InterviewRoleProto {
   HR = 2,
   /** LEADER - 리드 면접관 */
   LEADER = 3,
+  /** EXEC - 임원 면접관 */
+  EXEC = 4,
+  UNRECOGNIZED = -1,
+}
+
+/** 면접 차수/유형 (Round) */
+export enum InterviewRoundProto {
+  INTERVIEW_ROUND_UNSPECIFIED = 0,
+  /** TECHNICAL_ROUND - 1차 면접 (기술 중심) */
+  TECHNICAL_ROUND = 1,
+  /** CULTURE_ROUND - 2차 면접 (인적성/컬쳐핏 중심) */
+  CULTURE_ROUND = 2,
+  /** EXECUTIVE_ROUND - 임원 면접 (전략/비전 중심) */
+  EXECUTIVE_ROUND = 3,
   UNRECOGNIZED = -1,
 }
 
@@ -73,6 +87,19 @@ export enum InterviewStatusProto {
   COMPLETED = 3,
   /** CANCELLED - 취소됨 */
   CANCELLED = 4,
+  UNRECOGNIZED = -1,
+}
+
+/** 실시간 턴 상태 */
+export enum InterviewTurnStatusProto {
+  INTERVIEW_TURN_STATUS_UNSPECIFIED = 0,
+  TURN_READY = 1,
+  LISTENING = 2,
+  THINKING = 3,
+  SPEAKING = 4,
+  TURN_PAUSED = 5,
+  TURN_COMPLETED = 6,
+  TURN_CANCELLED = 7,
   UNRECOGNIZED = -1,
 }
 

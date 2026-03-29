@@ -16,8 +16,8 @@ export abstract class BaseRedisClient extends Redis implements OnModuleDestroy {
     }
 
     static createRedisOptions(configService: ConfigService): RedisOptions {
-        const redisPassword = configService.getOrThrow<string>("REDIS_PASSWORD");
-        const redisDb = configService.getOrThrow<number>("REDIS_DB");
+        const redisPassword = configService.get<string>("REDIS_PASSWORD") || "";
+        const redisDb = Number(configService.get("REDIS_DB") || 0);
 
         const sentinelHostsEnv = configService.get<string>("REDIS_SENTINEL_HOSTS");
         const sentinelHostEnv = configService.get<string>("REDIS_SENTINEL_HOST");

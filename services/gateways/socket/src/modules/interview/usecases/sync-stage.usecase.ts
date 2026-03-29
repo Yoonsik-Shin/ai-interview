@@ -5,6 +5,7 @@ import {
 } from "../../../infra/grpc/services/interview-grpc.service";
 import { RedisClient } from "../../../infra/redis/redis.clients";
 import { AuthenticatedSocket } from "../../../types/socket.types";
+import { AudioProcessorService } from "../../stt/services/audio-processor.service";
 
 export class SyncStageCommand {
     constructor(
@@ -13,6 +14,7 @@ export class SyncStageCommand {
         public readonly currentStage: InterviewStage,
         public readonly targetStage?: InterviewStage, // Explicit target for skip/debug
         public readonly action: "READY" | "SKIP" | "DEBUG_SKIP" = "READY",
+        public readonly durationSeconds?: number,
     ) {}
 }
 
@@ -30,6 +32,7 @@ export class SyncStageUseCase {
     constructor(
         private readonly stageService: InterviewGrpcService,
         private readonly redisClient: RedisClient,
+        private readonly audioProcessorService: AudioProcessorService,
     ) {}
 
     async execute(command: SyncStageCommand): Promise<SyncStageResult> {
@@ -38,6 +41,8 @@ export class SyncStageUseCase {
         let interventionMessage: string | undefined;
 
         if (command.action === "READY") {
+            // [FIX] READY 신호 수신 시 이전 음성 인퍼런스 중단 (상태 불일치 방지)
+            this.audioProcessorService.abortProcessing(command.interviewId);
             nextStage = this.getNextStageByReady(command.currentStage);
         } else if (command.action === "SKIP") {
             if (command.currentStage === InterviewStage.SELF_INTRO) {
@@ -66,21 +71,11 @@ export class SyncStageUseCase {
             command.interviewId,
             nextStage,
         );
-        
-        // [근본 해결] 후보자 발화가 필요한 단계일 때 Redis 세션 상태를 LISTENING으로 강제 주입
-        if (
-            transitionedStage === InterviewStage.CANDIDATE_GREETING || 
-            transitionedStage === InterviewStage.SELF_INTRO
-        ) {
-            const stateKey = `interview:${command.interviewId}:state`;
-            await this.redisClient.hset(stateKey, "status", "LISTENING");
-        }
 
         // Redis Optimization: SELF_INTRO 시작 시 시간 기록
         if (transitionedStage === InterviewStage.SELF_INTRO) {
-            const sessionKey = `interview:session:${command.interviewId}`;
-            await this.redisClient.hset(sessionKey, "selfIntroStart", Date.now());
-            await this.redisClient.expire(sessionKey, 3600);
+            const rtKey = `interview:rt:${command.interviewId}`;
+            await this.redisClient.hset(rtKey, "selfIntroStart", Date.now());
         }
 
         return new SyncStageResult(
@@ -95,10 +90,16 @@ export class SyncStageUseCase {
         switch (current) {
             case InterviewStage.GREETING:
                 return InterviewStage.CANDIDATE_GREETING;
+            case InterviewStage.CANDIDATE_GREETING:
+                return InterviewStage.INTERVIEWER_INTRO;
+            case InterviewStage.INTERVIEWER_INTRO:
+                return InterviewStage.SELF_INTRO_PROMPT;
             case InterviewStage.SELF_INTRO_PROMPT:
                 return InterviewStage.SELF_INTRO;
             case InterviewStage.LAST_QUESTION_PROMPT:
                 return InterviewStage.LAST_ANSWER;
+            case InterviewStage.CLOSING_GREETING:
+                return InterviewStage.COMPLETED;
             default:
                 return null;
         }

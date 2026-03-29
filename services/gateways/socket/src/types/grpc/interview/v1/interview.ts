@@ -8,14 +8,17 @@
 import type { Metadata } from "@grpc/grpc-js";
 import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
 import { Observable } from "rxjs";
-import { InterviewStageProto, InterviewStatusProto, InterviewTypeProto } from "../../common/v1/enums";
+import {
+  InterviewRoundProto,
+  InterviewStageProto,
+  InterviewStatusProto,
+  InterviewTurnStatusProto,
+  InterviewTypeProto,
+} from "../../common/v1/enums";
 
 export const protobufPackage = "interview.v1";
 
-/**
- * === 메시지 정의 (DTO) ===
- * === 메시지 정의 (DTO) ===
- */
+/** === 메시지 정의 (DTO) === */
 export interface CreateInterviewRequest {
   /** UUID */
   userId: string;
@@ -26,6 +29,9 @@ export interface CreateInterviewRequest {
   type: InterviewTypeProto;
   participatingPersonas: string[];
   scheduledDurationMinutes: number;
+  round: InterviewRoundProto;
+  jobPostingUrl?: string | undefined;
+  selfIntroText?: string | undefined;
 }
 
 export interface CreateInterviewResponse {
@@ -45,6 +51,10 @@ export interface GetInterviewStageResponse {
   participatingPersonas: string[];
   domain?: string | undefined;
   selfIntroRetryCount: number;
+  turnStatus: InterviewTurnStatusProto;
+  turnCount: number;
+  activePersonaId?: string | undefined;
+  canCandidateSpeak: boolean;
 }
 
 /** Stage 전환 */
@@ -57,13 +67,43 @@ export interface TransitionStageResponse {
   currentStage: InterviewStageProto;
 }
 
-/** 자기소개 재시도 증분 */
-export interface IncrementSelfIntroRetryRequest {
+/** 사용자 답변 직접 처리 */
+export interface ProcessUserAnswerRequest {
   interviewId: string;
+  userText: string;
+  userId: string;
+  timestamp: string;
 }
 
-export interface IncrementSelfIntroRetryResponse {
+export interface ProcessUserAnswerResponse {
+  success: boolean;
+}
+
+export interface SaveInterviewMessageRequest {
+  interviewId: string;
+  role: string;
+  content: string;
+  stage?: string | undefined;
+  personaId?: string | undefined;
+  turnCount: number;
+  sequenceNumber: number;
+  difficultyLevel?: number | undefined;
+}
+
+export interface SaveInterviewMessageResponse {
+  success: boolean;
+}
+
+/** 자기소개 리트라이 고속 제어 (STT 우회) */
+export interface RetrySelfIntroRequest {
+  interviewId: string;
+  durationSeconds: number;
+}
+
+export interface RetrySelfIntroResponse {
+  success: boolean;
   newRetryCount: number;
+  isMaxRetryExceeded: boolean;
 }
 
 /** 면접 목록 조회 */
@@ -87,6 +127,7 @@ export interface InterviewSummary {
   domain: string;
   type: InterviewTypeProto;
   scheduledDurationMinutes: number;
+  jobPostingUrl?: string | undefined;
 }
 
 export interface ListInterviewsResponse {
@@ -198,6 +239,84 @@ export interface GetInterviewResponse {
   participatingPersonas: string[];
   createdAt?: string | undefined;
   resumedAt?: string | undefined;
+  round: InterviewRoundProto;
+  jobPostingUrl?: string | undefined;
+  selfIntroText?: string | undefined;
+  turnCount: number;
+}
+
+/** 면접 리포트 생성 */
+export interface CreateInterviewReportRequest {
+  interviewId: string;
+}
+
+export interface CreateInterviewReportResponse {
+  reportId: string;
+  generationStatus: string;
+}
+
+/** 면접 리포트 조회 */
+export interface GetInterviewReportRequest {
+  interviewId: string;
+  reportId: string;
+}
+
+export interface GetInterviewReportResponse {
+  reportId: string;
+  generationStatus: string;
+  totalScore: number;
+  passFailStatus: string;
+  summaryText: string;
+  resumeFeedback: string;
+}
+
+/** 면접 영상 세그먼트 업로드 URL 발급 */
+export interface GetRecordingSegmentUploadUrlRequest {
+  interviewId: string;
+  turnCount: number;
+}
+
+export interface GetRecordingSegmentUploadUrlResponse {
+  uploadUrl: string;
+  objectKey: string;
+}
+
+/** 면접 영상 세그먼트 업로드 완료 신고 */
+export interface CompleteRecordingSegmentUploadRequest {
+  interviewId: string;
+  objectKey: string;
+  turnCount: number;
+  durationSeconds: number;
+  startedAtEpoch: number;
+  endedAtEpoch: number;
+}
+
+export interface CompleteRecordingSegmentUploadResponse {
+  success: boolean;
+}
+
+/** 면접 영상 세그먼트 목록 조회 (다시 보기) */
+export interface GetInterviewRecordingSegmentsRequest {
+  interviewId: string;
+}
+
+export interface RecordingSegment {
+  turnCount: number;
+  /** 지원자 영상 URL */
+  recordingUrl: string;
+  expiresAtEpoch: number;
+  /** 면접관 질문 텍스트 */
+  questionContent: string;
+  /** 지원자 답변 텍스트 (STT) */
+  answerContent: string;
+  /** 면접관 질문 음성 URL (TTS) */
+  questionAudioUrl: string;
+  /** 지원자 답변 음성 URL (STT 원본) */
+  answerAudioUrl: string;
+}
+
+export interface GetInterviewRecordingSegmentsResponse {
+  segments: RecordingSegment[];
 }
 
 export const INTERVIEW_V1_PACKAGE_NAME = "interview.v1";
@@ -215,12 +334,9 @@ export interface InterviewServiceClient {
 
   transitionStage(request: TransitionStageRequest, metadata?: Metadata): Observable<TransitionStageResponse>;
 
-  /** 자기소개 재시도 제어 */
+  /** 자기소개 리트라이 제어 (STT 우회) */
 
-  incrementSelfIntroRetry(
-    request: IncrementSelfIntroRetryRequest,
-    metadata?: Metadata,
-  ): Observable<IncrementSelfIntroRetryResponse>;
+  retrySelfIntro(request: RetrySelfIntroRequest, metadata?: Metadata): Observable<RetrySelfIntroResponse>;
 
   /** 면접 목록 조회 */
 
@@ -249,6 +365,17 @@ export interface InterviewServiceClient {
 
   resumeInterview(request: ResumeInterviewRequest, metadata?: Metadata): Observable<ResumeInterviewResponse>;
 
+  /** 사용자 답변 직접 처리 (자기소개 완료/스킵 등 Socket에서 직접 트리거 시) */
+
+  processUserAnswer(request: ProcessUserAnswerRequest, metadata?: Metadata): Observable<ProcessUserAnswerResponse>;
+
+  /** 프론트에서 재생된 시스템 음성/텍스트를 대화 히스토리에 저장 */
+
+  saveInterviewMessage(
+    request: SaveInterviewMessageRequest,
+    metadata?: Metadata,
+  ): Observable<SaveInterviewMessageResponse>;
+
   /** [DevTool] 면접 단계 강제 변경 (개발 환경 전용) */
 
   forceStage(request: ForceStageRequest, metadata?: Metadata): Observable<ForceStageResponse>;
@@ -256,6 +383,38 @@ export interface InterviewServiceClient {
   /** 면접 단건 조회 (상태 확인용) */
 
   getInterview(request: GetInterviewRequest, metadata?: Metadata): Observable<GetInterviewResponse>;
+
+  /** 면접 리포트 생성 */
+
+  createInterviewReport(
+    request: CreateInterviewReportRequest,
+    metadata?: Metadata,
+  ): Observable<CreateInterviewReportResponse>;
+
+  /** 면접 리포트 조회 */
+
+  getInterviewReport(request: GetInterviewReportRequest, metadata?: Metadata): Observable<GetInterviewReportResponse>;
+
+  /** 면접 영상 세그먼트 업로드 URL 발급 */
+
+  getRecordingSegmentUploadUrl(
+    request: GetRecordingSegmentUploadUrlRequest,
+    metadata?: Metadata,
+  ): Observable<GetRecordingSegmentUploadUrlResponse>;
+
+  /** 면접 영상 세그먼트 업로드 완료 신고 */
+
+  completeRecordingSegmentUpload(
+    request: CompleteRecordingSegmentUploadRequest,
+    metadata?: Metadata,
+  ): Observable<CompleteRecordingSegmentUploadResponse>;
+
+  /** 면접 영상 세그먼트 목록 조회 (다시 보기) */
+
+  getInterviewRecordingSegments(
+    request: GetInterviewRecordingSegmentsRequest,
+    metadata?: Metadata,
+  ): Observable<GetInterviewRecordingSegmentsResponse>;
 }
 
 /** === 서비스 정의 (인터페이스) === */
@@ -280,15 +439,12 @@ export interface InterviewServiceController {
     metadata?: Metadata,
   ): Promise<TransitionStageResponse> | Observable<TransitionStageResponse> | TransitionStageResponse;
 
-  /** 자기소개 재시도 제어 */
+  /** 자기소개 리트라이 제어 (STT 우회) */
 
-  incrementSelfIntroRetry(
-    request: IncrementSelfIntroRetryRequest,
+  retrySelfIntro(
+    request: RetrySelfIntroRequest,
     metadata?: Metadata,
-  ):
-    | Promise<IncrementSelfIntroRetryResponse>
-    | Observable<IncrementSelfIntroRetryResponse>
-    | IncrementSelfIntroRetryResponse;
+  ): Promise<RetrySelfIntroResponse> | Observable<RetrySelfIntroResponse> | RetrySelfIntroResponse;
 
   /** 면접 목록 조회 */
 
@@ -332,6 +488,20 @@ export interface InterviewServiceController {
     metadata?: Metadata,
   ): Promise<ResumeInterviewResponse> | Observable<ResumeInterviewResponse> | ResumeInterviewResponse;
 
+  /** 사용자 답변 직접 처리 (자기소개 완료/스킵 등 Socket에서 직접 트리거 시) */
+
+  processUserAnswer(
+    request: ProcessUserAnswerRequest,
+    metadata?: Metadata,
+  ): Promise<ProcessUserAnswerResponse> | Observable<ProcessUserAnswerResponse> | ProcessUserAnswerResponse;
+
+  /** 프론트에서 재생된 시스템 음성/텍스트를 대화 히스토리에 저장 */
+
+  saveInterviewMessage(
+    request: SaveInterviewMessageRequest,
+    metadata?: Metadata,
+  ): Promise<SaveInterviewMessageResponse> | Observable<SaveInterviewMessageResponse> | SaveInterviewMessageResponse;
+
   /** [DevTool] 면접 단계 강제 변경 (개발 환경 전용) */
 
   forceStage(
@@ -345,6 +515,50 @@ export interface InterviewServiceController {
     request: GetInterviewRequest,
     metadata?: Metadata,
   ): Promise<GetInterviewResponse> | Observable<GetInterviewResponse> | GetInterviewResponse;
+
+  /** 면접 리포트 생성 */
+
+  createInterviewReport(
+    request: CreateInterviewReportRequest,
+    metadata?: Metadata,
+  ): Promise<CreateInterviewReportResponse> | Observable<CreateInterviewReportResponse> | CreateInterviewReportResponse;
+
+  /** 면접 리포트 조회 */
+
+  getInterviewReport(
+    request: GetInterviewReportRequest,
+    metadata?: Metadata,
+  ): Promise<GetInterviewReportResponse> | Observable<GetInterviewReportResponse> | GetInterviewReportResponse;
+
+  /** 면접 영상 세그먼트 업로드 URL 발급 */
+
+  getRecordingSegmentUploadUrl(
+    request: GetRecordingSegmentUploadUrlRequest,
+    metadata?: Metadata,
+  ):
+    | Promise<GetRecordingSegmentUploadUrlResponse>
+    | Observable<GetRecordingSegmentUploadUrlResponse>
+    | GetRecordingSegmentUploadUrlResponse;
+
+  /** 면접 영상 세그먼트 업로드 완료 신고 */
+
+  completeRecordingSegmentUpload(
+    request: CompleteRecordingSegmentUploadRequest,
+    metadata?: Metadata,
+  ):
+    | Promise<CompleteRecordingSegmentUploadResponse>
+    | Observable<CompleteRecordingSegmentUploadResponse>
+    | CompleteRecordingSegmentUploadResponse;
+
+  /** 면접 영상 세그먼트 목록 조회 (다시 보기) */
+
+  getInterviewRecordingSegments(
+    request: GetInterviewRecordingSegmentsRequest,
+    metadata?: Metadata,
+  ):
+    | Promise<GetInterviewRecordingSegmentsResponse>
+    | Observable<GetInterviewRecordingSegmentsResponse>
+    | GetInterviewRecordingSegmentsResponse;
 }
 
 export function InterviewServiceControllerMethods() {
@@ -353,15 +567,22 @@ export function InterviewServiceControllerMethods() {
       "createInterview",
       "getInterviewStage",
       "transitionStage",
-      "incrementSelfIntroRetry",
+      "retrySelfIntro",
       "listInterviews",
       "getInterviewHistory",
       "completeInterview",
       "cancelInterview",
       "pauseInterview",
       "resumeInterview",
+      "processUserAnswer",
+      "saveInterviewMessage",
       "forceStage",
       "getInterview",
+      "createInterviewReport",
+      "getInterviewReport",
+      "getRecordingSegmentUploadUrl",
+      "completeRecordingSegmentUpload",
+      "getInterviewRecordingSegments",
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);

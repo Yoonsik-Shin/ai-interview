@@ -17,6 +17,7 @@ export class SttGrpcService implements OnModuleInit {
         string,
         { subject: Subject<AudioChunk>; subscription: Subscription }
     >();
+    private readonly latestTranscripts = new Map<string, string>();
 
     constructor(
         @Inject("STT_PACKAGE")
@@ -38,6 +39,7 @@ export class SttGrpcService implements OnModuleInit {
         timestamp: string,
         traceId: string,
         stage: string = "unknown",
+        retryCount: number = 0,
     ) {
         const mode = payload.mode || "practice";
 
@@ -56,11 +58,31 @@ export class SttGrpcService implements OnModuleInit {
                     interviewId: payload.interviewId,
                     userId: userId,
                     stage: stage,
+                    retryCount: retryCount,
                 },
+                general: undefined,
             },
         };
 
         let streamEntry = this.sttStreams.get(payload.interviewId);
+
+        // [FUNDAMENTAL FIX] 단계(stage)나 리트라이 횟수(retryCount)가 변경되면 기존 스트림을 파기하고 새로 생성합니다.
+        // 이는 이전 시도의 잔류 데이터(Residue)가 현재 시도의 상태를 오염시키는 것을 물리적으로 차단하는 가장 확실한 방법입니다.
+        if (streamEntry) {
+            const firstChunk = (streamEntry as any).firstChunkContext;
+            if (firstChunk && (firstChunk.stage !== stage || firstChunk.retryCount !== retryCount)) {
+                this.logger.log(client, "stt_grpc_stream_reset_due_to_version_mismatch", {
+                    interviewId: payload.interviewId,
+                    oldStage: firstChunk.stage,
+                    newStage: stage,
+                    oldRetry: firstChunk.retryCount,
+                    newRetry: retryCount,
+                });
+                this.cleanupSttStream(payload.interviewId, "version_mismatch");
+                streamEntry = undefined;
+            }
+        }
+
         if (!streamEntry) {
             const subject = new Subject<AudioChunk>();
             const sttResponse$ = this.sttGrpcService.speechToText(subject.asObservable());
@@ -71,15 +93,17 @@ export class SttGrpcService implements OnModuleInit {
                         text: response.text,
                         isEmpty: response.isEmpty,
                         engine: response.engine,
+                        // 스트림 생성 시점의 컨텍스트를 응답에 포함하여 전달 (Core에서 필터링 가능하도록)
+                        stage,
+                        retryCount,
                     });
 
                     if (response.isEmpty || !response.text || response.text.trim() === "") {
-                        this.logger.log(client, "stt_empty_skipping_llm", {
-                            interviewId: response.interviewId,
-                        });
-                        // Do NOT emit retry_answer here for every empty response.
-                        // We should only handle this in a turn-based context if needed.
                         return;
+                    }
+
+                    if (response.text) {
+                        this.latestTranscripts.set(response.interviewId, response.text);
                     }
 
                     client.emit("interview:stt_result", {
@@ -104,9 +128,12 @@ export class SttGrpcService implements OnModuleInit {
                 },
             });
             streamEntry = { subject, subscription };
+            (streamEntry as any).firstChunkContext = { stage, retryCount };
             this.sttStreams.set(payload.interviewId, streamEntry);
             this.logger.log(client, "stt_grpc_stream_started", {
                 interviewId: payload.interviewId,
+                stage,
+                retryCount,
             });
         }
 
@@ -114,11 +141,6 @@ export class SttGrpcService implements OnModuleInit {
 
         if (payload.isFinal) {
             streamEntry.subject.complete();
-            this.logger.log(client, "audio_chunk_grpc_success", {
-                interviewId: payload.interviewId,
-                isFinal: true,
-                path: "fast",
-            });
         }
     }
 
@@ -129,6 +151,10 @@ export class SttGrpcService implements OnModuleInit {
         this.cleanupSttStream(interviewId, "aborted");
     }
 
+    getLatestTranscript(interviewId: string): string {
+        return this.latestTranscripts.get(interviewId) || "";
+    }
+
     private cleanupSttStream(interviewId: string, reason: string): void {
         const entry = this.sttStreams.get(interviewId);
         if (!entry) {
@@ -137,6 +163,7 @@ export class SttGrpcService implements OnModuleInit {
         entry.subject.complete();
         entry.subscription.unsubscribe();
         this.sttStreams.delete(interviewId);
+        this.latestTranscripts.delete(interviewId);
         this.logger.log(null, "stt_grpc_stream_closed", {
             interviewId,
             reason,

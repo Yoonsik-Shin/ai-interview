@@ -20,7 +20,7 @@ export class SttStorageService implements OnModuleInit {
     }
 
     async pushToRedis(
-        client: AuthenticatedSocket,
+        client: AuthenticatedSocket | null,
         payload: AudioChunkDto,
         audioData: string | Buffer,
         metadata: any,
@@ -35,6 +35,7 @@ export class SttStorageService implements OnModuleInit {
                 : audioData;
 
             const queueMessage = JSON.stringify({
+                userId: client?.data?.userId ?? metadata.user_id,
                 audioData: audioBase64,
                 metadata: metadata,
                 isFinal: payload.isFinal || false,

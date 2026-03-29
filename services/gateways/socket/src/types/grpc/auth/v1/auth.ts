@@ -59,6 +59,30 @@ export interface User {
   companyCode: string;
 }
 
+export interface LoginWithOAuthRequest {
+  provider: string;
+  providerUserId: string;
+  accessToken: string;
+  tokenExpiresAt: number;
+  email: string;
+  name: string;
+  pictureUrl: string;
+}
+
+export interface LoginWithOAuthResponse {
+  isNewUser: boolean;
+  pendingToken: string;
+  auth: AuthenticateUserResponse | undefined;
+}
+
+export interface CompleteOAuthProfileRequest {
+  pendingToken: string;
+  role: string;
+  phoneNumber: string;
+  nickname: string;
+  password: string;
+}
+
 export const AUTH_V1_PACKAGE_NAME = "auth.v1";
 
 export interface AuthServiceClient {
@@ -69,6 +93,10 @@ export interface AuthServiceClient {
   authenticateUser(request: AuthenticateUserRequest, metadata?: Metadata): Observable<AuthenticateUserResponse>;
 
   refreshToken(request: RefreshTokenRequest, metadata?: Metadata): Observable<RefreshTokenResponse>;
+
+  loginWithOAuth(request: LoginWithOAuthRequest, metadata?: Metadata): Observable<LoginWithOAuthResponse>;
+
+  completeOAuthProfile(request: CompleteOAuthProfileRequest, metadata?: Metadata): Observable<AuthenticateUserResponse>;
 }
 
 export interface AuthServiceController {
@@ -91,11 +119,28 @@ export interface AuthServiceController {
     request: RefreshTokenRequest,
     metadata?: Metadata,
   ): Promise<RefreshTokenResponse> | Observable<RefreshTokenResponse> | RefreshTokenResponse;
+
+  loginWithOAuth(
+    request: LoginWithOAuthRequest,
+    metadata?: Metadata,
+  ): Promise<LoginWithOAuthResponse> | Observable<LoginWithOAuthResponse> | LoginWithOAuthResponse;
+
+  completeOAuthProfile(
+    request: CompleteOAuthProfileRequest,
+    metadata?: Metadata,
+  ): Promise<AuthenticateUserResponse> | Observable<AuthenticateUserResponse> | AuthenticateUserResponse;
 }
 
 export function AuthServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["registerCandidate", "registerRecruiter", "authenticateUser", "refreshToken"];
+    const grpcMethods: string[] = [
+      "registerCandidate",
+      "registerRecruiter",
+      "authenticateUser",
+      "refreshToken",
+      "loginWithOAuth",
+      "completeOAuthProfile",
+    ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("AuthService", method)(constructor.prototype[method], method, descriptor);
