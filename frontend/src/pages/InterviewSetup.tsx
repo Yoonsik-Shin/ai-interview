@@ -5,7 +5,6 @@ import {
   createInterview,
   type CreateInterviewReq,
   type InterviewPersona,
-  type InterviewPersonality,
 } from "@/api/interview";
 import {
   listResumes,
@@ -27,29 +26,51 @@ export function InterviewSetup() {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // State
   const [selectedRoles, setSelectedRoles] = useState<InterviewPersona[]>([
     "LEADER",
     "TECH",
   ]);
-  const [personality, setPersonality] =
-    useState<InterviewPersonality>("COMFORTABLE");
 
   const [form, setForm] = useState<
-    Omit<CreateInterviewReq, "resumeId" | "participatingPersonas" | "personality">
+    Omit<
+      CreateInterviewReq,
+      "resumeId" | "participatingPersonas" | "personality"
+    >
   >({
     companyName: "",
-    domain: "프론트엔드",
-    type: "PRACTICE",
+    domain: "백엔드",
+    round: "TECHNICAL",
+    type: "REAL",
     scheduledDurationMinutes: 30,
+    jobPostingUrl: "",
   });
 
+  const getMandatoryPersonas = (round: string): InterviewPersona[] => {
+    switch (round) {
+      case "TECHNICAL":
+        return ["LEADER", "TECH"];
+      case "CULTURE_FIT":
+        return ["LEADER", "HR"];
+      case "EXECUTIVE":
+        return ["EXEC"];
+      default:
+        return ["LEADER"];
+    }
+  };
+
+  // [수정] 라운드 변경 시 면접관 자동 프리셋 로직 고도화
+  useEffect(() => {
+    setSelectedRoles(getMandatoryPersonas(form.round));
+  }, [form.round]);
+
+  // [수정] 필수 면접관은 토글되지 않도록 잠금 로직 추가
   const toggleRole = (role: InterviewPersona) => {
-    if (role === "LEADER") return; // LEADER is mandatory
+    const mandatory = getMandatoryPersonas(form.round);
+    if (mandatory.includes(role)) return; // Locked
+
     setSelectedRoles((prev) => {
       const isSelected = prev.includes(role);
       if (isSelected) {
-        if (prev.length === 1) return prev; // At least one
         return prev.filter((r) => r !== role);
       } else {
         return [...prev, role];
@@ -78,7 +99,9 @@ export function InterviewSetup() {
     ready: false,
     resumeRisk: false,
   });
-  const [confirmResumeStatus, setConfirmResumeStatus] = useState<string | null>(null);
+  const [confirmResumeStatus, setConfirmResumeStatus] = useState<string | null>(
+    null,
+  );
   const [statusRefreshing, setStatusRefreshing] = useState(false);
   const [retryingResumeId, setRetryingResumeId] = useState<string | null>(null);
 
@@ -290,7 +313,9 @@ export function InterviewSetup() {
         const data = await getResume(rid);
         setConfirmResumeStatus(data.resume.status);
       } catch {
-        setConfirmResumeStatus(existingResumes.find((r) => r.id === rid)?.status ?? null);
+        setConfirmResumeStatus(
+          existingResumes.find((r) => r.id === rid)?.status ?? null,
+        );
       }
     } else {
       setConfirmResumeStatus(null);
@@ -301,7 +326,11 @@ export function InterviewSetup() {
   // 이력서 상태 폴링 (모달 열림 + PROCESSING/PENDING일 때만 3초 간격)
   useEffect(() => {
     if (!showConfirmModal) return;
-    if (confirmResumeStatus !== "PROCESSING" && confirmResumeStatus !== "PENDING") return;
+    if (
+      confirmResumeStatus !== "PROCESSING" &&
+      confirmResumeStatus !== "PENDING"
+    )
+      return;
 
     const rid = isNewUpload ? uploadedResumeId : selectedResumeId;
     if (!rid) return;
@@ -310,11 +339,19 @@ export function InterviewSetup() {
       try {
         const data = await getResume(rid);
         setConfirmResumeStatus(data.resume.status);
-      } catch { /* silent */ }
+      } catch {
+        /* silent */
+      }
     }, 3000);
 
     return () => clearInterval(timer);
-  }, [showConfirmModal, confirmResumeStatus, isNewUpload, uploadedResumeId, selectedResumeId]);
+  }, [
+    showConfirmModal,
+    confirmResumeStatus,
+    isNewUpload,
+    uploadedResumeId,
+    selectedResumeId,
+  ]);
 
   const handleRefreshStatus = async () => {
     const rid = isNewUpload ? uploadedResumeId : selectedResumeId;
@@ -323,8 +360,11 @@ export function InterviewSetup() {
     try {
       const data = await getResume(rid);
       setConfirmResumeStatus(data.resume.status);
-    } catch { /* silent */ }
-    finally { setStatusRefreshing(false); }
+    } catch {
+      /* silent */
+    } finally {
+      setStatusRefreshing(false);
+    }
   };
 
   const handleResumeClickInModal = async () => {
@@ -355,7 +395,7 @@ export function InterviewSetup() {
         ...form,
         resumeId,
         participatingPersonas: selectedRoles,
-        personality: personality,
+        personality: "COMFORTABLE", // Default to COMFORTABLE as other fields are removed
       };
 
       const { interviewId } = await createInterview(payload);
@@ -567,7 +607,10 @@ export function InterviewSetup() {
                             </div>
                             <div className={styles.resumeCardDate}>
                               {new Date(resume.createdAt).toLocaleDateString()}
-                              <span className={styles.resumeStatusBadge} data-status={resume.status}>
+                              <span
+                                className={styles.resumeStatusBadge}
+                                data-status={resume.status}
+                              >
                                 {resume.status}
                               </span>
                             </div>
@@ -592,7 +635,9 @@ export function InterviewSetup() {
                               }
                             }}
                           >
-                            {retryingResumeId === resume.id ? "재처리 중..." : "재처리"}
+                            {retryingResumeId === resume.id
+                              ? "재처리 중..."
+                              : "재처리"}
                           </button>
                         )}
                         <button
@@ -612,107 +657,175 @@ export function InterviewSetup() {
               )}
             </div>
 
-            <h2 className={styles.formTitle}>면접 상세 설정</h2>
             <form onSubmit={handleSubmit} className={styles.form}>
-              <div className={styles.field}>
-                <label htmlFor="companyName">회사명 (선택)</label>
-                <input
-                  id="companyName"
-                  type="text"
-                  value={form.companyName ?? ""}
-                  onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-                  className={styles.input}
-                  placeholder="예: 네이버, 카카오, 토스"
-                />
-              </div>
+              {/* 그룹 1: 면접 전략 및 구성 */}
+              <div className={styles.setupGroup}>
+                <div className={styles.groupInfo}>
+                  <h3 className={styles.groupHeader}>🎯 면접 유형 선택</h3>
+                  <p className={styles.groupDesc}>
+                    지원하시는 차수에 맞춰 최적의 AI 면접관과 질문 세트가
+                    구성됩니다.
+                  </p>
+                </div>
 
-              <div className={styles.field}>
-                <label htmlFor="domain">직무</label>
-                <input
-                  id="domain"
-                  type="text"
-                  value={form.domain}
-                  onChange={(e) => setForm({ ...form, domain: e.target.value })}
-                  className={styles.input}
-                  placeholder="예: 프론트엔드, 자바 백엔드"
-                  required
-                />
-              </div>
-
-              <div className={styles.field}>
-                <label htmlFor="interview-type">면접 타입</label>
-                <select
-                  id="interview-type"
-                  value={form.type}
-                  onChange={(e) =>
-                    setForm({ ...form, type: e.target.value as any })
-                  }
-                  className={styles.input}
-                >
-                  <option value="REAL">실전 면접 (정밀 분석, 유료)</option>
-                  <option value="PRACTICE">모의 면접 (빠른 처리, 무료)</option>
-                </select>
-              </div>
-
-              <div className={styles.field}>
-                <label htmlFor="personality">면접 분위기 (성격)</label>
-                <select
-                  id="personality"
-                  value={personality}
-                  onChange={(e) =>
-                    setPersonality(e.target.value as InterviewPersonality)
-                  }
-                  className={styles.input}
-                >
-                  <option value="COMFORTABLE">편안한 (격려하는 분위기)</option>
-                  <option value="PRESSURE">엄격한 (압박 면접 분위기)</option>
-                  <option value="RANDOM">랜덤</option>
-                </select>
-              </div>
-
-              <div className={styles.field}>
-                <label>면접관 구성 (복수 선택 가능)</label>
-                <div className={styles.personaGrid}>
-                  {[
-                    {
-                      id: "LEADER",
-                      title: "리드 면접관",
-                      desc: "리더십 및 종합 및 경험 평가",
-                      icon: "👨‍💼",
-                    },
-                    {
-                      id: "TECH",
-                      title: "기술 면접관",
-                      desc: "기술 역량 검증",
-                      icon: "💻",
-                    },
-                    {
-                      id: "HR",
-                      title: "인사 면접관",
-                      desc: "조직 적합성 및 인성 확인",
-                      icon: "🤝",
-                    },
-                  ].map((p) => {
-                    const isSelected = selectedRoles.includes(
-                      p.id as InterviewPersona,
-                    );
-                    return (
-                      <div
-                        key={p.id}
-                        className={`${styles.personaCard} ${isSelected ? styles.selected : ""} ${p.id === "LEADER" ? styles.mandatory : ""}`}
-                        onClick={() => toggleRole(p.id as InterviewPersona)}
+                <div className={styles.field}>
+                  <label htmlFor="interview-round">면접 유형 (Round)</label>
+                  <div className={styles.roundSelector}>
+                    {[
+                      {
+                        id: "TECHNICAL",
+                        label: "1차 면접",
+                        icon: "⬡",
+                        desc: "직무 역량과 기술 깊이 검증",
+                      },
+                      {
+                        id: "CULTURE_FIT",
+                        label: "2차 면접",
+                        icon: "⌬",
+                        desc: "조직 적합성 및 가치관 확인",
+                      },
+                      {
+                        id: "EXECUTIVE",
+                        label: "최종 면접",
+                        icon: "◈",
+                        desc: "비즈니스 통찰력 및 잠재력 평가",
+                      },
+                    ].map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        className={`${styles.roundBtn} ${form.round === r.id ? styles.active : ""}`}
+                        data-round={r.id}
+                        onClick={() => setForm({ ...form, round: r.id as any })}
                       >
-                        <div className={styles.cardIcon}>{p.icon}</div>
-                        <div className={styles.cardTitle}>
-                          {p.title}
-                          {p.id === "LEADER" && (
-                            <span className={styles.mandatoryBadge}>필수</span>
-                          )}
+                        <span className={styles.roundIcon}>{r.icon}</span>
+                        <div className={styles.roundBtnText}>
+                          <span className={styles.roundLabel}>{r.label}</span>
+                          <span className={styles.roundDesc}>{r.desc}</span>
                         </div>
-                        <div className={styles.cardDescription}>{p.desc}</div>
-                      </div>
-                    );
-                  })}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.field}>
+                  <label>면접관 구성</label>
+                  <div className={styles.personaGrid}>
+                    {[
+                      {
+                        id: "LEADER",
+                        title: "리드 면접관",
+                        desc: "종합 역량 및 경험 평가",
+                        icon: "👨‍💼",
+                      },
+                      {
+                        id: "TECH",
+                        title: "기술 면접관",
+                        desc: "실무 기술 역량 검증",
+                        icon: "💻",
+                      },
+                      {
+                        id: "HR",
+                        title: "인사 면접관",
+                        desc: "인성 및 조직 문화 적합성",
+                        icon: "🤝",
+                      },
+                      {
+                        id: "EXEC",
+                        title: "임원 면접관",
+                        desc: "비즈니스 가치관 평가",
+                        icon: "◈",
+                      },
+                    ].map((p) => {
+                      const isMandatory = getMandatoryPersonas(
+                        form.round,
+                      ).includes(p.id as InterviewPersona);
+                      const isSelected = selectedRoles.includes(
+                        p.id as InterviewPersona,
+                      );
+
+                      return (
+                        <div
+                          key={p.id}
+                          className={`${styles.personaCard} ${isSelected ? styles.selected : ""} ${isMandatory ? styles.mandatory : ""}`}
+                          onClick={() => toggleRole(p.id as InterviewPersona)}
+                        >
+                          <div className={styles.cardIcon}>{p.icon}</div>
+                          <div className={styles.cardTitle}>
+                            <span className={styles.cardTitleText}>
+                              {p.title}
+                            </span>
+                            {isMandatory ? (
+                              <span className={styles.mandatoryBadge}>
+                                필수
+                              </span>
+                            ) : (
+                              <span className={styles.optionalBadge}>
+                                (선택)
+                              </span>
+                            )}
+                          </div>
+                          <div className={styles.cardDescription}>{p.desc}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* 그룹 2: 지원 정보 상세 */}
+              <div className={styles.setupGroup}>
+                <div className={styles.groupInfo}>
+                  <h3 className={styles.groupHeader}>🏢 지원 정보 상세</h3>
+                  <p className={styles.groupDesc}>
+                    기업명과 공고 URL을 기반으로 더욱 정교한 맞춤형 질문을
+                    생성합니다.
+                  </p>
+                </div>
+
+                <div className={styles.topInfoRow}>
+                  <div className={styles.field}>
+                    <label htmlFor="companyName">회사명 (선택)</label>
+                    <input
+                      id="companyName"
+                      type="text"
+                      value={form.companyName ?? ""}
+                      onChange={(e) =>
+                        setForm({ ...form, companyName: e.target.value })
+                      }
+                      className={styles.input}
+                      placeholder="예: 네이버, 카카오, 토스"
+                    />
+                  </div>
+
+                  <div className={styles.field}>
+                    <label htmlFor="domain">직무</label>
+                    <input
+                      id="domain"
+                      type="text"
+                      value={form.domain}
+                      onChange={(e) =>
+                        setForm({ ...form, domain: e.target.value })
+                      }
+                      className={styles.input}
+                      placeholder="예: 프론트엔드, 백엔드"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.field}>
+                  <label htmlFor="jobPostingUrl">채용 공고 URL (선택)</label>
+                  <input
+                    id="jobPostingUrl"
+                    type="url"
+                    value={form.jobPostingUrl}
+                    onChange={(e) =>
+                      setForm({ ...form, jobPostingUrl: e.target.value })
+                    }
+                    className={styles.input}
+                    placeholder="https://link.to/job-post"
+                  />
                 </div>
               </div>
 
@@ -785,13 +898,14 @@ export function InterviewSetup() {
                   </div>
                 </div>
               </div>
+
               <button
                 type="submit"
                 disabled={loading || validating}
                 className={styles.btn}
               >
                 {loading
-                  ? "생성 중…"
+                  ? "면접 생성 중…"
                   : validating
                     ? "AI 분석 중…"
                     : "면접 시작"}
@@ -855,7 +969,10 @@ export function InterviewSetup() {
         createPortal(
           <div
             className={styles.modalOverlay}
-            onClick={() => { setShowConfirmModal(false); setConfirmResumeStatus(null); }}
+            onClick={() => {
+              setShowConfirmModal(false);
+              setConfirmResumeStatus(null);
+            }}
           >
             <div
               className={`${styles.modalContent} ${styles.confirmModalContent}`}
@@ -865,7 +982,10 @@ export function InterviewSetup() {
                 <h2>🚀 면접 시작 전 최종 확인</h2>
                 <button
                   className={styles.closeBtn}
-                  onClick={() => { setShowConfirmModal(false); setConfirmResumeStatus(null); }}
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setConfirmResumeStatus(null);
+                  }}
                 >
                   ✕
                 </button>
@@ -877,45 +997,61 @@ export function InterviewSetup() {
                   <div className={styles.summaryTitle}>설정 요약</div>
                   <div className={styles.summaryGrid}>
                     {(selectedResumeId || uploadedResumeId) && (
-                    <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>이력서</span>
-                      <div className={styles.resumeSummaryValue}>
-                        <span
-                          className={styles.summaryValueClickable}
-                          onClick={handleResumeClickInModal}
-                          title="클릭하여 확인하기"
-                        >
-                          {existingResumes.find((r) => r.id === selectedResumeId)
-                            ?.title ||
-                            (uploadedResumeId && "새로 업로드된 이력서") ||
-                            "선택된 이력서"}
-                        </span>
-                        <div className={styles.resumeStatusRow}>
-                          {confirmResumeStatus && (
-                            <span className={styles.resumeStatusBadge} data-status={confirmResumeStatus}>
-                              {confirmResumeStatus}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={handleRefreshStatus}
-                            className={styles.refreshStatusBtn}
-                            title="상태 새로고침"
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>이력서</span>
+                        <div className={styles.resumeSummaryValue}>
+                          <span
+                            className={styles.summaryValueClickable}
+                            onClick={handleResumeClickInModal}
+                            title="클릭하여 확인하기"
                           >
-                            {statusRefreshing ? "…" : "↻"}
-                          </button>
+                            {existingResumes.find(
+                              (r) => r.id === selectedResumeId,
+                            )?.title ||
+                              (uploadedResumeId && "새로 업로드된 이력서") ||
+                              "선택된 이력서"}
+                          </span>
+                          <div className={styles.resumeStatusRow}>
+                            {confirmResumeStatus && (
+                              <span
+                                className={styles.resumeStatusBadge}
+                                data-status={confirmResumeStatus}
+                              >
+                                {confirmResumeStatus}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleRefreshStatus}
+                              className={styles.refreshStatusBtn}
+                              title="상태 새로고침"
+                            >
+                              {statusRefreshing ? "…" : "↻"}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
                     )}
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>면접 유형</span>
+                      <span className={styles.summaryValue}>
+                        {form.round === "TECHNICAL"
+                          ? "1차 면접"
+                          : form.round === "CULTURE_FIT"
+                            ? "2차 면접"
+                            : "최종 면접"}
+                      </span>
+                    </div>
                     {form.companyName && (
                       <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel}>회사</span>
-                        <span className={styles.summaryValue}>{form.companyName}</span>
+                        <span className={styles.summaryLabel}>지원 기업</span>
+                        <span className={styles.summaryValue}>
+                          {form.companyName}
+                        </span>
                       </div>
                     )}
                     <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>직무</span>
+                      <span className={styles.summaryLabel}>직무 분야</span>
                       <span className={styles.summaryValue}>{form.domain}</span>
                     </div>
                     <div className={styles.summaryItem}>
@@ -924,12 +1060,24 @@ export function InterviewSetup() {
                         {form.scheduledDurationMinutes}분
                       </span>
                     </div>
-                    <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>면접 타입</span>
-                      <span className={styles.summaryValue}>
-                        {form.type === "REAL" ? "실전 면접" : "모의 면접"}
-                      </span>
-                    </div>
+                    {form.jobPostingUrl && (
+                      <div
+                        className={styles.summaryItem}
+                        style={{ gridColumn: "1 / -1" }}
+                      >
+                        <span className={styles.summaryLabel}>공고 URL</span>
+                        <span
+                          className={styles.summaryValue}
+                          style={{
+                            fontSize: "0.8rem",
+                            opacity: 0.8,
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          {form.jobPostingUrl}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -945,15 +1093,26 @@ export function InterviewSetup() {
                 </div>
 
                 {/* 이력서 상태 안내 */}
-                {(confirmResumeStatus === "PROCESSING" || confirmResumeStatus === "PENDING") && (
+                {(confirmResumeStatus === "PROCESSING" ||
+                  confirmResumeStatus === "PENDING") && (
                   <div className={styles.statusWarningBlock}>
                     <span className={styles.statusSpinner} />
-                    이력서를 분석 중입니다. 완료 전 시작하면 이력서 기반 질문이 제한될 수 있습니다.
+                    이력서를 분석 중입니다. 완료 전 시작하면 이력서 기반 질문이
+                    제한될 수 있습니다.
                   </div>
                 )}
                 {confirmResumeStatus === "FAILED" && (
                   <div className={styles.statusErrorBlock}>
-                    ⚠️ 이력서 처리에 실패했습니다. 지금 시작하면 이력서 없이 면접이 진행됩니다.
+                    ⚠️ 이력서 처리에 실패했습니다. 지금 시작하면 이력서 없이
+                    면접이 진행됩니다.
+                  </div>
+                )}
+                {(!selectedCamera ||
+                  selectedCamera === "none" ||
+                  !selectedMicrophone ||
+                  selectedMicrophone === "none") && (
+                  <div className={styles.statusErrorBlock}>
+                    ⚠️ 카메라와 마이크를 먼저 선택해 주세요.
                   </div>
                 )}
 
@@ -971,18 +1130,24 @@ export function InterviewSetup() {
                       카메라와 마이크가 잘 작동하는지 확인했습니다.
                     </span>
                   </label>
-                  {((!isNewUpload && !selectedResumeId) || (!uploadedResumeId && isNewUpload) ||
-                    (confirmResumeStatus !== null && confirmResumeStatus !== "COMPLETED")) && (
+                  {((!isNewUpload && !selectedResumeId) ||
+                    (!uploadedResumeId && isNewUpload) ||
+                    (confirmResumeStatus !== null &&
+                      confirmResumeStatus !== "COMPLETED")) && (
                     <label className={styles.checkItem}>
                       <input
                         type="checkbox"
                         checked={checklist.resumeRisk}
                         onChange={(e) =>
-                          setChecklist({ ...checklist, resumeRisk: e.target.checked })
+                          setChecklist({
+                            ...checklist,
+                            resumeRisk: e.target.checked,
+                          })
                         }
                       />
                       <span className={styles.checkText}>
-                        {(!isNewUpload && !selectedResumeId) || (!uploadedResumeId && isNewUpload)
+                        {(!isNewUpload && !selectedResumeId) ||
+                        (!uploadedResumeId && isNewUpload)
                           ? "선택된 이력서가 없습니다. 이력서 없이 면접을 시작합니다."
                           : "이력서 처리가 완료되지 않은 상태에서 면접을 시작합니다."}
                       </span>
@@ -1006,7 +1171,10 @@ export function InterviewSetup() {
               <div className={styles.modalFooter}>
                 <button
                   className={styles.cancelBtn}
-                  onClick={() => { setShowConfirmModal(false); setConfirmResumeStatus(null); }}
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setConfirmResumeStatus(null);
+                  }}
                 >
                   취소
                 </button>
@@ -1015,11 +1183,16 @@ export function InterviewSetup() {
                   onClick={handleFinalConfirm}
                   disabled={
                     loading ||
+                    !selectedCamera ||
+                    selectedCamera === "none" ||
+                    !selectedMicrophone ||
+                    selectedMicrophone === "none" ||
                     !checklist.media ||
                     !checklist.ready ||
                     (((!isNewUpload && !selectedResumeId) ||
                       (!uploadedResumeId && isNewUpload) ||
-                      (confirmResumeStatus !== null && confirmResumeStatus !== "COMPLETED")) &&
+                      (confirmResumeStatus !== null &&
+                        confirmResumeStatus !== "COMPLETED")) &&
                       !checklist.resumeRisk)
                   }
                 >

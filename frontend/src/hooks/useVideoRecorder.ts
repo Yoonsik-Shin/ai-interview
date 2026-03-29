@@ -83,6 +83,7 @@ export function useVideoRecorder(
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunkIndexRef = useRef(0);
     const activeSegmentRef = useRef<ActiveSegment | null>(null);
+    const isStartingRef = useRef(false);
 
     const startSegment = useCallback(
         async (turnCount: number) => {
@@ -90,6 +91,9 @@ export function useVideoRecorder(
             const stream = streamRef.current;
             if (!stream) return;
             if (mediaRecorderRef.current?.state === "recording") return;
+            if (activeSegmentRef.current) return;
+            if (isStartingRef.current) return;
+            isStartingRef.current = true;
 
             try {
                 const { uploadUrl, objectKey } = await fetchUploadUrl(interviewId, turnCount);
@@ -128,6 +132,8 @@ export function useVideoRecorder(
                 recorder.start(2000);
             } catch (err) {
                 console.error("startSegment error:", err);
+            } finally {
+                isStartingRef.current = false;
             }
         },
         [interviewId, streamRef],

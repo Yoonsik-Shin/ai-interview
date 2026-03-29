@@ -48,6 +48,9 @@ export function useAudioRecorder(
   }) => void,
   options?: {
     onLevel?: (level: number, ts: number) => void;
+    onSpeechStart?: () => void;
+    onSpeechEnd?: () => void;
+    redemptionMs?: number;
   },
 ) {
   const [recording, setRecording] = useState(false);
@@ -157,7 +160,7 @@ export function useAudioRecorder(
   }, []);
 
   const start = useCallback(
-    async (deviceId?: string) => {
+    async (deviceId?: string, redemptionMs?: number) => {
       if (isStartingRef.current) return;
       isStartingRef.current = true;
       isMountedRef.current = true;
@@ -200,16 +203,20 @@ export function useAudioRecorder(
             resumeStream: () => Promise.resolve(stream),
             baseAssetPath: "/", // static assets path 설정
             onnxWASMBasePath: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/", // Vite ?import 충돌 우회용 CDN 설정
-            redemptionMs: 2500, // 2.5초 무음 감지
+            redemptionMs: redemptionMs ?? options?.redemptionMs ?? 1500, // 일반 Q&A 턴 종료 기준과 맞춘다
             positiveSpeechThreshold: 0.7,
             negativeSpeechThreshold: 0.3,
             onSpeechStart: () => {
-              console.log("VAD: Speech Started");
               isSpeechActiveRef.current = true;
+              if (options?.onSpeechStart) options.onSpeechStart();
             },
             onSpeechEnd: () => {
-              console.log("VAD: Speech Ended");
               isSpeechActiveRef.current = false;
+              if (options?.onSpeechEnd) options.onSpeechEnd();
+            },
+            onVADMisfire: () => {
+              isSpeechActiveRef.current = false;
+              if (options?.onSpeechEnd) options.onSpeechEnd(); // Misfire도 종료로 간주하여 가드 해제
             },
           });
           vadRef.current.start();

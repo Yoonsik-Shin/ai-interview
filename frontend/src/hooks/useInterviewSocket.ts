@@ -30,6 +30,10 @@ export type TranscriptToken = {
   reduceTotalTime?: boolean;
   nextDifficulty?: number;
   currentPersonaId?: string;
+  turnCount?: number;
+  type?: string;
+  timeLeft?: number;
+  isFinal?: boolean;
 };
 export type ThinkingEvent = {
   nodeName: string;
@@ -46,11 +50,29 @@ export type StageChangedEvent = {
   interviewId: string;
   previousStage: InterviewStage;
   currentStage: InterviewStage;
+  selfIntroRetryCount?: number;
+  selfIntroElapsedSeconds?: number;
+  isMaxRetryExceeded?: boolean;
+};
+
+export type TurnStateEvent = {
+  stage: InterviewStage;
+  status: "READY" | "LISTENING" | "THINKING" | "SPEAKING" | "PAUSED" | "COMPLETED" | "CANCELLED";
+  canCandidateSpeak: boolean;
+  turnCount: number;
+  activePersonaId?: string;
+  timestamp?: string;
 };
 
 export type InterveneEvent = {
   message: string;
   type?: string;
+};
+
+export type RetryAnswerEvent = {
+  message: string;
+  selfIntroRetryCount?: number;
+  selfIntroElapsedSeconds?: number;
 };
 
 export type AudioAck = {
@@ -60,9 +82,17 @@ export type AudioAck = {
   timestamp: string;
 };
 
+export type DebugTraceEvent = {
+  timestamp: number;
+  stage: string;
+  data: any;
+};
+
 export function useInterviewSocket(interviewId: string | null) {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isTraceJoined, setIsTraceJoined] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
   const onStt = useRef<(e: SttResult) => void>(() => {});
@@ -71,11 +101,13 @@ export function useInterviewSocket(interviewId: string | null) {
   const onAudio = useRef<(e: AudioChunk) => void>(() => {});
   const onAck = useRef<(e: AudioAck) => void>(() => {});
   const onStageChanged = useRef<(e: StageChangedEvent) => void>(() => {});
+  const onTurnState = useRef<(e: TurnStateEvent) => void>(() => {});
   const onIntervene = useRef<(e: InterveneEvent) => void>(() => {});
-  const onRetryAnswer = useRef<(e: { message: string }) => void>(() => {});
+  const onRetryAnswer = useRef<(e: RetryAnswerEvent) => void>(() => {});
   const onResumeProcessed = useRef<
     (e: { resumeId: string; status: string; userId: string }) => void
   >(() => {});
+  const onDebugTrace = useRef<(e: DebugTraceEvent) => void>(() => {});
 
   const setOnStt = useCallback((fn: (e: SttResult) => void) => {
     onStt.current = fn;
@@ -98,12 +130,15 @@ export function useInterviewSocket(interviewId: string | null) {
     },
     [],
   );
+  const setOnTurnState = useCallback((fn: (e: TurnStateEvent) => void) => {
+    onTurnState.current = fn;
+  }, []);
   const setOnIntervene = useCallback((fn: (e: InterveneEvent) => void) => {
     onIntervene.current = fn;
   }, []);
 
   const setOnRetryAnswer = useCallback(
-    (fn: (e: { message: string }) => void) => {
+    (fn: (e: RetryAnswerEvent) => void) => {
       onRetryAnswer.current = fn;
     },
     [],
@@ -115,6 +150,10 @@ export function useInterviewSocket(interviewId: string | null) {
     },
     [],
   );
+
+  const setOnDebugTrace = useCallback((fn: (e: DebugTraceEvent) => void) => {
+    onDebugTrace.current = fn;
+  }, []);
 
   useEffect(() => {
     if (interviewId == null) return;
@@ -134,9 +173,13 @@ export function useInterviewSocket(interviewId: string | null) {
       transports: ["websocket", "polling"],
     });
     socketRef.current = socket;
+    setSocket(socket);
 
     socket.on("connect", () => setConnected(true));
-    socket.on("disconnect", () => setConnected(false));
+    socket.on("disconnect", () => {
+      setConnected(false);
+      setIsTraceJoined(false);
+    });
     socket.on("connect_error", (err) => setError(err.message ?? "연결 실패"));
     socket.on("connection:error", (p: { code?: string; message?: string }) =>
       setError(p?.message ?? "연결 오류"),
@@ -153,10 +196,13 @@ export function useInterviewSocket(interviewId: string | null) {
     socket.on("interview:stage_changed", (p: StageChangedEvent) =>
       onStageChanged.current(p),
     );
+    socket.on("interview:turn_state", (p: TurnStateEvent) =>
+      onTurnState.current(p),
+    );
     socket.on("interview:intervene", (p: InterveneEvent) =>
       onIntervene.current(p),
     );
-    socket.on("interview:retry_answer", (p: { message: string }) =>
+    socket.on("interview:retry_answer", (p: RetryAnswerEvent) =>
       onRetryAnswer.current(p),
     );
     socket.on(
@@ -167,6 +213,15 @@ export function useInterviewSocket(interviewId: string | null) {
     socket.on("interview:error", (p: { code?: string; message?: string }) =>
       setError(p?.message ?? "인터뷰 오류"),
     );
+    socket.on("debug:trace", (p: DebugTraceEvent) => onDebugTrace.current(p));
+
+    // 트레이스 참여 확인 리스너
+    socket.on("debug:trace_joined", () => {
+      if (import.meta.env.DEV) {
+        console.log(`[Socket] Debug trace room joined successfully`);
+      }
+      setIsTraceJoined(true);
+    });
 
     return () => {
       socket.off("connect").off("disconnect").off("connect_error");
@@ -179,13 +234,29 @@ export function useInterviewSocket(interviewId: string | null) {
         .off("interview:audio")
         .off("interview:audio_ack")
         .off("interview:stage_changed")
+        .off("interview:turn_state")
         .off("interview:intervene")
         .off("interview:retry_answer")
-        .off("interview:error");
+        .off("interview:error")
+        .off("debug:trace")
+        .off("debug:trace_joined");
       socket.disconnect();
       socketRef.current = null;
+      setSocket(null);
+      setIsTraceJoined(false);
     };
   }, [interviewId]);
+
+  const joinDebugTrace = useCallback(() => {
+    if (socket?.connected && interviewId != null) {
+      if (import.meta.env.DEV) {
+        console.log(`[Socket] Joining debug trace room for interview: ${interviewId}`);
+      }
+      socket.emit("debug:join_trace", {
+        interviewId: interviewId,
+      });
+    }
+  }, [socket, interviewId]);
 
   const sendAudioChunk = useCallback(
     (payload: {
@@ -195,47 +266,66 @@ export function useInterviewSocket(interviewId: string | null) {
       format?: string;
       sampleRate?: number;
       chunkId?: string;
+      retryCount?: number;
     }) => {
-      socketRef.current?.emit("interview:audio_chunk", payload);
+      socket?.emit("interview:audio_chunk", payload);
     },
-    [],
+    [socket],
   );
 
   const notifyStageReady = useCallback(
     (stage: InterviewStage) => {
-      if (socketRef.current?.connected && interviewId != null) {
-        socketRef.current.emit("interview:stage_ready", {
+      if (socket?.connected && interviewId != null) {
+        socket.emit("interview:stage_ready", {
           interviewId: interviewId,
           currentStage: stage,
         });
       }
     },
-    [interviewId],
+    [socket, interviewId],
   );
 
   const abortStream = useCallback(() => {
-    if (socketRef.current?.connected && interviewId != null) {
-      socketRef.current.emit("interview:abort_stream", {
+    if (socket?.connected && interviewId != null) {
+      socket.emit("interview:abort_stream", {
         interviewId: interviewId,
       });
     }
-  }, [interviewId]);
+  }, [socket, interviewId]);
+
+  const requestRetry = useCallback(
+    (stage: InterviewStage, durationSeconds?: number) => {
+      if (socket?.connected && interviewId != null) {
+        socket.emit("interview:request_retry", {
+          interviewId,
+          currentStage: stage,
+          durationSeconds,
+        });
+      }
+    },
+    [socket, interviewId],
+  );
 
   return {
     connected,
     error,
+    isTraceJoined,
     sendAudioChunk,
     notifyStageReady,
     abortStream,
+    requestRetry,
     setOnStt,
     setOnTranscript,
     setOnThinking,
     setOnAudio,
     setOnAck,
     setOnStageChanged,
+    setOnTurnState,
     setOnIntervene,
     setOnRetryAnswer,
     setOnResumeProcessed,
-    socket: socketRef.current,
+    setOnDebugTrace,
+    joinDebugTrace,
+    socket,
   };
 }

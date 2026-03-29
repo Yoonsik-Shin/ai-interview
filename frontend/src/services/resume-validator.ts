@@ -79,6 +79,10 @@ function normalizeText(text: string): string {
   return (
     text
       .normalize("NFC")
+      // Remove NULL bytes for PostgreSQL compatibility
+      .replace(/\0/g, "")
+      // Remove whitespace between Korean characters (Same as backend)
+      .replace(/(?<=[가-힣])\s+(?=[가-힣])/g, "")
       // Collapse all whitespaces into a single space
       .replace(/\s+/g, " ")
       .trim()
@@ -120,8 +124,8 @@ async function extractTextFromPDF(file: File): Promise<string> {
   }).promise;
   let fullText = "";
 
-  // 첫 2페이지만 확인해도 충분함
-  const maxPages = Math.min(pdf.numPages, 2);
+  // Extract all pages to match backend's full content extraction
+  const maxPages = pdf.numPages;
   for (let i = 1; i <= maxPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();

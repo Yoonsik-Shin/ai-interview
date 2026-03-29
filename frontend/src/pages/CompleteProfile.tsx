@@ -4,6 +4,7 @@ import { completeOAuthProfile } from "@/auth/authApi";
 import { Toast } from "@/components/Toast";
 import { PasswordInput, isPasswordValid } from "@/components/auth/PasswordInput";
 import { PasswordConfirmInput } from "@/components/auth/PasswordConfirmInput";
+import { ProfileFormFields, type Role } from "@/components/auth/ProfileFormFields";
 import logo from "@/assets/logo.png";
 import styles from "./Auth.module.css";
 
@@ -16,25 +17,18 @@ export function CompleteProfile() {
     searchParams.get("pending_token") ??
     "";
 
-  const [role, setRole] = useState<"CANDIDATE" | "RECRUITER" | "">("");
+  const [role, setRole] = useState<Role | "">("");
   const [nickname, setNickname] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
 
-  function formatPhone(value: string): string {
-    const digits = value.replace(/\D/g, "").slice(0, 11);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-  }
-
   function validate(): boolean {
-    const errors: Record<string, string> = {};
+    const errors: Record<string, string | undefined> = {};
     if (!role) errors.role = "역할을 선택해주세요.";
     if (nickname.length < 2 || nickname.length > 20)
       errors.nickname = "닉네임은 2~20자여야 합니다.";
@@ -59,7 +53,7 @@ export function CompleteProfile() {
     try {
       const { accessToken } = await completeOAuthProfile({
         pendingToken,
-        role: role as "CANDIDATE" | "RECRUITER",
+        role: role as Role,
         nickname,
         phoneNumber: phoneNumber.replace(/-/g, ""),
         password,
@@ -121,49 +115,15 @@ export function CompleteProfile() {
       <div className={styles.card}>
         <h1 className={styles.title}>프로필 설정</h1>
         <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.inputField}>
-            <div className={styles.roleGroup}>
-              <button
-                type="button"
-                className={`${styles.roleBtn} ${role === "CANDIDATE" ? styles.roleBtnActive : ""}`}
-                onClick={() => setRole("CANDIDATE")}
-              >
-                지원자
-              </button>
-              <button
-                type="button"
-                className={`${styles.roleBtn} ${role === "RECRUITER" ? styles.roleBtnActive : ""}`}
-                onClick={() => setRole("RECRUITER")}
-              >
-                채용담당자
-              </button>
-            </div>
-            {fieldErrors.role && <p className={styles.errorText}>{fieldErrors.role}</p>}
-          </div>
-
-          <div className={styles.inputField}>
-            <input
-              type="text"
-              placeholder="닉네임"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              className={`${styles.input} ${fieldErrors.nickname ? styles.inputError : ""}`}
-            />
-            {fieldErrors.nickname && <p className={styles.errorText}>{fieldErrors.nickname}</p>}
-          </div>
-
-          <div className={styles.inputField}>
-            <input
-              type="tel"
-              placeholder="휴대폰 번호 (010-1234-5678)"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(formatPhone(e.target.value))}
-              className={`${styles.input} ${fieldErrors.phoneNumber ? styles.inputError : ""}`}
-            />
-            {fieldErrors.phoneNumber && (
-              <p className={styles.errorText}>{fieldErrors.phoneNumber}</p>
-            )}
-          </div>
+          <ProfileFormFields
+            nickname={nickname}
+            onNicknameChange={setNickname}
+            phoneNumber={phoneNumber}
+            onPhoneNumberChange={setPhoneNumber}
+            role={role}
+            onRoleChange={setRole}
+            fieldErrors={fieldErrors}
+          />
 
           <div className={styles.inputField}>
             <PasswordInput

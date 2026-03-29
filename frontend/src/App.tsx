@@ -4,6 +4,8 @@ import { PageFrame } from "./components/PageFrame";
 import { InterviewRecoveryModal } from "./components/InterviewRecoveryModal";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
+import { GoogleCallback } from "./pages/GoogleCallback";
+import { CompleteProfile } from "./pages/CompleteProfile";
 import { Landing } from "./pages/Landing";
 import { Interviews } from "./pages/Interviews";
 import { InterviewSetup } from "./pages/InterviewSetup";
@@ -39,6 +41,15 @@ export default function App() {
           element={
             <PageFrame>
               <Register />
+            </PageFrame>
+          }
+        />
+        <Route path="/auth/google/callback" element={<GoogleCallback />} />
+        <Route
+          path="/complete-profile"
+          element={
+            <PageFrame>
+              <CompleteProfile />
             </PageFrame>
           }
         />
@@ -98,16 +109,18 @@ export default function App() {
             </AuthGuard>
           }
         />
-        <Route
-          path="/debug"
-          element={
-            <AuthGuard>
-              <PageFrame>
-                <DebugPage />
-              </PageFrame>
-            </AuthGuard>
-          }
-        />
+        {import.meta.env.DEV && (
+          <Route
+            path="/debug"
+            element={
+              <AuthGuard>
+                <PageFrame>
+                  <DebugPage />
+                </PageFrame>
+              </AuthGuard>
+            }
+          />
+        )}
         <Route
           path="/interviews/:interviewId/reports/:reportId"
           element={

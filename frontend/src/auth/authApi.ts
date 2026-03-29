@@ -52,3 +52,21 @@ export async function getMe(): Promise<User> {
 export async function logout(): Promise<void> {
   return api<void>("/v1/auth/logout", { method: "POST" });
 }
+
+export type CompleteOAuthProfileReq = {
+  pendingToken: string;
+  role: "CANDIDATE" | "RECRUITER";
+  nickname: string;
+  phoneNumber: string;
+  password: string;
+};
+
+export async function completeOAuthProfile(
+  body: CompleteOAuthProfileReq,
+): Promise<{ accessToken: string; user: User }> {
+  return api<{ accessToken: string; user: User }>("/v1/auth/oauth/complete-profile", {
+    method: "POST",
+    body: JSON.stringify(body),
+    credentials: "include",
+  });
+}

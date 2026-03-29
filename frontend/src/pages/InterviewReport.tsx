@@ -180,28 +180,57 @@ export function InterviewReport() {
                 <h2 className={styles.sectionTitle}>영상 다시 보기</h2>
 
                 <div className={styles.turnSelector}>
-                  {segments.map((seg) => (
-                    <button
-                      key={seg.turnCount}
-                      className={`${styles.turnBtn} ${selectedTurn === seg.turnCount ? styles.turnBtnActive : ""}`}
-                      onClick={() => setSelectedTurn(seg.turnCount)}
-                    >
-                      턴 {seg.turnCount}
-                    </button>
-                  ))}
+                  {segments
+                    .sort((a, b) => a.turnCount - b.turnCount)
+                    .map((seg, index) => (
+                      <button
+                        key={seg.turnCount}
+                        className={`${styles.turnBtn} ${selectedTurn === seg.turnCount ? styles.turnBtnActive : ""}`}
+                        onClick={() => setSelectedTurn(seg.turnCount)}
+                      >
+                        턴 {index + 1}
+                      </button>
+                    ))}
                 </div>
 
                 {selectedTurn !== null && (() => {
                   const seg = segments.find((s) => s.turnCount === selectedTurn);
-                  return seg ? (
-                    <video
-                      key={seg.recordingUrl}
-                      className={styles.videoPlayer}
-                      src={seg.recordingUrl}
-                      controls
-                      onError={handleVideoError}
-                    />
-                  ) : null;
+                  if (!seg) return null;
+                  return (
+                    <div className={styles.turnDetail}>
+                      <div className={styles.videoSection}>
+                        <video
+                          key={seg.recordingUrl}
+                          className={styles.videoPlayer}
+                          src={seg.recordingUrl}
+                          controls
+                          onError={handleVideoError}
+                        />
+                      </div>
+                      <div className={styles.qaSection}>
+                        <div className={styles.qaItem}>
+                          <div className={styles.roleLabel}>면접관 질문</div>
+                          <p className={styles.qaContent}>{seg.questionContent || "질문 정보가 없습니다."}</p>
+                          {seg.questionAudioUrl && (
+                            <div className={styles.audioWrap}>
+                              <span className={styles.audioLabel}>질문 음성</span>
+                              <audio src={seg.questionAudioUrl} controls className={styles.audioPlayer} />
+                            </div>
+                          )}
+                        </div>
+                        <div className={styles.qaItem}>
+                          <div className={styles.roleLabel}>지원자 답변</div>
+                          <p className={styles.qaContent}>{seg.answerContent || "답변 정보가 없습니다."}</p>
+                          {seg.answerAudioUrl && (
+                            <div className={styles.audioWrap}>
+                              <span className={styles.audioLabel}>답변 음성</span>
+                              <audio src={seg.answerAudioUrl} controls className={styles.audioPlayer} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
                 })()}
 
                 <div className={styles.turnNav}>

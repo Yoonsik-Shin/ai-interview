@@ -1,19 +1,21 @@
 import { api } from "./client";
 
-export type InterviewType = "REAL" | "PRACTICE";
+export type InterviewPersona = "TECH" | "HR" | "LEADER" | "EXEC" | "MAIN";
 
-export type InterviewPersona = "TECH" | "HR" | "LEADER";
+export type InterviewRound = "TECHNICAL" | "CULTURE_FIT" | "EXECUTIVE";
 
-export type InterviewPersonality = "PRESSURE" | "COMFORTABLE" | "RANDOM";
+export type InterviewPersonality = "COMFORTABLE";
 
 export type CreateInterviewReq = {
   resumeId?: string; // optional - 이력서 없이도 면접 가능
   companyName?: string;
   domain: string;
-  type: InterviewType;
+  round: InterviewRound;
+  type: "REAL" | "PRACTICE";
   participatingPersonas: InterviewPersona[];
   personality: InterviewPersonality;
   scheduledDurationMinutes: number;
+  jobPostingUrl?: string; // 채용 공고 URL 추가
 };
 
 export type CreateInterviewRes = { interviewId: string; status: string };
@@ -23,7 +25,8 @@ export type InterviewSessionSummary = {
   startedAt: string;
   status: string;
   domain: string;
-  type: InterviewType;
+  type: "REAL" | "PRACTICE";
+  round?: InterviewRound;
   scheduledDurationMinutes: number;
   interviewerCount: number;
 };
@@ -99,6 +102,10 @@ export type RecordingSegment = {
   turnCount: number;
   recordingUrl: string;
   expiresAt: number; // epoch ms
+  questionContent?: string;
+  answerContent?: string;
+  questionAudioUrl?: string;
+  answerAudioUrl?: string;
 };
 
 export async function getRecordingSegments(

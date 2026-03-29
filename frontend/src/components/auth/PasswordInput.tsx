@@ -35,6 +35,7 @@ interface Props {
   error?: string;
   onBlur?: () => void;
   autoComplete?: string;
+  hideRules?: boolean;
 }
 
 export function PasswordInput({
@@ -44,6 +45,7 @@ export function PasswordInput({
   error,
   onBlur,
   autoComplete,
+  hideRules = false,
 }: Props) {
   const [show, setShow] = useState(false);
 
@@ -63,7 +65,7 @@ export function PasswordInput({
           {show ? <EyeOffIcon /> : <EyeIcon />}
         </button>
       </div>
-      {value.length > 0 && (
+      {!hideRules && value.length > 0 && (
         <div className={styles.passwordRules}>
           {PASSWORD_RULES.map(({ label, test }) => {
             const ok = test(value);

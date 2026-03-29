@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import styles from "./Landing.module.css";
 import { useEffect, useState } from "react";
 import { User, getMe } from "../auth/authApi";
@@ -10,9 +10,19 @@ import { useInterviewRecovery } from "@/hooks/useInterviewRecovery";
 export function Landing() {
   const { triggerRecoveryCheck } = useInterviewRecovery();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [tip, setTip] = useState("");
+
+  // OAuth 리다이렉트 후 access_token 쿼리 파라미터 처리
+  const oauthAccessToken = searchParams.get("access_token");
+  if (oauthAccessToken) {
+    localStorage.setItem("accessToken", oauthAccessToken);
+    searchParams.delete("access_token");
+    setSearchParams(searchParams, { replace: true });
+  }
+
   const isLoggedIn = !!localStorage.getItem("accessToken");
 
   const stats = {
