@@ -69,6 +69,10 @@ message GenerateRequest {
   string input_role = 16;                           // "user" (default) or "system"
   string persona_id = 17;                           // 면접관 페르소나 템플릿 렌더링용 식별자
   string resume_id = 18;                            // 이력서 IDe
+  common.v1.InterviewRoundProto round = 19;         // 면접 차수/유형 (Round)
+  optional string job_posting_url = 20;
+  optional string self_intro_text = 21;
+  optional string forced_speaker_id = 22;
 }
 
 

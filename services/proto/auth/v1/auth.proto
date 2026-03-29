@@ -11,6 +11,8 @@ service AuthService {
   rpc RegisterRecruiter (RegisterRecruiterRequest) returns (RegisterResponse);
   rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthenticateUserResponse);
   rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc LoginWithOAuth (LoginWithOAuthRequest) returns (LoginWithOAuthResponse);
+  rpc CompleteOAuthProfile (CompleteOAuthProfileRequest) returns (AuthenticateUserResponse);
 }
 
 message RegisterCandidateRequest {
@@ -59,4 +61,28 @@ message User {
   string role = 4;
   string phone_number = 5;
   string company_code = 6;
+}
+
+message LoginWithOAuthRequest {
+  string provider = 1;
+  string provider_user_id = 2;
+  string access_token = 3;
+  int64 token_expires_at = 4;
+  string email = 5;
+  string name = 6;
+  string picture_url = 7;
+}
+
+message LoginWithOAuthResponse {
+  bool is_new_user = 1;
+  string pending_token = 2;
+  AuthenticateUserResponse auth = 3;
+}
+
+message CompleteOAuthProfileRequest {
+  string pending_token = 1;
+  string role = 2;
+  string phone_number = 3;
+  string nickname = 4;
+  string password = 5;
 }
