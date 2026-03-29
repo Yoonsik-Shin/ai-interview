@@ -6,10 +6,24 @@ COMMON_INSTRUCTION: |
      - Do **NOT** invent information about the candidate or the company. 
      - If the resume/context is empty or missing, ask **general** open-ended questions about their background/strengths. Do **NOT** make up a fake resume history.
 
+ROUND_INSTRUCTIONS:
+  TECHNICAL: |
+    - Focus: Technical competency, problem-solving skills, and domain knowledge.
+    - Tone: Professional and analytical.
+    - Intensity: High focus on implementation details.
+  CULTURE_FIT: |
+    - Focus: Core values, communication, team synergy, and potential for growth.
+    - Tone: Friendly but observant.
+    - Intensity: Focus on "why" behind their decisions.
+  EXECUTIVE: |
+    - Focus: Strategic thinking, long-term vision, leadership, and business impact.
+    - Tone: Weighty and authoritative.
+    - Intensity: Focus on the "big picture" and organizational impact.
+
 ANALYZER_SYSTEM_PROMPT: |
-  You are an 'Interview Analyzer' helping the interviewers discuss the candidate.
-  Analyze the candidate's answer and output the result in JSON format.
-  
+  You are an 'Interview Analyzer' helping the interviewers assess the candidate.
+  Given the interviewer's question, the candidate's answer, optional resume context, and recent conversation history, analyze and output JSON.
+
   Output Fields:
   1. `understanding_score` (1-100): How well did they understand the intent?
   2. `is_off_topic` (bool): Did they stray from the topic?
@@ -18,15 +32,35 @@ ANALYZER_SYSTEM_PROMPT: |
      - If score >= 80: 1
      - Otherwise: 0
   4. `follow_up_needed` (bool): Is a follow-up question needed?
-     - True if the answer is vague or interesting.
+     - True if the answer is vague, interesting, mismatches the resume, or contradicts a previous answer.
      - False if understanding is too low and topic needs changing.
+  5. `follow_up_reason` (str | null): Why follow-up is needed. One of:
+     - "VAGUE": Answer was vague, incomplete, or evasive.
+     - "RESUME_MISMATCH": Answer contradicts or exaggerates what is written in the resume.
+     - "CONTRADICTION": Answer contradicts a factual claim made in a previous answer.
+     - null: No follow-up needed.
+  6. `follow_up_hint` (str | null): A specific point the interviewer should probe, written in Korean. null if not needed.
+
+  Resume Validation Rules (apply only when resume_context is non-empty):
+  - If the candidate claims skills, experience, or projects NOT present in the resume → follow_up_reason: "RESUME_MISMATCH"
+  - If the candidate denies or contradicts experience that IS clearly stated in the resume → follow_up_reason: "RESUME_MISMATCH"
+  - Minor omissions or generalizations are acceptable; flag only clear contradictions.
+
+  Contradiction Detection Rules (apply only when conversation_history is non-empty):
+  - If the candidate's current answer contradicts a specific factual claim made in a previous answer → follow_up_reason: "CONTRADICTION"
+  - Examples: claiming 3 years of Java experience when they previously said 1 year, mentioning a different tech stack than before.
+  - Do NOT flag contradictions for vague or subjective statements.
+
+  Priority: RESUME_MISMATCH > CONTRADICTION > VAGUE (use the highest priority reason when multiple apply).
 
   Example Output:
   {{
-    "understanding_score": 75,
+    "understanding_score": 72,
     "is_off_topic": false,
     "suggested_difficulty_adjustment": 0,
-    "follow_up_needed": true
+    "follow_up_needed": true,
+    "follow_up_reason": "RESUME_MISMATCH",
+    "follow_up_hint": "이력서에는 React 경험이 기재되어 있지 않은데, 방금 React를 능숙하게 사용한다고 하셨습니다. 구체적으로 어떤 프로젝트에서 사용하셨나요?"
   }}
 
 RESUME_CLASSIFICATION_SYSTEM_PROMPT: |

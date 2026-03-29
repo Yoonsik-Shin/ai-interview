@@ -41,7 +41,7 @@ AZURE_OPENAI_DEPLOYMENT_ID = _env("AZURE_OPENAI_DEPLOYMENT_ID", "")
 # Redis Settings
 REDIS_HOST = _env("REDIS_HOST", "redis")
 REDIS_PORT = _env_int("REDIS_PORT", 6379)
-REDIS_DB = _env_int("REDIS_DB", 1)
+REDIS_DB = _env_int("REDIS_DB", 0)
 REDIS_PASSWORD = _env("REDIS_PASSWORD", "") or None
 REDIS_TRACK2_URL = _env("REDIS_TRACK2_URL", "")
 if not REDIS_TRACK2_URL:
@@ -54,8 +54,8 @@ REDIS_SENTINEL_HOST = _env("REDIS_SENTINEL_HOST", "")
 REDIS_SENTINEL_PORT = _env_int("REDIS_SENTINEL_PORT", 26379)
 REDIS_SENTINEL_NAME = _env("REDIS_SENTINEL_NAME", "mymaster")
 
-# Redis Queue (TTS)
-TTS_QUEUE = _env("TTS_QUEUE", "tts:sentence:queue")
+# Redis Streams (TTS)
+TTS_SENTENCE_STREAM = _env("TTS_SENTENCE_STREAM", "interview:sentence:generate")
 
 # System Prompt
 SYSTEM_PROMPT = _env(
@@ -78,5 +78,10 @@ DB_NAME = _env("DB_NAME", "unbrdn")
 DB_URL = _env("DB_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 # External Services
-RESUME_SERVICE_HOST = _env("RESUME_SERVICE_HOST", "localhost")
-RESUME_SERVICE_PORT = _env_int("RESUME_SERVICE_PORT", 9090)
+RESUME_SERVICE_HOST = _env("RESUME_SERVICE_HOST", "resume")
+# Kubernetes 서비스 자동 주입(8081)보다 gRPC 포트(9090)를 우선적으로 사용하도록 설계
+_grpc_port = _env_int("RESUME_SERVICE_PORT_GRPC", 9090)
+RESUME_SERVICE_PORT = _env_int("RESUME_SERVICE_PORT", _grpc_port)
+# 만약 RESUME_SERVICE_PORT가 8081(K8s 자동 주입 HTTP 포트)이라면, 명시적으로 9090(gRPC)을 사용
+if RESUME_SERVICE_PORT == 8081:
+    RESUME_SERVICE_PORT = 9090

@@ -17,11 +17,17 @@ _common_prompts = load_yaml("common.yaml")
 
 COMMON_INSTRUCTION = _common_prompts.get("COMMON_INSTRUCTION", "")
 ANALYZER_SYSTEM_PROMPT = _common_prompts.get("ANALYZER_SYSTEM_PROMPT", "")
+ROUND_INSTRUCTIONS = _common_prompts.get("ROUND_INSTRUCTIONS", {})
 RESUME_CLASSIFICATION_SYSTEM_PROMPT = _common_prompts.get("RESUME_CLASSIFICATION_SYSTEM_PROMPT", "")
 
 ANALYZER_PROMPT = ChatPromptTemplate.from_messages([
     ("system", ANALYZER_SYSTEM_PROMPT),
-    ("user", "Question: {question}\nAnswer: {answer}")
+    ("user", (
+        "Question: {question}\n"
+        "Candidate's Answer: {answer}\n\n"
+        "Resume Context (empty if not available):\n{resume_context}\n\n"
+        "Recent Conversation History (empty if not available):\n{conversation_history}"
+    ))
 ])
 
 RESUME_CLASSIFICATION_PROMPT = ChatPromptTemplate.from_messages([

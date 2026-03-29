@@ -12,6 +12,14 @@ from common.v1 import enums_pb2
 from config import GRPC_PORT
 from utils.log_format import log_json
 
+# proto enum 필드명 → 도메인 stage 이름 매핑
+# InterviewStageProto.Name()이 "IN_PROGRESS_STAGE", "COMPLETED_STAGE" 처럼 _STAGE 접미사를 포함하지만
+# nodes.py / stages.yaml 은 "IN_PROGRESS", "COMPLETED" 를 기대하므로 변환이 필요함
+_PROTO_STAGE_MAP = {
+    "IN_PROGRESS_STAGE": "IN_PROGRESS",
+    "COMPLETED_STAGE": "COMPLETED",
+}
+
 class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
     def __init__(self):
         # LangGraph & LLM Setup
@@ -30,6 +38,7 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             log_json(
                 "llm_request_start",
                 interviewId=request.interview_id,
+                resumeId=getattr(request, "resume_id", "") or "",
             )
 
             # 1. Construct State
@@ -55,15 +64,22 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                 "resume_id": getattr(request, "resume_id", ""),
                 "user_input": request.user_text,
                 "available_roles": roles,
+                "forced_speaker_id": getattr(request, "forced_speaker_id", "") or "",
                 "personality": personality,
                 "input_role": getattr(request, "input_role", "user"),
                 "current_difficulty": request.current_difficulty_level or 3,
                 "remaining_time": request.remaining_time_seconds,
                 "total_duration": request.scheduled_duration_minutes * 60,
                 "last_interviewer_id": request.last_interviewer_id,
-                "stage": enums_pb2.InterviewStageProto.Name(request.stage),
+                "stage": _PROTO_STAGE_MAP.get(
+                    enums_pb2.InterviewStageProto.Name(request.stage),
+                    enums_pb2.InterviewStageProto.Name(request.stage),
+                ),
                 "company_name": company_name,
                 "domain": domain_name,
+                "round": enums_pb2.InterviewRoundProto.Name(request.round) if request.round else "INTERVIEW_ROUND_UNSPECIFIED",
+                "job_posting_url": getattr(request, "job_posting_url", "") or "",
+                "self_intro_text": getattr(request, "self_intro_text", "") or "",
                 # Initial internal state
                 "is_ending": False,
                 "reduce_total_time": False,
@@ -74,9 +90,11 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             log_json("llm_graph_invoke_start")
             config = {"configurable": {"thread_id": request.interview_id}}
             final_state = self.graph.invoke(state, config=config)
-            log_json("llm_graph_invoke_end", 
+            resume_ctx = final_state.get("resume_context", "")
+            log_json("llm_graph_invoke_end",
                      next_speaker=final_state.get("next_speaker_id"),
-                     next_diff=final_state.get("next_difficulty"))
+                     next_diff=final_state.get("next_difficulty"),
+                     resumeContextStatus="ok" if resume_ctx and resume_ctx.startswith("[이력서") else resume_ctx[:30] if resume_ctx else "empty")
             
             # 3. Prepare Generation
             messages = self.nodes.get_prompt_messages(final_state)
@@ -87,18 +105,20 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             reduce_time = final_state.get("reduce_total_time", False)
             is_ending = final_state.get("is_ending", False)
 
-            log_json("llm_stream_start")
+            # log_json("llm_stream_start")
             first_chunk = True
-            accumulated = ""
+            current_sentence = ""
+            full_response = ""
             
             for chunk in self.llm.stream(messages):
                 token = chunk.content
                 if not token:
                     continue
                     
-                accumulated += token
+                current_sentence += token
+                full_response += token
                 is_sentence_end = (token in [".", "?", "!", "\n"] or 
-                                  accumulated.strip().endswith((".", "?", "!"))) 
+                                  current_sentence.strip().endswith((".", "?", "!"))) 
                 
                 yield llm_pb2.TokenChunk(
                     token=token,
@@ -111,7 +131,7 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
                 )
                 
                 if is_sentence_end:
-                    accumulated = ""
+                    current_sentence = ""
                 first_chunk = False
 
             # Final Chunk
@@ -126,9 +146,23 @@ class LlmServicer(llm_pb2_grpc.LlmServiceServicer):
             from langchain_core.messages import HumanMessage, AIMessage
             log_json("llm_updating_stateful_history", interviewId=request.interview_id)
             new_history = []
-            if request.user_text:
+            
+            # [FIX] 첫 질문 시점(IN_PROGRESS 단계 첫 진입)에는 시스템 지침 대신 실제 자기소개를 이력으로 저장
+            prev_history = final_state.get("history", [])
+            is_first_in_progress = (
+                not prev_history and 
+                enums_pb2.InterviewStageProto.Name(request.stage) == "IN_PROGRESS" and
+                request.self_intro_text
+            )
+            
+            if is_first_in_progress:
+                # 첫 턴에는 지침(user_text) 대신 자기소개를 HumanMessage로 기록
+                new_history.append(HumanMessage(content=f"안녕하세요. 제 자기소개입니다: {request.self_intro_text}"))
+            elif request.user_text and request.input_role != "system":
+                # 시스템 지침은 이력에 저장하지 않음 (순수 대화만 유지)
                 new_history.append(HumanMessage(content=request.user_text))
-            new_history.append(AIMessage(content=accumulated))
+                
+            new_history.append(AIMessage(content=full_response))
             
             self.graph.update_state(config, {"history": new_history})
             

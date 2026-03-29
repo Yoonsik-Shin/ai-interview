@@ -49,8 +49,8 @@ llm/
 1. STT → Redis Streams → Core (consume)
 2. Core → LLM (gRPC streaming request)
 3. LLM → Core (streaming response: THINKING + tokens)
-4. Core → Redis Cache (append), Pub/Sub (실시간 자막), Queue (TTS용 문장)
-5. TTS → Queue consume → Pub/Sub (음성)
+4. Core → Redis Cache (append), Pub/Sub (실시간 자막), Stream (TTS용 문장)
+5. TTS → Stream consume → Pub/Sub (음성)
 6. Core → PostgreSQL (최종 저장), Redis (히스토리 갱신)
 ```
 
@@ -117,7 +117,7 @@ Core 서비스는 LLM의 스트리밍 응답을 받아 다음 작업을 **동시
 
 #### 2. **Redis Pub/Sub 발행 (실시간 자막)**
 
-- **Channel**: `interview:transcript:{interview_id}`
+- **Channel**: `interview:transcript:pubsub:{interview_id}`
 - **Payload**:
   ```json
   {
@@ -129,9 +129,9 @@ Core 서비스는 LLM의 스트리밍 응답을 받아 다음 작업을 **동시
   ```
 - **Consumer**: Socket Service → WebSocket → Client
 
-#### 3. **Redis Queue에 문장 단위 Push (TTS용)**
+#### 3. **Redis Streams에 문장 단위 Push (TTS용)**
 
-- **Queue**: `tts:sentence:queue`
+- **Stream**: `interview:sentence:generate`
 - **Trigger**: `is_sentence_end = true`일 때
 - **Payload**:
   ```json
@@ -169,7 +169,7 @@ VALUES (?, ?, ?, NOW());
 
 ### TTS Service 역할
 
-**Input**: Redis Queue (`tts:sentence:queue`)
+**Input**: Redis Streams (`interview:sentence:generate`)
 
 ```json
 {
@@ -183,13 +183,13 @@ VALUES (?, ?, ?, NOW());
 
 **Processing**:
 
-1. Queue에서 문장 consume (`BLPOP`)
+1. Stream에서 문장 consume
 2. TTS 생성 (OpenAI TTS / Edge-TTS)
 3. 음성 데이터를 Redis Pub/Sub로 발행
 
 **Output**: Redis Pub/Sub
 
-- **Channel**: `interview:audio:{interview_id}`
+- **Channel**: `interview:audio:pubsub:{interview_id}`
 - **Payload**:
   ```json
   {
@@ -211,7 +211,7 @@ VALUES (?, ?, ?, NOW());
 | `GRPC_PORT`    | `50051`       | gRPC 서버 포트 |
 | `REDIS_HOST`   | `redis`       | Redis 호스트   |
 | `REDIS_PORT`   | `6379`        | Redis 포트     |
-| `REDIS_DB`     | `1`           | Redis DB 번호  |
+| `REDIS_DB`     | `0`           | Redis DB 번호  |
 | `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI 모델    |
 
 ---
@@ -221,7 +221,7 @@ VALUES (?, ?, ?, NOW());
 ```
 ┌─────────────┐
 │ STT Service │ ──► Redis Streams ──► ┌──────────────┐
-└─────────────┘    (stt:transcript)    │ Core Service │
+└─────────────┘    (interview:transcript:process)    │ Core Service │
                                        │              │
                                        │ 1. Consume   │
                                        │ 2. gRPC Call │◄─┐
@@ -241,7 +241,7 @@ Core Service 처리:
 │ LLM Response Stream 수신                              │
 │                                                       │
 │ ┌─────────────┐  ┌─────────────┐  ┌──────────────┐ │
-│ │ Redis Cache │  │ Pub/Sub     │  │ TTS Queue    │ │
+│ │ Redis Cache │  │ Pub/Sub     │  │ TTS Stream   │ │
 │ │ (append)    │  │ (실시간자막)│  │ (문장단위)   │ │
 │ └─────────────┘  └─────────────┘  └──────────────┘ │
 │                                                       │
@@ -254,11 +254,11 @@ Core Service 처리:
 
 TTS Service:
 ┌──────────────┐
-│ TTS Service  │ ◄── Redis Queue (tts:sentence:queue)
+│ TTS Service  │ ◄── Redis Streams (interview:sentence:generate)
 │              │
 │ - Consume    │
 │ - Generate   │
-│ - Publish    │ ──► Redis Pub/Sub (interview:audio)
+│ - Publish    │ ──► Redis Pub/Sub (interview:audio:pubsub:*)
 └──────────────┘                │
                                 ▼
                          ┌────────────────┐
