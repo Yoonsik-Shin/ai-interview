@@ -540,14 +540,17 @@ if [ -f "./scripts/build-images-local.sh" ]; then
     fi
     log_success "이미지 빌드 완료"
     
-    log_task "Kind 클러스터에 이미지 로드 중..."
+    log_task "Kind 클러스터에 이미지 로드 및 재시작 중..."
     for SVC in "${SERVICES[@]}"; do
         IMAGE="${SVC}:latest"
         start_spinner "로드 중: ${IMAGE}"
         if kind load docker-image "$IMAGE" --name unbrdn-local >/dev/null 2>&1; then
              stop_spinner "success" "로드 완료: ${IMAGE}"
+             # 강제 재시작 추가
+             kubectl rollout restart deployment/${SVC} -n ${NAMESPACE} >/dev/null 2>&1 || true
         else
-             stop_spinner "warning" "로드 실패 또는 이미 존재: ${IMAGE}"
+             stop_spinner "warning" "로드 실패 또는 이미 존재. 강제 재시작 시도..."
+             kubectl rollout restart deployment/${SVC} -n ${NAMESPACE} >/dev/null 2>&1 || true
         fi
     done
 else
@@ -647,8 +650,8 @@ INFRA_PIDS=()
             kubectl apply -f k8s/infra/oracle/ > "$LOG_FILE" 2>&1
         fi
         
-        # 대기
-        if ! show_pod_status "${NAMESPACE}" "app=postgres" 60 "PostgreSQL" >/dev/null 2>&1; then
+        # 대기 (PVC 프로비저닝 시간 고려하여 120초로 상향)
+        if ! show_pod_status "${NAMESPACE}" "app=postgres" 120 "PostgreSQL" >/dev/null 2>&1; then
             SUCCESS=false
         fi
         
@@ -763,7 +766,9 @@ INFRA_PIDS+=($!)
         fi
         
         # Redis Insight (상태와 무관하게 확인/적용)
-        if [ -f "k8s/infra/redis/redis-insight.yaml" ]; then
+        if [ -f "k8s/infra/redis-insight/prod/redis-insight.yaml" ]; then
+            kubectl apply -f k8s/infra/redis-insight/prod/redis-insight.yaml >/dev/null 2>&1
+        elif [ -f "k8s/infra/redis/redis-insight.yaml" ]; then
             kubectl apply -f k8s/infra/redis/redis-insight.yaml >/dev/null 2>&1
         fi
     } || SUCCESS=false
@@ -784,17 +789,6 @@ INFRA_PIDS+=($!)
     LOG_FILE="${DEPLOY_STATUS_DIR}/${SERVICE}.log"
     
     {
-        # StorageClass Check (Concurrent safe typically)
-        DEFAULT_SC=$(kubectl get storageclass -o jsonpath='{.items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")].metadata.name}' 2>/dev/null || echo "")
-        if [ -z "$DEFAULT_SC" ]; then
-            if ! kubectl get storageclass local-path &>/dev/null; then
-                kubectl apply -f 'https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.26/deploy/local-path-storage.yaml' >/dev/null 2>&1 || \
-                kubectl apply -f 'https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml' >/dev/null 2>&1 || true
-                kubectl wait --for=condition=available deployment/local-path-provisioner -n local-path-storage --timeout=120s >/dev/null 2>&1 || true
-            fi
-            kubectl patch storageclass local-path -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' >/dev/null 2>&1 || true
-        fi
-        
         # Apply Manifests
         if [ -d "k8s/infra/kafka/common" ]; then
             kubectl apply -f k8s/infra/kafka/common/ > "$LOG_FILE" 2>&1
@@ -968,6 +962,23 @@ create_secret_storage() {
   log_success "storage-secrets 생성됨"
 }
 
+create_secret_bff_google() {
+  log_task "BFF Google OAuth Credentials"
+  read -p "GOOGLE_CLIENT_ID: " client_id
+  read -sp "GOOGLE_CLIENT_SECRET: " client_secret
+  echo
+  if [ -z "$client_id" ] || [ -z "$client_secret" ]; then
+    log_warning "Google OAuth Secret 건너뜀 (Google 로그인 불가)"
+    return
+  fi
+  kubectl create secret generic bff-google-secrets \
+    --from-literal=GOOGLE_CLIENT_ID="$client_id" \
+    --from-literal=GOOGLE_CLIENT_SECRET="$client_secret" \
+    --namespace="${NAMESPACE}" \
+    --dry-run=client -o yaml 2>/dev/null | kubectl apply -f - >/dev/null 2>&1
+  log_success "bff-google-secrets 생성됨"
+}
+
 create_secret_oracle() {
   log_task "Oracle DB Credentials"
   read -p "DB Username (Enter=ADMIN): " user
@@ -1035,13 +1046,14 @@ log_section "Secrets"
 
 MISSING_SECRETS=()
 set +e  # 배열 추가를 위해 일시적으로 set -e 비활성화
-ensure_secret "llm-secrets"       || MISSING_SECRETS+=("llm-secrets")
-ensure_secret "stt-secrets"       || MISSING_SECRETS+=("stt-secrets")
-ensure_secret "tts-secrets"       || MISSING_SECRETS+=("tts-secrets")
-ensure_secret "storage-secrets"   || MISSING_SECRETS+=("storage-secrets")
+ensure_secret "llm-secrets"         || MISSING_SECRETS+=("llm-secrets")
+ensure_secret "stt-secrets"         || MISSING_SECRETS+=("stt-secrets")
+ensure_secret "tts-secrets"         || MISSING_SECRETS+=("tts-secrets")
+ensure_secret "storage-secrets"     || MISSING_SECRETS+=("storage-secrets")
 # oracle-db-credentials: 로컬 환경에서는 PostgreSQL 사용하므로 불필요
 # ensure_secret "oracle-db-credentials" || MISSING_SECRETS+=("oracle-db-credentials")
-ensure_secret "core-jwt-keys"     || MISSING_SECRETS+=("core-jwt-keys")
+ensure_secret "core-jwt-keys"       || MISSING_SECRETS+=("core-jwt-keys")
+ensure_secret "bff-google-secrets"  || MISSING_SECRETS+=("bff-google-secrets")
 set -e  # 다시 set -e 활성화
 # minio-credentials: MinIO 배포 시 사용, 없으면 기본 생성
 
@@ -1055,13 +1067,14 @@ if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
     exit 1
   fi
 
-  ensure_secret "llm-secrets"       || create_secret_llm
-  ensure_secret "stt-secrets"       || create_secret_stt
-  ensure_secret "tts-secrets"       || create_secret_tts
-  ensure_secret "storage-secrets"   || create_secret_storage
+  ensure_secret "llm-secrets"         || create_secret_llm
+  ensure_secret "stt-secrets"         || create_secret_stt
+  ensure_secret "tts-secrets"         || create_secret_tts
+  ensure_secret "storage-secrets"     || create_secret_storage
   # oracle-db-credentials: 로컬 환경에서는 PostgreSQL 사용하므로 생성하지 않음
   # ensure_secret "oracle-db-credentials" || create_secret_oracle
-  ensure_secret "core-jwt-keys"     || create_secret_core_jwt
+  ensure_secret "core-jwt-keys"       || create_secret_core_jwt
+  ensure_secret "bff-google-secrets"  || create_secret_bff_google
   if ! ensure_secret "minio-credentials"; then
     log_task "MinIO Secret 확인"
     read -p "MinIO Secret도 생성하시겠습니까? (Y/n): " -n 1 -r
