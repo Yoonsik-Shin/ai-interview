@@ -64,6 +64,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: bff-config
+            - secretRef:
+                name: bff-google-secrets
           env:
             - name: REDIS_PASSWORD
               valueFrom:

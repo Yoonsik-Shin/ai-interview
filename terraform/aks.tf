@@ -51,6 +51,10 @@ resource "azurerm_kubernetes_cluster_node_pool" "gpupool" {
   vm_size               = "Standard_NC4as_T4_v3"
   node_count            = 1
   node_labels           = { role = "inference" }
+  priority              = "Spot"
   spot_max_price        = -1
   eviction_policy       = "Deallocate"
+
+  # ⚠️ 중요: GPU Time-Slicing은 Terraform 속성이 아닌 K8s 매니페스트로 관리됩니다.
+  # k8s/infra/nvidia/prod/ 디렉토리의 ConfigMap 및 DaemonSet을 참고하세요.
 }

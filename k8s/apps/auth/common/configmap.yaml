@@ -19,10 +19,16 @@ data:
   LLM_GRPC_HOST: "llm.unbrdn.svc.cluster.local"
   LLM_GRPC_PORT: "50051"
 
-  # Redis (대화 맥락 저장)
+  # Redis (Real-time Pub/Sub - Track 1)
   REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
+  REDIS_SENTINEL_MASTER: "mymaster"
+  REDIS_SENTINEL_NODES: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
+
+  # Redis (Session State - Track 3)
+  REDIS_TRACK3_HOST: "redis-track3.unbrdn.svc.cluster.local"
+  REDIS_TRACK3_PORT: "6379"
 
   # JPA
   SPRING_JPA_HIBERNATE_DDL_AUTO: "validate"

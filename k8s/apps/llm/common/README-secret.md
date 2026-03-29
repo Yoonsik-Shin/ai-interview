@@ -13,7 +13,8 @@
 
 ```bash
 kubectl create secret generic llm-secrets \
-  --from-literal=OPENAI_API_KEY='your-actual-api-key-here' \
+  --from-literal=OPENAI_API_KEY='your-openai-key' \
+  --from-literal=TAVILY_API_KEY='your-tavily-key' \
   --namespace=unbrdn \
   --dry-run=client -o yaml | kubectl apply -f -
 ```

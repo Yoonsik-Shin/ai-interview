@@ -9,14 +9,13 @@ data:
 
   # Kafka Topics
   STT_INPUT_TOPIC: "interview.audio.input"
-  STT_OUTPUT_TOPIC: "interview.stt.transcript.created.v1"
 
   # Redis
   REDIS_SENTINEL_HOSTS: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
   REDIS_SENTINEL_HOST: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
   REDIS_SENTINEL_NAME: "mymaster"
-  REDIS_DB: "2"
+  REDIS_DB: "0"
   # Fallback
   REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
@@ -26,7 +25,7 @@ data:
   # VAD Settings (Hallucination 방지)
   VAD_MIN_SILENCE_MS: "500"
   VAD_MIN_SPEECH_MS: "300"
-  NO_SPEECH_THRESHOLD: "0.6"
+  NO_SPEECH_THRESHOLD: "0.4"
   WHISPER_DEVICE: "cpu"
   WHISPER_COMPUTE_TYPE: "int8"
 
@@ -34,5 +33,5 @@ data:
   STT_GRPC_PORT: "50052"
 
   # Redis Pub/Sub and Streams
-  STT_REDIS_CHANNEL: "stt:transcript:pubsub"
-  STT_REDIS_STREAM: "stt:transcript:stream"
+  STT_PUBSUB_CHANNEL_TEMPLATE: "interview:transcript:pubsub:{interviewId}"
+  STT_REDIS_STREAM: "interview:transcript:process"

@@ -23,8 +23,12 @@ data:
   REDIS_SENTINEL_NAME: "mymaster"
 
   # Track 2: LangGraph Checkpoint (대화 히스토리, 에이전트 메모리)
-  REDIS_TRACK2_URL: "redis://redis-track2-master.unbrdn.svc.cluster.local:6379/0"
+  REDIS_TRACK2_URL: "redis://redis-track2.unbrdn.svc.cluster.local:6379/0"
+  
+  # External Services
+  RESUME_SERVICE_HOST: "resume"
+  RESUME_SERVICE_PORT: "9090"
 
-  TTS_QUEUE: "tts:sentence:queue"
+  TTS_SENTENCE_STREAM: "interview:sentence:stream"
 
   SYSTEM_PROMPT: "너는 10년 차 IT 개발자 면접관이다. 지원자의 답변을 듣고, 내용이 빈약하거나 기술적으로 모호한 부분을 찾아 날카로운 꼬리 질문을 한 가지만 짧게(한 문장으로) 물어봐라. 존댓말을 사용해라."

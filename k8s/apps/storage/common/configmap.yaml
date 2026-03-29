@@ -10,11 +10,17 @@ data:
   # Kafka Topics
   STORAGE_COMPLETED_TOPIC: "storage.completed"
 
-  # Redis
+  # Redis (Real-time Pub/Sub - Track 1)
   REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
-  REDIS_DB: "2"
-  REDIS_AUDIO_QUEUE_PREFIX: "interview:audio"
+  REDIS_DB: "0"
+  REDIS_SENTINEL_MASTER: "mymaster"
+  REDIS_SENTINEL_NODES: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
+
+  # Redis (Session State - Track 3)
+  REDIS_TRACK3_HOST: "redis-track3.unbrdn.svc.cluster.local"
+  REDIS_TRACK3_PORT: "6379"
+  REDIS_AUDIO_QUEUE_PREFIX: "interview:audio:queue:storage"
   # Bitnami Helm Chart: Pod 이름은 redis-node-{ordinal} 패턴 사용
   REDIS_SENTINEL_HOSTS: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
   REDIS_SENTINEL_HOST: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local"

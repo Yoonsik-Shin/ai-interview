@@ -9,9 +9,10 @@ data:
   GRPC_PORT: "50051"
   OPENAI_MODEL: "gpt-4o-mini"
 
-  REDIS_HOST: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local"
+  REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
+  REDIS_TRACK2_URL: "redis://redis-track2-master.unbrdn.svc.cluster.local:6379/0"
   # Redis Sentinel (3 Pod)
   REDIS_SENTINEL_HOSTS: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
   REDIS_SENTINEL_HOST: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local"
@@ -19,5 +20,9 @@ data:
   REDIS_SENTINEL_NAME: "mymaster"
 
   TTS_QUEUE: "tts:sentence:queue"
+  
+  # External Services
+  RESUME_SERVICE_HOST: "resume"
+  RESUME_SERVICE_PORT: "9090"
 
   SYSTEM_PROMPT: "너는 10년 차 IT 개발자 면접관이다. 지원자의 답변을 듣고, 내용이 빈약하거나 기술적으로 모호한 부분을 찾아 날카로운 꼬리 질문을 한 가지만 짧게(한 문장으로) 물어봐라. 존댓말을 사용해라."

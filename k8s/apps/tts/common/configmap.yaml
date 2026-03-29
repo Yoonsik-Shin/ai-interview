@@ -8,6 +8,7 @@ data:
   REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
+  REDIS_TRACK3_HOST: "redis-track3-master.unbrdn.svc.cluster.local"
   # Redis Sentinel Configuration
   REDIS_SENTINEL_HOSTS: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
   REDIS_SENTINEL_HOST: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local"
@@ -27,8 +28,8 @@ data:
   EDGE_TTS_ENABLED: "true"
 
   # Queue / PubSub
-  TTS_INPUT_QUEUE: "tts:sentence:queue"
-  TTS_PUBSUB_CHANNEL_TEMPLATE: "interview:audio:{interviewId}"
+  TTS_SENTENCE_STREAM: "interview:sentence:stream"
+  TTS_PUBSUB_CHANNEL_TEMPLATE: "interview:audio:pubsub:{interviewId}"
 
   # Health Check (gRPC)
   TTS_GRPC_PORT: "50053"

@@ -51,6 +51,11 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 5
+          env:
+            - name: RESUME_SERVICE_PORT
+              value: "9090"
+            - name: RESUME_SERVICE_HOST
+              value: "resume"
           envFrom:
             - secretRef:
                 name: llm-secrets

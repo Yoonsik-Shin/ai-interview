@@ -42,14 +42,19 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 5
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: TOKENIZERS_PARALLELISM
+              value: "false"
           envFrom:
             - configMapRef:
                 name: document-config
           resources:
             requests:
-              cpu: "100m"
+              cpu: "200m"
               memory: "1Gi"
             limits:
-              cpu: "500m"
+              cpu: "1000m"
               memory: "2Gi"
       restartPolicy: Always

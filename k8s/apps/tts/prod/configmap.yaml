@@ -13,22 +13,18 @@ data:
   REDIS_SENTINEL_HOST: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
   REDIS_SENTINEL_NAME: "mymaster"
-  # Redis Connection
-  REDIS_SOCKET_TIMEOUT: "0"
-  REDIS_CONNECT_TIMEOUT: "5"
-  REDIS_HEALTH_CHECK_INTERVAL: "10"
-  REDIS_SOCKET_KEEPALIVE: "true"
-  REDIS_TCP_KEEPIDLE: "30"
-  REDIS_TCP_KEEPINTVL: "10"
-  REDIS_TCP_KEEPCNT: "3"
-  REDIS_BLOCKING_TIMEOUT: "5"
 
   # TTS 설정
   EDGE_TTS_ENABLED: "true"
 
   # Queue / PubSub
-  TTS_INPUT_QUEUE: "tts:sentence:queue"
-  TTS_PUBSUB_CHANNEL_TEMPLATE: "interview:audio:{interviewId}"
+  TTS_SENTENCE_STREAM: "interview:sentence:stream"
+  TTS_PUBSUB_CHANNEL_TEMPLATE: "interview:audio:pubsub:{interviewId}"
+  REDIS_HEALTH_CHECK_INTERVAL: "10"
+  REDIS_SOCKET_KEEPALIVE: "true"
+  REDIS_TCP_KEEPIDLE: "30"
+  REDIS_TCP_KEEPINTVL: "10"
+  REDIS_TCP_KEEPCNT: "3"
 
   # Health Check (gRPC)
   TTS_GRPC_PORT: "50053"

@@ -19,16 +19,14 @@ data:
   LLM_GRPC_HOST: "llm.unbrdn.svc.cluster.local"
   LLM_GRPC_PORT: "50051"
 
-  # Track 1: Redis Sentinel (LLM 버퍼, Pub/Sub 수신)
+  # Redis (Real-time Pub/Sub - Track 1)
   REDIS_HOST: "redis-track1.unbrdn.svc.cluster.local"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
   REDIS_SENTINEL_MASTER: "mymaster"
   REDIS_SENTINEL_NODES: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
-  SPRING_DATA_REDIS_SENTINEL_MASTER: "mymaster"
-  SPRING_DATA_REDIS_SENTINEL_NODES: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
 
-  # Track 3: Azure Cache for Redis (면접 세션 상태, STT/TTS 스트림)
+  # Redis (Business Logic / State - Track 3: Azure Cache for Redis)
   REDIS_TRACK3_HOST: "unbrdn-redis-track3.redis.cache.windows.net"
   REDIS_TRACK3_PORT: "6380"
   REDIS_TRACK3_SSL: "true"

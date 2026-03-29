@@ -33,5 +33,13 @@ resource "azurerm_redis_cache" "redis" {
   capacity             = 1
   family               = "C"
   sku_name             = "Standard"
-  non_ssl_port_enabled = false
+  non_ssl_port_enabled = true
+}
+
+resource "azurerm_redis_firewall_rule" "allow_all" {
+  name                = "AllowAll"
+  redis_cache_name    = azurerm_redis_cache.redis.name
+  resource_group_name = local.rg_name
+  start_ip            = "0.0.0.0"
+  end_ip              = "255.255.255.255"
 }

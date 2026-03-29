@@ -25,7 +25,6 @@ spec:
         path: "{{path}}"
       destination:
         server: https://kubernetes.default.svc
-        namespace: unbrdn
       syncPolicy:
         automated:
           prune: true

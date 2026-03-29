@@ -8,7 +8,7 @@ metadata:
 data:
   PORT: "4000"
 
-  REDIS_SENTINEL_HOSTS: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379"
+  REDIS_SENTINEL_HOSTS: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-1.redis-track1-headless.unbrdn.svc.cluster.local:26379,redis-track1-node-2.redis-track1-headless.unbrdn.svc.cluster.local:26379"
   REDIS_SENTINEL_HOST: "redis-track1-node-0.redis-track1-headless.unbrdn.svc.cluster.local"
   REDIS_SENTINEL_PORT: "26379"
   REDIS_SENTINEL_NAME: "mymaster"
@@ -32,6 +32,9 @@ data:
   RESUME_GRPC_PORT: "9090"
 
   JWT_JWKS_URI: "http://auth.unbrdn.svc.cluster.local:8081/.well-known/jwks.json"
+  REDIS_LLM_PUBSUB_PATTERN: "interview:llm:pubsub:*"
+  REDIS_STT_PUBSUB_PATTERN: "interview:stt:pubsub:*"
+  REDIS_TTS_PUBSUB_PATTERN: "interview:tts:pubsub:*"
   JWT_JWKS_CACHE_MAX_AGE_MS: "300000"
   JWT_JWKS_REQUESTS_PER_MINUTE: "10"
   JWT_JWKS_TIMEOUT_MS: "30000"
