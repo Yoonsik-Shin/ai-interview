@@ -37,7 +37,7 @@ spec:
 
       containers:
         - name: auth
-          image: unbrdnacr.azurecr.io/auth:b509fdeb867a2a7167d2275b28c89dd2fcf0b145
+          image: unbrdnacr.azurecr.io/auth:ca1882d79a645053d641a12ce8814634a9e94c99
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
