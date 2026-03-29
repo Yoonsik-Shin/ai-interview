@@ -8,5 +8,13 @@ public interface TransitionInterviewStageUseCase {
     void execute(TransitionStageCommand command);
 
     /** Command DTO */
-    record TransitionStageCommand(UUID interviewId, String newStage) {}
+    record TransitionStageCommand(UUID interviewId, String newStage, String selfIntroText, boolean isMaxRetryExceeded) {
+        public TransitionStageCommand(UUID interviewId, String newStage) {
+            this(interviewId, newStage, null, false);
+        }
+        
+        public TransitionStageCommand(UUID interviewId, String newStage, String selfIntroText) {
+            this(interviewId, newStage, selfIntroText, false);
+        }
+    }
 }

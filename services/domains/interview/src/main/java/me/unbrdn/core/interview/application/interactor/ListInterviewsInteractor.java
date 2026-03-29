@@ -42,6 +42,7 @@ public class ListInterviewsInteractor implements ListInterviewsUseCase {
                 .domain(session.getDomain())
                 .type(session.getType())
                 .scheduledDurationMinutes(session.getScheduledDurationMinutes())
+                .jobPostingUrl(session.getJobPostingUrl())
                 .build();
     }
 }

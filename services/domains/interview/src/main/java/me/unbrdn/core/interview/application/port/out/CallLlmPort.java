@@ -11,5 +11,6 @@ public interface CallLlmPort {
 
     void generateResponseSync(CallLlmCommand command);
 
-    GenerateReportResult generateReport(String interviewId, List<InterviewMessageJpaEntity> messages);
+    GenerateReportResult generateReport(
+            String interviewId, List<InterviewMessageJpaEntity> messages);
 }

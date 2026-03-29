@@ -7,7 +7,14 @@ public interface GetInterviewRecordingSegmentsUseCase {
 
     record GetSegmentsQuery(UUID interviewId) {}
 
-    record SegmentResult(int turnCount, String recordingUrl, long expiresAtEpoch) {}
+    record SegmentResult(
+            int turnCount,
+            String recordingUrl,
+            long expiresAtEpoch,
+            String questionContent,
+            String answerContent,
+            String questionAudioUrl,
+            String answerAudioUrl) {}
 
     List<SegmentResult> execute(GetSegmentsQuery query);
 }

@@ -30,10 +30,10 @@ public class SttTranscriptRedisStreamConsumer
     private final ProcessUserAnswerUseCase processUserAnswerUseCase;
     private final ObjectMapper objectMapper;
 
-    @Value("${redis.stream.stt-transcript:stt:transcript:stream}")
+    @Value("${redis.stream.stt-transcript:interview:transcript:process}")
     private String streamKey;
 
-    @Value("${redis.stream.stt-transcript-group:core-stt-consumer-group}")
+    @Value("${redis.stream.stt-transcript-group:interview:transcript:cg:stt}")
     private String consumerGroup;
 
     @Value("${redis.stream.stt-transcript-consumer:core-consumer-1}")
@@ -78,17 +78,31 @@ public class SttTranscriptRedisStreamConsumer
         try {
             Map<String, String> body = message.getValue();
 
-            // STT payload 파싱
-            String interviewId = body.get("interviewId");
-            String text = body.get("text");
-            String userId = body.get("userId");
-            String traceId = body.get("traceId");
-            Boolean isFinal = Boolean.parseBoolean(body.getOrDefault("isFinal", "false"));
-            Boolean isEmpty = Boolean.parseBoolean(body.getOrDefault("isEmpty", "false"));
+            // STT payload 파싱: Python publisher가 {"payload": json_string} 형태로 publish
+            String payloadJson = body.get("payload");
+            if (payloadJson == null) {
+                log.debug("Skipping message with no payload field");
+                redisTemplate.opsForStream().acknowledge(streamKey, consumerGroup, message.getId());
+                return;
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = objectMapper.readValue(payloadJson, Map.class);
+            String interviewId = (String) payload.get("interviewId");
+            String text = (String) payload.get("text");
+            String userId = (String) payload.get("userId");
+            String traceId = (String) payload.get("traceId");
+            Integer retryCount = (Integer) payload.getOrDefault("retryCount", 0);
+            Boolean isFinal =
+                    Boolean.parseBoolean(String.valueOf(payload.getOrDefault("isFinal", "false")));
+            Boolean isEmpty =
+                    Boolean.parseBoolean(String.valueOf(payload.getOrDefault("isEmpty", "false")));
+            String stage = (String) payload.get("stage");
 
             // 빈 텍스트 또는 final이 아닌 경우 스킵
             if (isEmpty || !isFinal || text == null || text.trim().isEmpty()) {
                 log.debug("Skipping non-final or empty STT message");
+                redisTemplate.opsForStream().acknowledge(streamKey, consumerGroup, message.getId());
                 return;
             }
 
@@ -100,6 +114,8 @@ public class SttTranscriptRedisStreamConsumer
                             .userText(text)
                             .persona("COMFORTABLE") // 기본값, 추후 payload에서 받을 수 있음
                             .traceId(traceId)
+                            .retryCount(retryCount)
+                            .stage(stage)
                             .build();
 
             // Use Case 호출

@@ -2,6 +2,7 @@ package me.unbrdn.core.interview.application.interactor;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,18 +10,20 @@ import me.unbrdn.core.interview.application.dto.command.CallLlmCommand;
 import me.unbrdn.core.interview.application.dto.command.ProcessUserAnswerCommand;
 import me.unbrdn.core.interview.application.dto.command.PublishTranscriptCommand;
 import me.unbrdn.core.interview.application.port.in.ProcessUserAnswerUseCase;
+import me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.application.port.out.PublishTranscriptPort;
-import me.unbrdn.core.interview.application.port.out.SaveAdjustmentLogPort;
 import me.unbrdn.core.interview.application.port.out.SaveInterviewMessagePort;
+import me.unbrdn.core.interview.application.support.InterviewMessagePersistencePolicy;
+import me.unbrdn.core.interview.application.support.PersonaResolver;
+import me.unbrdn.core.interview.application.support.TurnStatePublisher;
 import me.unbrdn.core.interview.domain.entity.InterviewMessage;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
-import me.unbrdn.core.interview.domain.enums.MessageRole;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import me.unbrdn.core.interview.domain.enums.MessageRole;
+import me.unbrdn.core.interview.domain.enums.MessageSource;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -32,10 +35,11 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
     private final InterviewPort interviewPort;
     private final PublishTranscriptPort publishTranscriptPort;
     private final ManageSessionStatePort sessionStatePort;
-    private final SaveAdjustmentLogPort saveAdjustmentLogPort;
     private final SaveInterviewMessagePort saveInterviewMessagePort;
-
-    private final StringRedisTemplate stringRedisTemplate;
+    private final TransitionInterviewStageUseCase transitionInterviewStageUseCase;
+    private final TurnStatePublisher turnStatePublisher;
+    private final PersonaResolver personaResolver;
+    private final InterviewMessagePersistencePolicy persistencePolicy;
 
     @Override
     public void execute(ProcessUserAnswerCommand command) {
@@ -64,14 +68,51 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                                                 "Track 3 state missing for "
                                                         + command.getInterviewId()));
 
+        InterviewStage originalStage = state.getCurrentStage();
+        long now = System.currentTimeMillis();
+
+        // [FUNDAMENTAL GUARD] 만약 메시지에 포함된 단계(stage)가 현재 세션의 단계와 다르면 지연된 메시지로 간주하고 무시합니다. (STT 지연 방어)
+        if (command.getStage() != null && !command.getStage().equalsIgnoreCase(state.getCurrentStage().name())) {
+            log.info(
+                    "Ignoring stale STT transcript from previous stage. interviewId={}, commandStage={}, currentStage={}",
+                    command.getInterviewId(),
+                    command.getStage(),
+                    state.getCurrentStage());
+            return;
+        }
+
+
+        // [GUARD] 단계 전이 직후 3초 이내에 도착하는 잔여 오디오 데이터(Residue)는 무시하여 레이스 컨디션을 방지합니다.
+        long lastStageTransitionAt =
+                state.getLastStageTransitionAt() != null ? state.getLastStageTransitionAt() : 0;
+        if (now - lastStageTransitionAt < 3000) {
+            log.info(
+                    "Ignoring speech detected shortly after stage transition (residue). interviewId={}, elapsed={}ms",
+                    command.getInterviewId(),
+                    now - lastStageTransitionAt);
+            return;
+        }
+
+        // [FIX] 안내 음성(PROMPT) 중에는 사용자의 발화를 원천 차단하여 간섭을 방지합니다.
+        if (originalStage == InterviewStage.SELF_INTRO_PROMPT) {
+            log.info(
+                    "Speech detected during SELF_INTRO_PROMPT. Ignoring to prevent LLM/Retry conflict. interviewId={}",
+                    command.getInterviewId());
+            return;
+        }
+
         if (state.getStatus()
                 != me.unbrdn.core.interview.domain.model.InterviewSessionState.Status.LISTENING) {
             log.warn("Drop message - Session not LISTENING. Current: {}", state.getStatus());
             return;
         }
+
+        // 상태 변경 시작
         state.setStatus(
                 me.unbrdn.core.interview.domain.model.InterviewSessionState.Status.THINKING);
+        state.setCanCandidateSpeak(false);
         sessionStatePort.saveState(command.getInterviewId(), state);
+        turnStatePublisher.publish(command.getInterviewId(), state);
 
         // Publish clear_turn to ensure Frontend UI is ready for new tokens (Track 1 UX Sync)
         PublishTranscriptCommand clearTurnCommand =
@@ -88,99 +129,78 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                         .name()
                         .toLowerCase(); // REAL -> "real", PRACTICE -> "practice"
 
-        // 2. [REMOVED for Phase 6] 대화 히스토리 로드는 더 이상 Core에서 하지 않음.
-
-        // 2-1. Persist user message to DB for report generation
-        try {
-            InterviewMessage userMessage = InterviewMessage.create(
-                    interviewSession,
-                    state.getTurnCount() != null ? state.getTurnCount() : 0,
-                    0,
-                    state.getCurrentStage(),
-                    MessageRole.USER,
-                    command.getUserText(),
-                    null);
-            saveInterviewMessagePort.save(userMessage);
-        } catch (Exception e) {
-            log.error("Failed to persist user message to DB: interviewId={}", command.getInterviewId(), e);
+        // [NEW] CANDIDATE_GREETING 처리: 사용자가 인사하면 텍스트 내용과 상관없이 바로 면접관 소개로 전이
+        if (originalStage == InterviewStage.CANDIDATE_GREETING) {
+            log.info(
+                    "Transitioning from CANDIDATE_GREETING to INTERVIEWER_INTRO for interview: {}. User text: {}",
+                    command.getInterviewId(),
+                    command.getUserText());
+            transitionInterviewStageUseCase.execute(
+                    new TransitionInterviewStageUseCase.TransitionStageCommand(
+                            interviewUuid, InterviewStage.INTERVIEWER_INTRO.name()));
+            return;
         }
 
-        // 2-2. Update Session State (Increment Turn Count)
+        // [NEW] LAST_ANSWER 처리: 사용자의 마지막 답변 이후 마무리 인사로 전이
+        if (originalStage == InterviewStage.LAST_ANSWER) {
+            persistUserMessage(interviewSession, state, originalStage, command.getUserText());
+            log.info(
+                    "Transitioning from LAST_ANSWER to CLOSING_GREETING for interview: {}",
+                    command.getInterviewId());
+            transitionInterviewStageUseCase.execute(
+                    new TransitionInterviewStageUseCase.TransitionStageCommand(
+                            interviewUuid, InterviewStage.CLOSING_GREETING.name()));
+            return;
+        }
+
+        // [FIX] SELF_INTRO 처리: 리트라이 로직을 제거하고 항상 즉시 단계 전이 수행
+        if (originalStage == InterviewStage.SELF_INTRO) {
+            long selfIntroStart = state.getSelfIntroStart() != null ? state.getSelfIntroStart() : now;
+            long elapsedSeconds = (now - selfIntroStart) / 1000;
+
+            log.info("Self intro ended (elapsed={}s). Transitioning to IN_PROGRESS. interviewId={}", 
+                    elapsedSeconds, command.getInterviewId());
+            
+            state.setSelfIntroText(command.getUserText());
+            sessionStatePort.saveState(command.getInterviewId(), state);
+            
+            interviewSession.updateSelfIntroText(command.getUserText());
+            interviewPort.save(interviewSession);
+
+            try {
+                // [FIX] Save User STT (Turn 0, Seq 0)
+                saveInterviewMessagePort.save(InterviewMessage.create(
+                        interviewSession, 0, 0, InterviewStage.SELF_INTRO,
+                        MessageRole.USER, MessageSource.SYSTEM, command.getUserText(), null, "CANDIDATE", 3));
+            } catch (Exception e) {
+                log.error("Failed to save self-intro message", e);
+            }
+
+            transitionInterviewStageUseCase.execute(new TransitionInterviewStageUseCase.TransitionStageCommand(
+                    interviewUuid, InterviewStage.IN_PROGRESS.name(), command.getUserText(), false));
+            return;
+        }
+
+        // [FIX] 기획서(docs/llm-question-generation-context.md)와의 정합성 확보:
+        // 면접관 교대 및 꼬리질문 여부는 LLM 서비스의 LangGraph(router 노드)가 결정합니다.
+        // Core에서 강제로 교대할 경우 꼬리질문(Follow-up) 기획이 동작하지 않으므로,
+        // 현재 면접관 ID를 그대로 전달하고 LLM의 응답 토큰에 포함된 persona_id로 상태를 업데이트합니다.
+        String nextInterviewerId = state.getLastInterviewerId();
+        List<String> personas = state.getParticipatingPersonas();
+
+        if (nextInterviewerId == null
+                || nextInterviewerId.isEmpty()
+                || nextInterviewerId.equals("DEFAULT")) {
+            nextInterviewerId = personaResolver.resolveLeadPersona(personas);
+        }
+
+        // 2-2. Persist user message to DB for report generation
+        persistUserMessage(interviewSession, state, originalStage, command.getUserText());
+
+        // 2-3. Update Session State (Increment Turn Count)
         updateTurnCount(interviewSession);
 
-        // 2-3. Check for SELF_INTRO completion transition
-        if (state.getCurrentStage() == InterviewStage.SELF_INTRO) {
-            long elapsedSeconds = awaitElapsedSeconds(command.getInterviewId());
-            int retryCount = getSelfIntroRetryCount(command.getInterviewId());
-
-            boolean isForcedCompletion =
-                    command.getUserText() != null
-                            && (command.getUserText().contains("자기소개 생략")
-                                    || command.getUserText().contains("자기소개 시간 초과"));
-
-            if (!isForcedCompletion && elapsedSeconds < 30 && retryCount < 2) {
-                log.info(
-                        "Self intro too short (elapsed={}s), requesting retry (count={})",
-                        elapsedSeconds,
-                        retryCount + 1);
-                incrementSelfIntroRetryCount(command.getInterviewId());
-
-                // Publish RETRY_ANSWER event to Redis Pub/Sub → Socket → Frontend
-                PublishTranscriptCommand retryEvent =
-                        PublishTranscriptCommand.builder()
-                                .interviewId(command.getInterviewId())
-                                .type("RETRY_ANSWER")
-                                .content("Self intro too short. Please elaborate.")
-                                .currentStage(state.getCurrentStage().name())
-                                .previousStage(InterviewStage.SELF_INTRO.name())
-                                .build();
-                publishTranscriptPort.publish(retryEvent);
-
-                // Reset selfIntroStart so the next retry attempt measures elapsed from now
-                stringRedisTemplate.opsForHash().put(
-                        "interview:session:" + command.getInterviewId(),
-                        "selfIntroStart",
-                        String.valueOf(System.currentTimeMillis()));
-
-                // Revert state to LISTENING for next retry loop
-                state.setStatus(
-                        me.unbrdn.core.interview.domain.model.InterviewSessionState.Status
-                                .LISTENING);
-                sessionStatePort.saveState(command.getInterviewId(), state);
-
-                return; // Skip LLM call for a retry prompt
-            } else {
-                log.info(
-                        "Self intro completed (elapsed={}s) or max retries reached, transitioning to IN_PROGRESS",
-                        elapsedSeconds);
-                state.setCurrentStage(InterviewStage.IN_PROGRESS);
-                state.setSelfIntroText(command.getUserText()); // 무기한 보존용 텍스트 저장
-                sessionStatePort.saveState(command.getInterviewId(), state);
-                try {
-                    interviewPort.save(interviewSession);
-                } catch (ObjectOptimisticLockingFailureException e) {
-                    log.warn(
-                            "SELF_INTRO->IN_PROGRESS transition skipped (optimistic lock conflict): {}",
-                            e.getMessage());
-                    return;
-                }
-
-                // Publish Stage Change Event
-                PublishTranscriptCommand stageEvent =
-                        PublishTranscriptCommand.builder()
-                                .interviewId(command.getInterviewId())
-                                .type("STAGE_CHANGE")
-                                .currentStage(state.getCurrentStage().name())
-                                .previousStage(InterviewStage.SELF_INTRO.name())
-                                .build();
-                publishTranscriptPort.publish(stageEvent);
-            }
-        }
-
         // 3. LLM 호출 (스트리밍)
-        // Note: history passed to LLM does NOT include the just-appended user message
-        // because we loaded it before appending. This is often correct if the LLM
-        // prompt builder appends the current user text separately.
         long totalDurationSeconds = interviewSession.getScheduledDurationMinutes() * 60L;
         long elapsed = 0;
         if (interviewSession.getStartedAt() != null) {
@@ -199,7 +219,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                                                 : null))
                         .userId(command.getUserId())
                         .userText(command.getUserText())
-                        .personaId("DEFAULT") // Not tracking personality enum anymore
+                        .personaId(nextInterviewerId)
                         .mode(mode)
                         .companyName(interviewSession.getCompanyName())
                         .scheduledDurationMinutes(interviewSession.getScheduledDurationMinutes())
@@ -208,10 +228,7 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                                 state.getCurrentDifficulty() != null
                                         ? state.getCurrentDifficulty()
                                         : 3)
-                        .lastInterviewerId(
-                                state.getLastInterviewerId() != null
-                                        ? state.getLastInterviewerId()
-                                        : "LEADER")
+                        .lastInterviewerId(nextInterviewerId)
                         .stage(state.getCurrentStage())
                         .interviewerCount(
                                 state.getParticipatingPersonas() != null
@@ -219,9 +236,45 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
                                         : 1)
                         .domain(interviewSession.getDomain())
                         .participatingPersonas(state.getParticipatingPersonas())
+                        .round(interviewSession.getRound())
+                        .jobPostingUrl(interviewSession.getJobPostingUrl())
+                        .selfIntroText(state.getSelfIntroText())
                         .build();
 
         callLlmPort.generateResponse(llmCommand);
+    }
+
+    private void persistUserMessage(
+            InterviewSession session,
+            me.unbrdn.core.interview.domain.model.InterviewSessionState state,
+            InterviewStage stage,
+            String content) {
+        if (!persistencePolicy.shouldPersist(stage, MessageRole.USER)) {
+            log.debug(
+                    "Skip user message persistence before SELF_INTRO: interviewId={}, stage={}",
+                    session.getId(),
+                    stage);
+            return;
+        }
+        try {
+            InterviewMessage userMessage =
+                    InterviewMessage.create(
+                            session,
+                            state.getTurnCount() != null ? state.getTurnCount() : 0,
+                            0,
+                            stage,
+                            MessageRole.USER,
+                            MessageSource.SYSTEM,
+                            content,
+                            null,
+                            "CANDIDATE",
+                            state.getCurrentDifficulty() != null
+                                    ? state.getCurrentDifficulty()
+                                    : 3);
+            saveInterviewMessagePort.save(userMessage);
+        } catch (Exception e) {
+            log.error("Failed to persist user message to DB: interviewId={}", session.getId(), e);
+        }
     }
 
     private void updateTurnCount(InterviewSession session) {
@@ -242,49 +295,5 @@ public class ProcessUserAnswerInteractor implements ProcessUserAnswerUseCase {
         } catch (Exception e) {
             log.error("Failed to update turn count", e);
         }
-    }
-
-    private long awaitElapsedSeconds(String interviewId) {
-        Object startObj =
-                stringRedisTemplate
-                        .opsForHash()
-                        .get("interview:session:" + interviewId, "selfIntroStart");
-        if (startObj != null) {
-            try {
-                long startTime = Long.parseLong(startObj.toString());
-                return (System.currentTimeMillis() - startTime) / 1000;
-            } catch (NumberFormatException e) {
-                log.warn("Failed to parse selfIntroStart from Redis: {}", startObj);
-            }
-        } else {
-            log.warn("selfIntroStart not found in Redis. Treating as already completed to avoid accidental retry.");
-            return Long.MAX_VALUE;
-        }
-        return 0;
-    }
-
-    private int getSelfIntroRetryCount(String interviewId) {
-        return sessionStatePort
-                .getState(interviewId)
-                .map(
-                        state ->
-                                state.getSelfIntroRetryCount() != null
-                                        ? state.getSelfIntroRetryCount()
-                                        : 0)
-                .orElse(0);
-    }
-
-    private void incrementSelfIntroRetryCount(String interviewId) {
-        sessionStatePort
-                .getState(interviewId)
-                .ifPresent(
-                        state -> {
-                            int current =
-                                    state.getSelfIntroRetryCount() != null
-                                            ? state.getSelfIntroRetryCount()
-                                            : 0;
-                            state.setSelfIntroRetryCount(current + 1);
-                            sessionStatePort.saveState(interviewId, state);
-                        });
     }
 }

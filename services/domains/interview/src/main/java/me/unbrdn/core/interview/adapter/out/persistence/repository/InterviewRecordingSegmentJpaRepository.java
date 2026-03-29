@@ -10,4 +10,7 @@ public interface InterviewRecordingSegmentJpaRepository
 
     List<InterviewRecordingSegmentJpaEntity> findByInterviewSessionIdOrderByTurnCount(
             UUID interviewSessionId);
+
+    java.util.Optional<InterviewRecordingSegmentJpaEntity> findByInterviewSessionIdAndTurnCount(
+            UUID interviewSessionId, int turnCount);
 }

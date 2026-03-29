@@ -14,5 +14,9 @@ public interface GetInterviewStageUseCase {
             me.unbrdn.core.interview.domain.enums.InterviewStage stage,
             java.util.List<String> participatingPersonas,
             String domain,
-            Integer selfIntroRetryCount) {}
+            Integer selfIntroRetryCount,
+            me.unbrdn.core.interview.domain.model.InterviewSessionState.Status turnStatus,
+            Integer turnCount,
+            String activePersonaId,
+            boolean canCandidateSpeak) {}
 }

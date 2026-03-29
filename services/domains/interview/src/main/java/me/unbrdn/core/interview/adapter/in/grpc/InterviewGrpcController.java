@@ -11,53 +11,62 @@ import me.unbrdn.core.grpc.interview.v1.CancelInterviewRequest;
 import me.unbrdn.core.grpc.interview.v1.CancelInterviewResponse;
 import me.unbrdn.core.grpc.interview.v1.CompleteInterviewRequest;
 import me.unbrdn.core.grpc.interview.v1.CompleteInterviewResponse;
+import me.unbrdn.core.grpc.interview.v1.CompleteRecordingSegmentUploadRequest;
+import me.unbrdn.core.grpc.interview.v1.CompleteRecordingSegmentUploadResponse;
 import me.unbrdn.core.grpc.interview.v1.CreateInterviewReportRequest;
 import me.unbrdn.core.grpc.interview.v1.CreateInterviewReportResponse;
 import me.unbrdn.core.grpc.interview.v1.CreateInterviewRequest;
 import me.unbrdn.core.grpc.interview.v1.CreateInterviewResponse;
-import me.unbrdn.core.grpc.interview.v1.GetInterviewReportRequest;
-import me.unbrdn.core.grpc.interview.v1.GetInterviewReportResponse;
 import me.unbrdn.core.grpc.interview.v1.GetInterviewHistoryRequest;
 import me.unbrdn.core.grpc.interview.v1.GetInterviewHistoryResponse;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewRecordingSegmentsRequest;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewRecordingSegmentsResponse;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewReportRequest;
+import me.unbrdn.core.grpc.interview.v1.GetInterviewReportResponse;
 import me.unbrdn.core.grpc.interview.v1.GetInterviewStageRequest;
 import me.unbrdn.core.grpc.interview.v1.GetInterviewStageResponse;
-import me.unbrdn.core.grpc.interview.v1.IncrementSelfIntroRetryRequest;
-import me.unbrdn.core.grpc.interview.v1.IncrementSelfIntroRetryResponse;
+import me.unbrdn.core.grpc.interview.v1.GetRecordingSegmentUploadUrlRequest;
+import me.unbrdn.core.grpc.interview.v1.GetRecordingSegmentUploadUrlResponse;
 import me.unbrdn.core.grpc.interview.v1.InterviewMessage;
 import me.unbrdn.core.grpc.interview.v1.InterviewServiceGrpc;
 import me.unbrdn.core.grpc.interview.v1.ListInterviewsRequest;
 import me.unbrdn.core.grpc.interview.v1.ListInterviewsResponse;
 import me.unbrdn.core.grpc.interview.v1.PauseInterviewRequest;
 import me.unbrdn.core.grpc.interview.v1.PauseInterviewResponse;
+import me.unbrdn.core.grpc.interview.v1.ProcessUserAnswerRequest;
+import me.unbrdn.core.grpc.interview.v1.ProcessUserAnswerResponse;
+import me.unbrdn.core.grpc.interview.v1.RecordingSegment;
 import me.unbrdn.core.grpc.interview.v1.ResumeInterviewRequest;
 import me.unbrdn.core.grpc.interview.v1.ResumeInterviewResponse;
+import me.unbrdn.core.grpc.interview.v1.RetrySelfIntroRequest;
+import me.unbrdn.core.grpc.interview.v1.RetrySelfIntroResponse;
+import me.unbrdn.core.grpc.interview.v1.SaveInterviewMessageRequest;
+import me.unbrdn.core.grpc.interview.v1.SaveInterviewMessageResponse;
 import me.unbrdn.core.grpc.interview.v1.TransitionStageRequest;
 import me.unbrdn.core.grpc.interview.v1.TransitionStageResponse;
 import me.unbrdn.core.interview.application.dto.command.CreateInterviewCommand;
+import me.unbrdn.core.interview.application.dto.command.ProcessUserAnswerCommand;
+import me.unbrdn.core.interview.application.dto.command.SaveInterviewMessageCommand;
 import me.unbrdn.core.interview.application.dto.result.CreateInterviewResult;
-import me.unbrdn.core.grpc.interview.v1.CompleteRecordingSegmentUploadRequest;
-import me.unbrdn.core.grpc.interview.v1.CompleteRecordingSegmentUploadResponse;
-import me.unbrdn.core.grpc.interview.v1.GetInterviewRecordingSegmentsRequest;
-import me.unbrdn.core.grpc.interview.v1.GetInterviewRecordingSegmentsResponse;
-import me.unbrdn.core.grpc.interview.v1.GetRecordingSegmentUploadUrlRequest;
-import me.unbrdn.core.grpc.interview.v1.GetRecordingSegmentUploadUrlResponse;
-import me.unbrdn.core.grpc.interview.v1.RecordingSegment;
 import me.unbrdn.core.interview.application.port.in.CompleteSegmentUploadUseCase;
 import me.unbrdn.core.interview.application.port.in.CreateInterviewReportUseCase;
 import me.unbrdn.core.interview.application.port.in.CreateInterviewUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewHistoryUseCase;
+import me.unbrdn.core.interview.application.port.in.GetInterviewHistoryUseCase.InterviewMessageDto;
 import me.unbrdn.core.interview.application.port.in.GetInterviewRecordingSegmentsUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewReportUseCase;
-import me.unbrdn.core.interview.application.port.in.GetUploadUrlForSegmentUseCase;
-import me.unbrdn.core.interview.application.port.in.GetInterviewHistoryUseCase.InterviewMessageDto;
 import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase;
 import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.GetInterviewStageQuery;
 import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase.InterviewStageResult;
-import me.unbrdn.core.interview.application.port.in.IncrementSelfIntroRetryUseCase;
+import me.unbrdn.core.interview.application.port.in.GetUploadUrlForSegmentUseCase;
 import me.unbrdn.core.interview.application.port.in.ListInterviewsUseCase;
+import me.unbrdn.core.interview.application.port.in.ProcessUserAnswerUseCase;
+import me.unbrdn.core.interview.application.port.in.RetrySelfIntroUseCase;
+import me.unbrdn.core.interview.application.port.in.SaveInterviewMessageUseCase;
 import me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase;
 import me.unbrdn.core.interview.application.port.in.TransitionInterviewStageUseCase.TransitionStageCommand;
 import me.unbrdn.core.interview.domain.enums.InterviewSessionStatus;
+import me.unbrdn.core.interview.domain.enums.MessageRole;
 import net.devh.boot.grpc.server.service.GrpcService;
 
 /** Interview Application Service의 gRPC 진입점 */
@@ -69,7 +78,7 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
     private final CreateInterviewUseCase createInterviewUseCase;
     private final GetInterviewStageUseCase getInterviewStageUseCase;
     private final TransitionInterviewStageUseCase transitionInterviewStageUseCase;
-    private final IncrementSelfIntroRetryUseCase incrementSelfIntroRetryUseCase;
+    private final RetrySelfIntroUseCase retrySelfIntroUseCase;
     private final ListInterviewsUseCase listInterviewsUseCase;
     private final GetInterviewHistoryUseCase getInterviewHistoryUseCase;
     private final me.unbrdn.core.interview.application.port.in.CompleteInterviewUseCase
@@ -88,18 +97,63 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
     private final GetUploadUrlForSegmentUseCase getUploadUrlForSegmentUseCase;
     private final CompleteSegmentUploadUseCase completeSegmentUploadUseCase;
     private final GetInterviewRecordingSegmentsUseCase getInterviewRecordingSegmentsUseCase;
+    private final ProcessUserAnswerUseCase processUserAnswerUseCase;
+    private final SaveInterviewMessageUseCase saveInterviewMessageUseCase;
     private final InterviewGrpcMapper mapper;
 
     @Override
-    public void incrementSelfIntroRetry(
-            IncrementSelfIntroRetryRequest request,
-            StreamObserver<IncrementSelfIntroRetryResponse> responseObserver) {
+    public void processUserAnswer(
+            ProcessUserAnswerRequest request,
+            StreamObserver<ProcessUserAnswerResponse> responseObserver) {
+        ProcessUserAnswerCommand command =
+                ProcessUserAnswerCommand.builder()
+                        .interviewId(request.getInterviewId())
+                        .userId(request.getUserId())
+                        .userText(request.getUserText())
+                        .build();
+        processUserAnswerUseCase.execute(command);
+        responseObserver.onNext(ProcessUserAnswerResponse.newBuilder().setSuccess(true).build());
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void saveInterviewMessage(
+            SaveInterviewMessageRequest request,
+            StreamObserver<SaveInterviewMessageResponse> responseObserver) {
+        SaveInterviewMessageCommand command =
+                SaveInterviewMessageCommand.builder()
+                        .interviewId(request.getInterviewId())
+                        .role(MessageRole.valueOf(request.getRole()))
+                        .sentence(request.getContent())
+                        .stage(request.hasStage() ? request.getStage() : null)
+                        .personaId(request.hasPersonaId() ? request.getPersonaId() : null)
+                        .turnCount(request.getTurnCount())
+                        .sentenceIndex(request.getSequenceNumber())
+                        .difficultyLevel(
+                                request.hasDifficultyLevel() ? request.getDifficultyLevel() : null)
+                        .isFinal(true)
+                        .build();
+
+        saveInterviewMessageUseCase.execute(command);
+        responseObserver.onNext(SaveInterviewMessageResponse.newBuilder().setSuccess(true).build());
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void retrySelfIntro(
+            RetrySelfIntroRequest request,
+            StreamObserver<RetrySelfIntroResponse> responseObserver) {
 
         UUID interviewId = UUID.fromString(request.getInterviewId());
-        int newCount = incrementSelfIntroRetryUseCase.execute(interviewId);
+        RetrySelfIntroUseCase.Result result =
+                retrySelfIntroUseCase.execute(interviewId, request.getDurationSeconds());
 
-        IncrementSelfIntroRetryResponse response =
-                IncrementSelfIntroRetryResponse.newBuilder().setNewRetryCount(newCount).build();
+        RetrySelfIntroResponse response =
+                RetrySelfIntroResponse.newBuilder()
+                        .setSuccess(true)
+                        .setNewRetryCount(result.getNewRetryCount())
+                        .setIsMaxRetryExceeded(result.isMaxRetryExceeded())
+                        .build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
@@ -121,9 +175,12 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
                                                 : null))
                         .companyName(request.getCompanyName())
                         .domain(request.getDomain())
-                        .type(request.getType().name())
+                        .type(mapper.toDomainInterviewType(request.getType()))
+                        .round(mapper.toDomainInterviewRound(request.getRound()))
                         .roles(roles)
                         .scheduledDurationMinutes(request.getScheduledDurationMinutes())
+                        .jobPostingUrl(request.getJobPostingUrl())
+                        .selfIntroText(request.getSelfIntroText())
                         .build();
 
         CreateInterviewResult result = createInterviewUseCase.execute(command);
@@ -196,6 +253,16 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             responseBuilder.setDomain(result.domain());
         }
         responseBuilder.setSelfIntroRetryCount(result.selfIntroRetryCount());
+        if (result.turnStatus() != null) {
+            responseBuilder.setTurnStatus(mapper.toProtoTurnStatus(result.turnStatus()));
+        }
+        if (result.turnCount() != null) {
+            responseBuilder.setTurnCount(result.turnCount());
+        }
+        if (result.activePersonaId() != null) {
+            responseBuilder.setActivePersonaId(result.activePersonaId());
+        }
+        responseBuilder.setCanCandidateSpeak(result.canCandidateSpeak());
 
         responseObserver.onNext(responseBuilder.build());
         responseObserver.onCompleted();
@@ -460,10 +527,11 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             var command = new CreateInterviewReportUseCase.CreateReportCommand(interviewId);
             var result = createInterviewReportUseCase.execute(command);
 
-            CreateInterviewReportResponse response = CreateInterviewReportResponse.newBuilder()
-                    .setReportId(result.reportId().toString())
-                    .setGenerationStatus(result.generationStatus().name())
-                    .build();
+            CreateInterviewReportResponse response =
+                    CreateInterviewReportResponse.newBuilder()
+                            .setReportId(result.reportId().toString())
+                            .setGenerationStatus(result.generationStatus().name())
+                            .build();
 
             responseObserver.onNext(response);
             responseObserver.onCompleted();
@@ -484,14 +552,17 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             var query = new GetInterviewReportUseCase.GetReportQuery(interviewId, reportId);
             var result = getInterviewReportUseCase.execute(query);
 
-            GetInterviewReportResponse response = GetInterviewReportResponse.newBuilder()
-                    .setReportId(result.reportId().toString())
-                    .setGenerationStatus(result.generationStatus().name())
-                    .setTotalScore(result.totalScore())
-                    .setPassFailStatus(result.passFailStatus().name())
-                    .setSummaryText(result.summaryText() != null ? result.summaryText() : "")
-                    .setResumeFeedback(result.resumeFeedback() != null ? result.resumeFeedback() : "")
-                    .build();
+            GetInterviewReportResponse response =
+                    GetInterviewReportResponse.newBuilder()
+                            .setReportId(result.reportId().toString())
+                            .setGenerationStatus(result.generationStatus().name())
+                            .setTotalScore(result.totalScore())
+                            .setPassFailStatus(result.passFailStatus().name())
+                            .setSummaryText(
+                                    result.summaryText() != null ? result.summaryText() : "")
+                            .setResumeFeedback(
+                                    result.resumeFeedback() != null ? result.resumeFeedback() : "")
+                            .build();
 
             responseObserver.onNext(response);
             responseObserver.onCompleted();
@@ -507,18 +578,21 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             GetRecordingSegmentUploadUrlRequest request,
             StreamObserver<GetRecordingSegmentUploadUrlResponse> responseObserver) {
         try {
-            var command = new GetUploadUrlForSegmentUseCase.GetUploadUrlCommand(
-                    UUID.fromString(request.getInterviewId()), request.getTurnCount());
+            var command =
+                    new GetUploadUrlForSegmentUseCase.GetUploadUrlCommand(
+                            UUID.fromString(request.getInterviewId()), request.getTurnCount());
             var result = getUploadUrlForSegmentUseCase.execute(command);
 
-            responseObserver.onNext(GetRecordingSegmentUploadUrlResponse.newBuilder()
-                    .setUploadUrl(result.uploadUrl())
-                    .setObjectKey(result.objectKey())
-                    .build());
+            responseObserver.onNext(
+                    GetRecordingSegmentUploadUrlResponse.newBuilder()
+                            .setUploadUrl(result.uploadUrl())
+                            .setObjectKey(result.objectKey())
+                            .build());
             responseObserver.onCompleted();
         } catch (Exception e) {
             log.error("Failed to get recording segment upload URL", e);
-            responseObserver.onError(GlobalGrpcExceptionHandler.toGrpcStatus(e).asRuntimeException());
+            responseObserver.onError(
+                    GlobalGrpcExceptionHandler.toGrpcStatus(e).asRuntimeException());
         }
     }
 
@@ -527,17 +601,18 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             CompleteRecordingSegmentUploadRequest request,
             StreamObserver<CompleteRecordingSegmentUploadResponse> responseObserver) {
         try {
-            var command = new CompleteSegmentUploadUseCase.CompleteSegmentCommand(
-                    UUID.fromString(request.getInterviewId()),
-                    request.getObjectKey(),
-                    request.getTurnCount(),
-                    request.getDurationSeconds() > 0 ? request.getDurationSeconds() : null,
-                    request.getStartedAtEpoch() > 0
-                            ? java.time.Instant.ofEpochMilli(request.getStartedAtEpoch())
-                            : null,
-                    request.getEndedAtEpoch() > 0
-                            ? java.time.Instant.ofEpochMilli(request.getEndedAtEpoch())
-                            : null);
+            var command =
+                    new CompleteSegmentUploadUseCase.CompleteSegmentCommand(
+                            UUID.fromString(request.getInterviewId()),
+                            request.getObjectKey(),
+                            request.getTurnCount(),
+                            request.getDurationSeconds() > 0 ? request.getDurationSeconds() : null,
+                            request.getStartedAtEpoch() > 0
+                                    ? java.time.Instant.ofEpochMilli(request.getStartedAtEpoch())
+                                    : null,
+                            request.getEndedAtEpoch() > 0
+                                    ? java.time.Instant.ofEpochMilli(request.getEndedAtEpoch())
+                                    : null);
             completeSegmentUploadUseCase.execute(command);
 
             responseObserver.onNext(
@@ -545,7 +620,8 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             responseObserver.onCompleted();
         } catch (Exception e) {
             log.error("Failed to complete recording segment upload", e);
-            responseObserver.onError(GlobalGrpcExceptionHandler.toGrpcStatus(e).asRuntimeException());
+            responseObserver.onError(
+                    GlobalGrpcExceptionHandler.toGrpcStatus(e).asRuntimeException());
         }
     }
 
@@ -554,25 +630,50 @@ public class InterviewGrpcController extends InterviewServiceGrpc.InterviewServi
             GetInterviewRecordingSegmentsRequest request,
             StreamObserver<GetInterviewRecordingSegmentsResponse> responseObserver) {
         try {
-            var query = new GetInterviewRecordingSegmentsUseCase.GetSegmentsQuery(
-                    UUID.fromString(request.getInterviewId()));
+            var query =
+                    new GetInterviewRecordingSegmentsUseCase.GetSegmentsQuery(
+                            UUID.fromString(request.getInterviewId()));
             var results = getInterviewRecordingSegmentsUseCase.execute(query);
 
-            var segments = results.stream()
-                    .map(r -> RecordingSegment.newBuilder()
-                            .setTurnCount(r.turnCount())
-                            .setRecordingUrl(r.recordingUrl() != null ? r.recordingUrl() : "")
-                            .setExpiresAtEpoch(r.expiresAtEpoch())
-                            .build())
-                    .toList();
+            var segments =
+                    results.stream()
+                            .map(
+                                    r ->
+                                            RecordingSegment.newBuilder()
+                                                    .setTurnCount(r.turnCount())
+                                                    .setRecordingUrl(
+                                                            r.recordingUrl() != null
+                                                                    ? r.recordingUrl()
+                                                                    : "")
+                                                    .setExpiresAtEpoch(r.expiresAtEpoch())
+                                                    .setQuestionContent(
+                                                            r.questionContent() != null
+                                                                    ? r.questionContent()
+                                                                    : "")
+                                                    .setAnswerContent(
+                                                            r.answerContent() != null
+                                                                    ? r.answerContent()
+                                                                    : "")
+                                                    .setQuestionAudioUrl(
+                                                            r.questionAudioUrl() != null
+                                                                    ? r.questionAudioUrl()
+                                                                    : "")
+                                                    .setAnswerAudioUrl(
+                                                            r.answerAudioUrl() != null
+                                                                    ? r.answerAudioUrl()
+                                                                    : "")
+                                                    .build())
+                            .toList();
 
-            responseObserver.onNext(GetInterviewRecordingSegmentsResponse.newBuilder()
-                    .addAllSegments(segments)
-                    .build());
+            responseObserver.onNext(
+                    GetInterviewRecordingSegmentsResponse.newBuilder()
+                            .addAllSegments(segments)
+                            .build());
             responseObserver.onCompleted();
         } catch (Exception e) {
             log.error("Failed to get interview recording segments", e);
-            responseObserver.onError(GlobalGrpcExceptionHandler.toGrpcStatus(e).asRuntimeException());
+            responseObserver.onError(
+                    GlobalGrpcExceptionHandler.toGrpcStatus(e).asRuntimeException());
         }
     }
 }

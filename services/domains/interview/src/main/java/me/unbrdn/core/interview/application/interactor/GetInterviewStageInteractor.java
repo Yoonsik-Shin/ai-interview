@@ -5,6 +5,7 @@ import me.unbrdn.core.interview.application.port.in.GetInterviewStageUseCase;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
+import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import me.unbrdn.core.interview.domain.model.InterviewSessionState;
 import org.springframework.stereotype.Service;
 
@@ -41,7 +42,36 @@ public class GetInterviewStageInteractor implements GetInterviewStageUseCase {
                         ? state.getCurrentStage()
                         : me.unbrdn.core.interview.domain.enums.InterviewStage.WAITING;
 
+        InterviewSessionState.Status turnStatus =
+                state != null && state.getStatus() != null
+                        ? state.getStatus()
+                        : InterviewSessionState.Status.READY;
+
+        Integer turnCount =
+                state != null && state.getTurnCount() != null
+                        ? state.getTurnCount()
+                        : session.getTurnCount();
+
+        String activePersonaId =
+                state != null && state.getLastInterviewerId() != null
+                        ? state.getLastInterviewerId()
+                        : participatingPersonas.stream().findFirst().orElse(null);
+
+        boolean canCandidateSpeak =
+                turnStatus == InterviewSessionState.Status.LISTENING
+                        && (currentStage == InterviewStage.CANDIDATE_GREETING
+                                || currentStage == InterviewStage.SELF_INTRO
+                                || currentStage == InterviewStage.IN_PROGRESS
+                                || currentStage == InterviewStage.LAST_ANSWER);
+
         return new InterviewStageResult(
-                currentStage, participatingPersonas, session.getDomain(), retryCount);
+                currentStage,
+                participatingPersonas,
+                session.getDomain(),
+                retryCount,
+                turnStatus,
+                turnCount,
+                activePersonaId,
+                canCandidateSpeak);
     }
 }

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class RedisTtsQueueAdapter implements PushTtsQueuePort {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private static final String TTS_QUEUE = "tts:sentence:queue";
+    private static final String TTS_QUEUE = "interview:sentence:queue:tts";
 
     @Override
     public void push(PushTtsQueueCommand command) {

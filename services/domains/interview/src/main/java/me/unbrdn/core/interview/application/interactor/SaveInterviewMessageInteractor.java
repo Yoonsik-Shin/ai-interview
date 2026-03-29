@@ -8,9 +8,12 @@ import me.unbrdn.core.interview.application.port.in.SaveInterviewMessageUseCase;
 import me.unbrdn.core.interview.application.port.out.InterviewPort;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.application.port.out.SaveInterviewMessagePort;
+import me.unbrdn.core.interview.application.support.InterviewMessagePersistencePolicy;
 import me.unbrdn.core.interview.domain.entity.InterviewMessage;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
+import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import me.unbrdn.core.interview.domain.enums.MessageRole;
+import me.unbrdn.core.interview.domain.enums.MessageSource;
 import me.unbrdn.core.interview.domain.model.InterviewSessionState;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +25,7 @@ public class SaveInterviewMessageInteractor implements SaveInterviewMessageUseCa
     private final SaveInterviewMessagePort saveInterviewMessagePort;
     private final InterviewPort interviewPort;
     private final ManageSessionStatePort sessionStatePort;
+    private final InterviewMessagePersistencePolicy persistencePolicy;
 
     @Override
     public void execute(SaveInterviewMessageCommand command) {
@@ -36,15 +40,45 @@ public class SaveInterviewMessageInteractor implements SaveInterviewMessageUseCa
                             .getState(command.getInterviewId())
                             .orElse(InterviewSessionState.createDefault());
 
+            Integer turnCount =
+                    command.getTurnCount() != null
+                            ? command.getTurnCount()
+                            : (state.getTurnCount() != null ? state.getTurnCount() : 0);
+
+            InterviewStage stage = state.getCurrentStage();
+            if (command.getStage() != null && !command.getStage().isBlank()) {
+                try {
+                    stage = InterviewStage.valueOf(command.getStage());
+                } catch (IllegalArgumentException ignored) {
+                    log.warn(
+                            "Unknown stage in SaveInterviewMessageCommand. interviewId={}, stage={}",
+                            command.getInterviewId(),
+                            command.getStage());
+                }
+            }
+
+            MessageRole role = command.getRole() != null ? command.getRole() : MessageRole.AI;
+            if (!persistencePolicy.shouldPersist(stage, role)) {
+                log.info(
+                        "Skip interview message persistence before SELF_INTRO: interviewId={}, role={}, stage={}",
+                        command.getInterviewId(),
+                        role,
+                        stage);
+                return;
+            }
+
             InterviewMessage message =
                     InterviewMessage.create(
                             session,
-                            state.getTurnCount() != null ? state.getTurnCount() : 0,
+                            turnCount,
                             command.getSentenceIndex(),
-                            state.getCurrentStage(),
-                            MessageRole.AI,
+                            stage,
+                            role,
+                            command.getSource() != null ? command.getSource() : MessageSource.SYSTEM,
                             command.getSentence(),
-                            null);
+                            null,
+                            command.getPersonaId() != null ? command.getPersonaId() : "DEFAULT",
+                            command.getDifficultyLevel());
 
             saveInterviewMessagePort.save(message);
             log.info(

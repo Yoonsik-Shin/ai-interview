@@ -18,31 +18,33 @@ public class PauseInterviewInteractor implements PauseInterviewUseCase {
     private final ProduceInterviewEventPort produceInterviewEventPort;
 
     @Override
-    @Transactional
     public PauseInterviewResult execute(PauseInterviewCommand command) {
         log.info("Pausing interview: {}", command.interviewId());
 
-        // Load interview session
-        InterviewSession session =
-                interviewPort
-                        .loadById(command.interviewId())
-                        .orElseThrow(
-                                () ->
-                                        new IllegalArgumentException(
-                                                "면접 세션을 찾을 수 없습니다: " + command.interviewId()));
+        // Update session in a transaction
+        InterviewSession session = updateSessionToPaused(command.interviewId());
 
-        // Pause the interview
-        session.pause();
-
-        // Save the updated session
-        interviewPort.save(session);
-
-        // Publish event
+        // Publish event outside transaction to avoid holding DB connection
         produceInterviewEventPort.publishInterviewPaused(session.getId().toString());
 
         log.info("Interview paused: interviewId={}", session.getId());
 
         return new PauseInterviewResult(
                 session.getId().toString(), session.getStatus().name(), null);
+    }
+
+    @Transactional
+    public InterviewSession updateSessionToPaused(java.util.UUID interviewId) {
+        InterviewSession session =
+                interviewPort
+                        .loadById(interviewId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "면접 세션을 찾을 수 없습니다: " + interviewId));
+
+        session.pause();
+        interviewPort.save(session);
+        return session;
     }
 }

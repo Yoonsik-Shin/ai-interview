@@ -1,7 +1,6 @@
 package me.unbrdn.core.interview.domain.model;
 
 import java.io.Serializable;
-import java.util.Collections;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,12 +36,17 @@ public class InterviewSessionState implements Serializable {
     private Long cumulatedPauseSeconds; // 누적 일시정지 시간
     private me.unbrdn.core.interview.domain.enums.InterviewStage currentStage;
     private String resumeId; // 이력서 ID
+    @Builder.Default private boolean canCandidateSpeak = true;
 
     // Sequential Intro fields
     private List<String> participatingPersonas;
     private Integer nextPersonaIndex;
     private Integer selfIntroRetryCount;
     private String selfIntroText; // 자기소개 무기한 보존용 피봇 필드
+    private Long selfIntroStart; // 자기소개 시작 시간 (Epoch ms, 30초 retry 체크용)
+    private Long lastRetryAt; // 레이스 컨디션 방지용 마지막 리트라이 시점 (Epoch ms)
+    private Long lastStageTransitionAt;
+    private String jobPostingUrl;
 
     public static InterviewSessionState createDefault() {
         return InterviewSessionState.builder()
@@ -57,15 +61,18 @@ public class InterviewSessionState implements Serializable {
     public static InterviewSessionState fromEntity(InterviewSession session) {
         return InterviewSessionState.builder()
                 .resumeId(session.getResumeId() != null ? session.getResumeId().toString() : null)
-                .status(Status.READY) // 기본 상태값 READY 주입 (에러 방지용)
+                .status(Status.READY) // Default for new state
                 .currentDifficulty(3)
                 .lastInterviewerId("LEADER")
                 .turnCount(session.getTurnCount())
                 .remainingTimeSeconds(session.getScheduledDurationMinutes() * 60L)
                 .selfIntroRetryCount(0)
-                .participatingPersonas(Collections.emptyList())
+                .participatingPersonas(
+                        session.getParticipatingPersonas()) // FIXED: Load from entity
                 .nextPersonaIndex(0)
                 .currentStage(me.unbrdn.core.interview.domain.enums.InterviewStage.WAITING)
+                .jobPostingUrl(session.getJobPostingUrl())
+                .selfIntroText(session.getSelfIntroText())
                 .build();
     }
 }

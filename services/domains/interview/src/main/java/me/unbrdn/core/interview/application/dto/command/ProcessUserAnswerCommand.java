@@ -11,4 +11,6 @@ public class ProcessUserAnswerCommand {
     private final String userText;
     private final String persona;
     private final String traceId;
+    private final Integer retryCount;
+    private final String stage;
 }

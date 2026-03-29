@@ -11,4 +11,11 @@ public interface ManageSessionStatePort {
     void deleteState(String interviewId);
 
     int incrementTurnCount(String interviewId);
+
+    int incrementSelfIntroRetryCount(String interviewId);
+
+    void updateStatus(
+            String interviewId,
+            me.unbrdn.core.interview.domain.model.InterviewSessionState.Status status,
+            boolean canCandidateSpeak);
 }

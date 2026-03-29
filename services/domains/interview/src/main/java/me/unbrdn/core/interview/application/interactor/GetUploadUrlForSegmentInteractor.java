@@ -22,10 +22,19 @@ public class GetUploadUrlForSegmentInteractor implements GetUploadUrlForSegmentU
     public GetUploadUrlResult execute(GetUploadUrlCommand command) {
         UUID interviewId = command.interviewId();
 
-        interviewPort
-                .loadById(interviewId)
-                .orElseThrow(
-                        () -> new IllegalArgumentException("Interview not found: " + interviewId));
+        var session =
+                interviewPort
+                        .loadById(interviewId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Interview not found: " + interviewId));
+
+        if (session.getStatus()
+                == me.unbrdn.core.interview.domain.enums.InterviewSessionStatus.PAUSED) {
+            throw new IllegalStateException(
+                    "Cannot get upload URL for a paused interview: " + interviewId);
+        }
 
         String objectKey =
                 String.format(

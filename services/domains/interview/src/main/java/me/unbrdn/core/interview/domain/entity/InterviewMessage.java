@@ -7,6 +7,7 @@ import lombok.experimental.SuperBuilder;
 import me.unbrdn.core.common.domain.BaseTimeEntity;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import me.unbrdn.core.interview.domain.enums.MessageRole;
+import me.unbrdn.core.interview.domain.enums.MessageSource;
 
 @Getter
 @SuperBuilder
@@ -18,8 +19,11 @@ public class InterviewMessage extends BaseTimeEntity {
     private Integer sequenceNumber;
     private InterviewStage stage;
     private MessageRole role;
+    private MessageSource source;
     private String content;
     private String mediaUrl;
+    private String personaId;
+    private Integer difficultyLevel;
 
     public static InterviewMessage create(
             InterviewSession interview,
@@ -27,8 +31,11 @@ public class InterviewMessage extends BaseTimeEntity {
             Integer sequenceNumber,
             InterviewStage stage,
             MessageRole role,
+            MessageSource source,
             String content,
-            String mediaUrl) {
+            String mediaUrl,
+            String personaId,
+            Integer difficultyLevel) {
 
         return InterviewMessage.builder()
                 .interview(interview)
@@ -36,8 +43,11 @@ public class InterviewMessage extends BaseTimeEntity {
                 .sequenceNumber(sequenceNumber)
                 .stage(stage)
                 .role(role)
+                .source(source)
                 .content(content)
                 .mediaUrl(mediaUrl)
+                .personaId(personaId)
+                .difficultyLevel(difficultyLevel)
                 .build();
     }
 

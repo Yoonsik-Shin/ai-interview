@@ -38,4 +38,13 @@ public class InterviewRecordingSegment extends BaseTimeEntity {
                 .analysisStatus(SegmentAnalysisStatus.PENDING)
                 .build();
     }
+
+    public void updateDetails(
+            String objectKey, Integer durationSeconds, Instant startedAt, Instant endedAt) {
+        this.objectKey = objectKey;
+        this.durationSeconds = durationSeconds;
+        this.startedAt = startedAt;
+        this.endedAt = endedAt;
+        this.analysisStatus = SegmentAnalysisStatus.PENDING;
+    }
 }

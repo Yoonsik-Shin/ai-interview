@@ -4,14 +4,14 @@ import io.grpc.Metadata;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import java.util.List;
 import me.unbrdn.core.grpc.common.v1.InterviewStageProto;
-import me.unbrdn.core.grpc.llm.v1.GenerateRequest;
 import me.unbrdn.core.grpc.llm.v1.GenerateReportRequest;
 import me.unbrdn.core.grpc.llm.v1.GenerateReportResponse;
+import me.unbrdn.core.grpc.llm.v1.GenerateRequest;
 import me.unbrdn.core.grpc.llm.v1.LlmServiceGrpc;
 import me.unbrdn.core.grpc.llm.v1.ReportMessage;
 import me.unbrdn.core.grpc.llm.v1.TokenChunk;
@@ -21,8 +21,11 @@ import me.unbrdn.core.interview.application.dto.command.ProcessLlmTokenCommand;
 import me.unbrdn.core.interview.application.dto.result.GenerateReportResult;
 import me.unbrdn.core.interview.application.port.in.ProcessLlmTokenUseCase;
 import me.unbrdn.core.interview.application.port.out.CallLlmPort;
+import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
+import me.unbrdn.core.interview.application.support.TurnStatePublisher;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import me.unbrdn.core.interview.domain.enums.PassFailStatus;
+import me.unbrdn.core.interview.domain.model.InterviewSessionState;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
 
@@ -38,6 +41,8 @@ public class LlmGrpcAdapter implements CallLlmPort {
     private LlmServiceGrpc.LlmServiceBlockingStub llmServiceBlockingStub;
 
     private final ProcessLlmTokenUseCase processLlmTokenUseCase;
+    private final ManageSessionStatePort sessionStatePort;
+    private final TurnStatePublisher turnStatePublisher;
 
     @Override
     public void generateResponse(CallLlmCommand command) {
@@ -102,7 +107,11 @@ public class LlmGrpcAdapter implements CallLlmPort {
                         .setCurrentDifficultyLevel(command.getCurrentDifficultyLevel())
                         .setLastInterviewerId(
                                 command.getLastInterviewerId() == null
-                                        ? "LEADER"
+                                        ? (command.getParticipatingPersonas() != null
+                                                        && !command.getParticipatingPersonas()
+                                                                .isEmpty()
+                                                ? command.getParticipatingPersonas().get(0)
+                                                : "LEADER")
                                         : command.getLastInterviewerId())
                         .setInputRole(
                                 command.getInputRole() == null ? "user" : command.getInputRole())
@@ -125,7 +134,32 @@ public class LlmGrpcAdapter implements CallLlmPort {
             builder.addAllParticipatingPersonas(command.getParticipatingPersonas());
         }
 
+        if (command.getRound() != null) {
+            builder.setRound(toProtoInterviewRound(command.getRound()));
+        }
+
+        if (command.getJobPostingUrl() != null) {
+            builder.setJobPostingUrl(command.getJobPostingUrl());
+        }
+        if (command.getSelfIntroText() != null) {
+            builder.setSelfIntroText(command.getSelfIntroText());
+        }
+        if (command.getForcedSpeakerId() != null) {
+            builder.setForcedSpeakerId(command.getForcedSpeakerId());
+        }
+
         return builder.build();
+    }
+
+    private me.unbrdn.core.grpc.common.v1.InterviewRoundProto toProtoInterviewRound(
+            me.unbrdn.core.interview.domain.enums.InterviewRound round) {
+        if (round == null)
+            return me.unbrdn.core.grpc.common.v1.InterviewRoundProto.INTERVIEW_ROUND_UNSPECIFIED;
+        return switch (round) {
+            case TECHNICAL -> me.unbrdn.core.grpc.common.v1.InterviewRoundProto.TECHNICAL_ROUND;
+            case CULTURE_FIT -> me.unbrdn.core.grpc.common.v1.InterviewRoundProto.CULTURE_ROUND;
+            case EXECUTIVE -> me.unbrdn.core.grpc.common.v1.InterviewRoundProto.EXECUTIVE_ROUND;
+        };
     }
 
     private void processChunk(TokenChunk chunk, CallLlmCommand command) {
@@ -150,18 +184,29 @@ public class LlmGrpcAdapter implements CallLlmPort {
     }
 
     @Override
-    public GenerateReportResult generateReport(String interviewId, List<InterviewMessageJpaEntity> messages) {
-        List<ReportMessage> protoMessages = messages.stream()
-                .map(msg -> ReportMessage.newBuilder()
-                        .setRole(msg.getRole() != null ? msg.getRole().name() : "")
-                        .setContent(msg.getContent() != null ? msg.getContent() : "")
-                        .build())
-                .toList();
+    public GenerateReportResult generateReport(
+            String interviewId, List<InterviewMessageJpaEntity> messages) {
+        List<ReportMessage> protoMessages =
+                messages.stream()
+                        .map(
+                                msg ->
+                                        ReportMessage.newBuilder()
+                                                .setRole(
+                                                        msg.getRole() != null
+                                                                ? msg.getRole().name()
+                                                                : "")
+                                                .setContent(
+                                                        msg.getContent() != null
+                                                                ? msg.getContent()
+                                                                : "")
+                                                .build())
+                        .toList();
 
-        GenerateReportRequest request = GenerateReportRequest.newBuilder()
-                .setInterviewId(interviewId)
-                .addAllMessages(protoMessages)
-                .build();
+        GenerateReportRequest request =
+                GenerateReportRequest.newBuilder()
+                        .setInterviewId(interviewId)
+                        .addAllMessages(protoMessages)
+                        .build();
 
         GenerateReportResponse response = llmServiceBlockingStub.generateReport(request);
 
@@ -205,6 +250,32 @@ public class LlmGrpcAdapter implements CallLlmPort {
                 return InterviewStageProto.COMPLETED_STAGE;
             default:
                 return InterviewStageProto.IN_PROGRESS_STAGE;
+        }
+    }
+
+    private void recoverSessionToListening(String interviewId) {
+        try {
+            sessionStatePort
+                    .getState(interviewId)
+                    .ifPresent(
+                            state -> {
+                                InterviewStage stage = state.getCurrentStage();
+                                if (stage == InterviewStage.IN_PROGRESS
+                                        || stage == InterviewStage.LAST_ANSWER) {
+                                    state.setStatus(InterviewSessionState.Status.LISTENING);
+                                    state.setCanCandidateSpeak(true);
+                                    sessionStatePort.saveState(interviewId, state);
+                                    turnStatePublisher.publish(interviewId, state);
+                                    log.info(
+                                            "Session recovered to LISTENING after LLM failure: interviewId={}",
+                                            interviewId);
+                                }
+                            });
+        } catch (Exception e) {
+            log.error(
+                    "Failed to recover session state after LLM failure: interviewId={}",
+                    interviewId,
+                    e);
         }
     }
 
@@ -258,6 +329,8 @@ public class LlmGrpcAdapter implements CallLlmPort {
                 log.error(
                         "Max retries reached for LLM gRPC stream: interviewId={}",
                         command.getInterviewId());
+                // LLM 완전 실패 시 세션 상태를 LISTENING으로 복구하여 사용자가 계속 답변할 수 있도록 함
+                recoverSessionToListening(command.getInterviewId());
             }
         }
 

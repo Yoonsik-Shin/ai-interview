@@ -22,5 +22,6 @@ public interface ListInterviewsUseCase {
             String companyName,
             String domain,
             InterviewType type,
-            int scheduledDurationMinutes) {}
+            int scheduledDurationMinutes,
+            String jobPostingUrl) {}
 }

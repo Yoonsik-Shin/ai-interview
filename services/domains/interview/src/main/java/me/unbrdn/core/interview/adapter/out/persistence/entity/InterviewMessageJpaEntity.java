@@ -9,6 +9,7 @@ import me.unbrdn.core.common.adapter.out.persistence.entity.BaseTimeJpaEntity;
 import me.unbrdn.core.interview.domain.entity.InterviewMessage;
 import me.unbrdn.core.interview.domain.enums.InterviewStage;
 import me.unbrdn.core.interview.domain.enums.MessageRole;
+import me.unbrdn.core.interview.domain.enums.MessageSource;
 
 @Entity
 @Table(name = "interview_messages")
@@ -35,11 +36,21 @@ public class InterviewMessageJpaEntity extends BaseTimeJpaEntity {
     @Column(nullable = false, length = 20)
     private MessageRole role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private MessageSource source;
+
     @Column(columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "media_url", length = 2048)
     private String mediaUrl;
+
+    @Column(name = "persona_id", length = 50)
+    private String personaId;
+
+    @Column(name = "difficulty_level")
+    private Integer difficultyLevel;
 
     /** 도메인 Entity -> JpaEntity 변환 */
     public static InterviewMessageJpaEntity fromDomain(
@@ -51,8 +62,11 @@ public class InterviewMessageJpaEntity extends BaseTimeJpaEntity {
                 .sequenceNumber(message.getSequenceNumber())
                 .stage(message.getStage())
                 .role(message.getRole())
+                .source(message.getSource())
                 .content(message.getContent())
                 .mediaUrl(message.getMediaUrl())
+                .personaId(message.getPersonaId())
+                .difficultyLevel(message.getDifficultyLevel())
                 .createdAt(message.getCreatedAt())
                 .updatedAt(message.getUpdatedAt())
                 .build();
@@ -66,7 +80,14 @@ public class InterviewMessageJpaEntity extends BaseTimeJpaEntity {
                 this.sequenceNumber,
                 this.stage,
                 this.role,
+                this.source,
                 this.content,
-                this.mediaUrl);
+                this.mediaUrl,
+                this.personaId,
+                this.difficultyLevel);
+    }
+
+    public void updateMediaUrl(String mediaUrl) {
+        this.mediaUrl = mediaUrl;
     }
 }

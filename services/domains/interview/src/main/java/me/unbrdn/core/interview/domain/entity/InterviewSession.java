@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import me.unbrdn.core.common.domain.BaseTimeEntity;
+import me.unbrdn.core.interview.domain.enums.InterviewRound;
 import me.unbrdn.core.interview.domain.enums.InterviewSessionStatus;
 import me.unbrdn.core.interview.domain.enums.InterviewType;
 
@@ -22,12 +23,15 @@ public class InterviewSession extends BaseTimeEntity {
     private String companyName;
     private InterviewType type;
     private InterviewSessionStatus status;
+    private InterviewRound round;
     private Instant startedAt;
     private Instant endedAt;
     private String domain;
     private int scheduledDurationMinutes;
     private java.util.List<String> participatingPersonas;
     private int turnCount;
+    private String jobPostingUrl;
+    private String selfIntroText;
     private Long version;
 
     public void start() {
@@ -62,6 +66,13 @@ public class InterviewSession extends BaseTimeEntity {
     }
 
     public void pause() {
+        if (this.status == InterviewSessionStatus.PAUSED) {
+            return;
+        }
+        // READY 상태에서 일시정지 요청이 오면 먼저 시작 상태로 만든 후 일시정지 처리
+        if (this.status == InterviewSessionStatus.READY) {
+            this.start();
+        }
         if (this.status != InterviewSessionStatus.IN_PROGRESS) {
             throw new IllegalStateException("진행 중인 면접만 일시정지할 수 있습니다.");
         }
@@ -69,6 +80,14 @@ public class InterviewSession extends BaseTimeEntity {
     }
 
     public void resume() {
+        if (this.status == InterviewSessionStatus.IN_PROGRESS) {
+            return;
+        }
+        // READY 상태에서 재개 요청이 오면 바로 시작 처리
+        if (this.status == InterviewSessionStatus.READY) {
+            this.start();
+            return;
+        }
         if (this.status != InterviewSessionStatus.PAUSED) {
             throw new IllegalStateException("일시정지된 면접만 재개할 수 있습니다.");
         }
@@ -83,24 +102,34 @@ public class InterviewSession extends BaseTimeEntity {
         this.turnCount++;
     }
 
+    public void updateSelfIntroText(String selfIntroText) {
+        this.selfIntroText = selfIntroText;
+    }
+
     public static InterviewSession create(
             String interviewId,
             java.util.UUID candidateId,
             java.util.UUID resumeId,
             String companyName,
             InterviewType type,
+            InterviewRound round,
             String domain,
             int scheduledDurationMinutes,
-            java.util.List<String> participatingPersonas) {
+            java.util.List<String> participatingPersonas,
+            String jobPostingUrl,
+            String selfIntroText) {
         return InterviewSession.builder()
                 .id(java.util.UUID.fromString(interviewId))
                 .candidateId(candidateId)
                 .resumeId(resumeId)
                 .companyName(companyName)
                 .type(type)
+                .round(round)
                 .domain(domain)
                 .scheduledDurationMinutes(scheduledDurationMinutes)
                 .participatingPersonas(participatingPersonas)
+                .jobPostingUrl(jobPostingUrl)
+                .selfIntroText(selfIntroText)
                 .status(InterviewSessionStatus.READY)
                 .turnCount(0)
                 .build();

@@ -25,14 +25,19 @@ public class GetInterviewHistoryInteractor implements GetInterviewHistoryUseCase
     public List<InterviewMessageDto> execute(String interviewId) {
         log.info("Executing GetInterviewHistory: interviewId={}", interviewId);
 
-        List<InterviewMessageJpaEntity> entities = messageJpaRepository
-                .findByInterview_IdOrderByCreatedAtAsc(UUID.fromString(interviewId));
+        List<InterviewMessageJpaEntity> entities =
+                messageJpaRepository.findByInterview_IdOrderByCreatedAtAsc(
+                        UUID.fromString(interviewId));
 
         return entities.stream().map(this::toDto).collect(Collectors.toList());
     }
 
     private InterviewMessageDto toDto(InterviewMessageJpaEntity entity) {
-        return new InterviewMessageDto(entity.getRole() != null ? entity.getRole().name() : "", "", entity.getContent(),
-                entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null, Map.of());
+        return new InterviewMessageDto(
+                entity.getRole() != null ? entity.getRole().name() : "",
+                "",
+                entity.getContent(),
+                entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null,
+                Map.of());
     }
 }

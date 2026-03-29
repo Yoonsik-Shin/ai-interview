@@ -2,25 +2,33 @@ package me.unbrdn.core.interview.adapter.out.cache;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.unbrdn.core.interview.application.event.SessionStateUpdatedEvent;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.domain.model.InterviewSessionState;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class InterviewSessionCacheAdapter implements ManageSessionStatePort {
-
     private final RedisTemplate<String, Object> redisTemplate;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
-    private static final String KEY_PREFIX = "interview:";
-    private static final String KEY_SUFFIX = ":state";
+
+    public InterviewSessionCacheAdapter(
+            @Qualifier("track3RedisTemplate") RedisTemplate<String, Object> redisTemplate,
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper,
+            ApplicationEventPublisher eventPublisher) {
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
+    }
+
+    private static final String KEY_PREFIX = "interview:session:hash:";
+    private static final String KEY_SUFFIX = "";
     private static final long TTL_HOURS = 2;
 
     @Override
@@ -99,6 +107,44 @@ public class InterviewSessionCacheAdapter implements ManageSessionStatePort {
         } catch (Exception e) {
             log.error("Failed to increment turn count in Redis", e);
             return 0;
+        }
+    }
+
+    @Override
+    public int incrementSelfIntroRetryCount(String interviewId) {
+        String key = buildKey(interviewId);
+        try {
+            Long count = redisTemplate.opsForHash().increment(key, "selfIntroRetryCount", 1L);
+            redisTemplate.expire(key, TTL_HOURS, TimeUnit.HOURS);
+
+            // [NEW] 세션 상태 업데이트 이벤트 전파 (비동기 DB 스냅샷용)
+            getState(interviewId)
+                    .ifPresent(
+                            state ->
+                                    eventPublisher.publishEvent(
+                                            new SessionStateUpdatedEvent(this, interviewId, state)));
+
+            return count != null ? count.intValue() : 0;
+        } catch (Exception e) {
+            log.error("Failed to increment self-intro retry count in Redis", e);
+            return 0;
+        }
+    }
+
+    @Override
+    public void updateStatus(
+            String interviewId, InterviewSessionState.Status status, boolean canCandidateSpeak) {
+        String key = buildKey(interviewId);
+        try {
+            java.util.Map<String, String> updates = new java.util.HashMap<>();
+            updates.put("status", status.name());
+            updates.put("canCandidateSpeak", String.valueOf(canCandidateSpeak));
+
+            redisTemplate.opsForHash().putAll(key, updates);
+            redisTemplate.expire(key, TTL_HOURS, TimeUnit.HOURS);
+            log.debug("Updated status fields in Redis HASH for interview: {}", interviewId);
+        } catch (Exception e) {
+            log.error("Failed to update status fields in Redis", e);
         }
     }
 

@@ -66,6 +66,8 @@ public class InterviewRecordingSegmentJpaEntity extends BaseTimeJpaEntity {
     public InterviewRecordingSegment toDomain() {
         return InterviewRecordingSegment.builder()
                 .id(this.getId())
+                .interviewSession(
+                        this.interviewSession != null ? this.interviewSession.toDomain() : null)
                 .turnCount(this.turnCount)
                 .objectKey(this.objectKey)
                 .durationSeconds(this.durationSeconds)

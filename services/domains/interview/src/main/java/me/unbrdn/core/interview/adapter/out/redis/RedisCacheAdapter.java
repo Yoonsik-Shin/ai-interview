@@ -5,7 +5,6 @@ import java.time.Duration;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.unbrdn.core.interview.application.port.out.AppendRedisCachePort;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -13,11 +12,18 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class RedisCacheAdapter implements AppendRedisCachePort {
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+
+    public RedisCacheAdapter(
+            @org.springframework.beans.factory.annotation.Qualifier("stringRedisTemplate")
+                    StringRedisTemplate redisTemplate,
+            ObjectMapper objectMapper) {
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public void appendToken(String interviewId, String token, String persona) {
@@ -35,30 +41,30 @@ public class RedisCacheAdapter implements AppendRedisCachePort {
     }
 
     @Override
-    public void appendSentenceBuffer(String interviewId, String token) {
-        String key = "interview:llm:sentence:" + interviewId;
+    public void appendSentenceBuffer(String interviewId, String token, String persona) {
+        String key = "interview:llm:sentence:" + interviewId + ":" + persona;
         redisTemplate.opsForValue().append(key, token);
         redisTemplate.expire(key, Duration.ofMinutes(10));
     }
 
     @Override
-    public String getAndClearSentenceBuffer(String interviewId) {
-        String key = "interview:llm:sentence:" + interviewId;
+    public String getAndClearSentenceBuffer(String interviewId, String persona) {
+        String key = "interview:llm:sentence:" + interviewId + ":" + persona;
         String sentence = redisTemplate.opsForValue().get(key);
         redisTemplate.delete(key);
         return sentence == null ? "" : sentence;
     }
 
     @Override
-    public void appendFullResponseBuffer(String interviewId, String token) {
-        String key = "interview:llm:buffer:" + interviewId;
+    public void appendFullResponseBuffer(String interviewId, String token, String persona) {
+        String key = "interview:llm:buffer:" + interviewId + ":" + persona;
         redisTemplate.opsForValue().append(key, token);
         redisTemplate.expire(key, Duration.ofMinutes(30));
     }
 
     @Override
-    public String getAndClearFullResponseBuffer(String interviewId) {
-        String key = "interview:llm:buffer:" + interviewId;
+    public String getAndClearFullResponseBuffer(String interviewId, String persona) {
+        String key = "interview:llm:buffer:" + interviewId + ":" + persona;
         String fullResponse = redisTemplate.opsForValue().get(key);
         redisTemplate.delete(key);
         return fullResponse == null ? "" : fullResponse;

@@ -25,7 +25,8 @@ public class InterviewRecordingSegmentPersistenceAdapter
         InterviewSessionJpaEntity session =
                 sessionRepository
                         .findById(segment.getInterviewSession().getId())
-                        .orElseThrow(() -> new IllegalArgumentException("Interview Session not found"));
+                        .orElseThrow(
+                                () -> new IllegalArgumentException("Interview Session not found"));
 
         InterviewRecordingSegmentJpaEntity jpaEntity =
                 InterviewRecordingSegmentJpaEntity.fromDomain(segment, session);
@@ -35,10 +36,16 @@ public class InterviewRecordingSegmentPersistenceAdapter
 
     @Override
     public List<InterviewRecordingSegment> loadByInterviewSessionId(UUID interviewSessionId) {
-        return repository
-                .findByInterviewSessionIdOrderByTurnCount(interviewSessionId)
-                .stream()
+        return repository.findByInterviewSessionIdOrderByTurnCount(interviewSessionId).stream()
                 .map(InterviewRecordingSegmentJpaEntity::toDomain)
                 .toList();
+    }
+
+    @Override
+    public java.util.Optional<InterviewRecordingSegment> loadByInterviewSessionIdAndTurnCount(
+            UUID interviewSessionId, int turnCount) {
+        return repository
+                .findByInterviewSessionIdAndTurnCount(interviewSessionId, turnCount)
+                .map(InterviewRecordingSegmentJpaEntity::toDomain);
     }
 }

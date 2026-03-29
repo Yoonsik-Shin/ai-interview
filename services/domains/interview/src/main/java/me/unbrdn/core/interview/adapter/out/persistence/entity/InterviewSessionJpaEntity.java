@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import me.unbrdn.core.common.adapter.out.persistence.entity.BaseTimeJpaEntity;
+import me.unbrdn.core.interview.domain.enums.InterviewRound;
 import me.unbrdn.core.interview.domain.enums.InterviewSessionStatus;
 import me.unbrdn.core.interview.domain.enums.InterviewType;
 
@@ -35,6 +36,10 @@ public class InterviewSessionJpaEntity extends BaseTimeJpaEntity {
     @Column(nullable = false, length = 20)
     private InterviewSessionStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private InterviewRound round;
+
     @Column(name = "started_at")
     private Instant startedAt;
 
@@ -55,8 +60,37 @@ public class InterviewSessionJpaEntity extends BaseTimeJpaEntity {
     @Builder.Default
     private int turnCount = 0;
 
+    @Column(name = "job_posting_url", length = 500)
+    private String jobPostingUrl;
+
+    @Column(name = "self_intro_text", columnDefinition = "text")
+    private String selfIntroText;
+
     @jakarta.persistence.Version
     @Column(name = "version")
     @Builder.Default
     private Long version = 0L;
+
+    public me.unbrdn.core.interview.domain.entity.InterviewSession toDomain() {
+        return me.unbrdn.core.interview.domain.entity.InterviewSession.builder()
+                .id(this.getId())
+                .candidateId(this.candidateId)
+                .resumeId(this.resumeId)
+                .companyName(this.companyName)
+                .type(this.type)
+                .status(this.status)
+                .round(this.round)
+                .startedAt(this.startedAt)
+                .endedAt(this.endedAt)
+                .domain(this.domain)
+                .scheduledDurationMinutes(this.scheduledDurationMinutes)
+                .participatingPersonas(this.participatingPersonas)
+                .turnCount(this.turnCount)
+                .jobPostingUrl(this.jobPostingUrl)
+                .selfIntroText(this.selfIntroText)
+                .version(this.version)
+                .createdAt(this.getCreatedAt())
+                .updatedAt(this.getUpdatedAt())
+                .build();
+    }
 }

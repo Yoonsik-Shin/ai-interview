@@ -13,6 +13,7 @@ import me.unbrdn.core.interview.application.port.out.LoadResumePort;
 import me.unbrdn.core.interview.application.port.out.LoadUserPort;
 import me.unbrdn.core.interview.application.port.out.ManageSessionStatePort;
 import me.unbrdn.core.interview.domain.entity.InterviewSession;
+import me.unbrdn.core.interview.domain.enums.InterviewRound;
 import me.unbrdn.core.interview.domain.enums.InterviewType;
 import me.unbrdn.core.interview.domain.model.InterviewSessionState;
 import org.springframework.stereotype.Service;
@@ -41,14 +42,17 @@ public class CreateInterviewInteractor implements CreateInterviewUseCase {
         }
 
         InterviewType interviewType =
-                command.getType() == null
-                        ? InterviewType.PRACTICE
-                        : InterviewType.valueOf(command.getType());
+                command.getType() == null ? InterviewType.PRACTICE : command.getType();
+
+        InterviewRound interviewRound =
+                command.getRound() == null ? InterviewRound.TECHNICAL : command.getRound();
 
         List<String> participatingPersonas =
                 command.getRoles() == null || command.getRoles().isEmpty()
                         ? List.of("TECH")
-                        : new java.util.ArrayList<>(command.getRoles());
+                        : command.getRoles().stream()
+                                .distinct()
+                                .collect(java.util.stream.Collectors.toList());
 
         String interviewId = UUID.randomUUID().toString();
 
@@ -59,22 +63,16 @@ public class CreateInterviewInteractor implements CreateInterviewUseCase {
                         resumeId,
                         command.getCompanyName(),
                         interviewType,
+                        interviewRound,
                         command.getDomain(),
                         command.getScheduledDurationMinutes(),
-                        participatingPersonas);
+                        participatingPersonas,
+                        command.getJobPostingUrl(),
+                        command.getSelfIntroText());
 
         InterviewSession savedSession = interviewPort.save(interviewSession);
 
-        InterviewSessionState initialState =
-                InterviewSessionState.builder()
-                        .currentDifficulty(3)
-                        .lastInterviewerId("LEADER")
-                        .turnCount(0)
-                        .remainingTimeSeconds(command.getScheduledDurationMinutes() * 60L)
-                        .selfIntroRetryCount(0)
-                        .participatingPersonas(participatingPersonas)
-                        .nextPersonaIndex(0)
-                        .build();
+        InterviewSessionState initialState = InterviewSessionState.fromEntity(savedSession);
         sessionStatePort.saveState(savedSession.getId().toString(), initialState);
 
         return CreateInterviewResult.builder()

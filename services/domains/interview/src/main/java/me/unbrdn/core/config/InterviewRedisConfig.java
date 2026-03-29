@@ -1,17 +1,19 @@
 package me.unbrdn.core.config;
 
 import java.time.Duration;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisSentinelConfiguration;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
@@ -19,15 +21,24 @@ import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 @Configuration
 public class InterviewRedisConfig {
 
-    @Value("${redis.stream.interview-result:stt:transcript:stream}")
-    private String interviewResultStreamKey;
+    @Value("${spring.data.redis.host:localhost}")
+    private String track1Host;
 
-    @Value("${redis.stream.interview-result-group:core-interview-result-group}")
-    private String interviewResultGroup;
+    @Value("${spring.data.redis.port:6379}")
+    private int track1Port;
 
-    // ===============================
-    // Track 3 Redis (Azure) Properties
-    // ===============================
+    @Value("${spring.data.redis.password:}")
+    private String track1Password;
+
+    @Value("${spring.data.redis.database:0}")
+    private int track1Database;
+
+    @Value("${spring.data.redis.sentinel.master:}")
+    private String track1SentinelMaster;
+
+    @Value("${spring.data.redis.sentinel.nodes:}")
+    private String track1SentinelNodes;
+
     @Value("${redis.track3.host:localhost}")
     private String track3Host;
 
@@ -55,12 +66,14 @@ public class InterviewRedisConfig {
     @Bean
     public StreamMessageListenerContainer<String, MapRecord<String, String, String>>
             streamMessageListenerContainer(
-                    RedisConnectionFactory redisConnectionFactory, // Auto-configured (Track 1)
+                    @Qualifier("track1ConnectionFactory")
+                            RedisConnectionFactory redisConnectionFactory,
                     @Qualifier("redisStreamTaskExecutor")
                             org.springframework.core.task.TaskExecutor taskExecutor) {
         StreamMessageListenerContainer.StreamMessageListenerContainerOptions<
                         String, MapRecord<String, String, String>>
-                options = StreamMessageListenerContainer.StreamMessageListenerContainerOptions
+                options =
+                        StreamMessageListenerContainer.StreamMessageListenerContainerOptions
                                 .builder()
                                 .pollTimeout(Duration.ofMillis(100))
                                 .executor(taskExecutor)
@@ -68,12 +81,39 @@ public class InterviewRedisConfig {
         return StreamMessageListenerContainer.create(redisConnectionFactory, options);
     }
 
-    // ===============================
-    // Track 1 RedisTemplate (Default)
-    // ===============================
+    @Bean(name = "track1ConnectionFactory")
+    public RedisConnectionFactory track1ConnectionFactory() {
+        if (track1SentinelMaster != null
+                && !track1SentinelMaster.isEmpty()
+                && track1SentinelNodes != null
+                && !track1SentinelNodes.isEmpty()) {
+            RedisSentinelConfiguration sentinelConfig = new RedisSentinelConfiguration();
+            sentinelConfig.master(track1SentinelMaster);
+            for (String node : track1SentinelNodes.split(",")) {
+                String[] parts = node.trim().split(":");
+                sentinelConfig.sentinel(parts[0], Integer.parseInt(parts[1]));
+            }
+            sentinelConfig.setDatabase(track1Database);
+            if (!track1Password.isEmpty()) {
+                sentinelConfig.setPassword(track1Password);
+                sentinelConfig.setSentinelPassword(track1Password);
+            }
+            return new LettuceConnectionFactory(sentinelConfig);
+        }
+
+        RedisStandaloneConfiguration config =
+                new RedisStandaloneConfiguration(track1Host, track1Port);
+        config.setDatabase(track1Database);
+        if (!track1Password.isEmpty()) {
+            config.setPassword(track1Password);
+        }
+        return new LettuceConnectionFactory(config);
+    }
+
     @Bean
     @Primary
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+    public RedisTemplate<String, Object> redisTemplate(
+            @Qualifier("track1ConnectionFactory") RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
@@ -83,21 +123,27 @@ public class InterviewRedisConfig {
         return template;
     }
 
-    // ===============================
-    // Track 3 Connection Factory & Template
-    // ===============================
+    @Bean
+    @Primary
+    public StringRedisTemplate stringRedisTemplate(
+            @Qualifier("track1ConnectionFactory") RedisConnectionFactory connectionFactory) {
+        return new StringRedisTemplate(connectionFactory);
+    }
+
     @Bean(name = "track3ConnectionFactory")
     public RedisConnectionFactory track3ConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(track3Host, track3Port);
+        RedisStandaloneConfiguration config =
+                new RedisStandaloneConfiguration(track3Host, track3Port);
         if (!track3Password.isEmpty()) {
             config.setPassword(track3Password);
         }
 
-        LettuceClientConfiguration.LettuceClientConfigurationBuilder builder = LettuceClientConfiguration.builder();
+        LettuceClientConfiguration.LettuceClientConfigurationBuilder builder =
+                LettuceClientConfiguration.builder();
         if (track3Ssl) {
             builder.useSsl();
         }
-        
+
         return new LettuceConnectionFactory(config, builder.build());
     }
 
@@ -111,5 +157,11 @@ public class InterviewRedisConfig {
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setHashValueSerializer(GenericJacksonJsonRedisSerializer.builder().build());
         return template;
+    }
+
+    @Bean(name = "track3StringRedisTemplate")
+    public StringRedisTemplate track3StringRedisTemplate(
+            @Qualifier("track3ConnectionFactory") RedisConnectionFactory connectionFactory) {
+        return new StringRedisTemplate(connectionFactory);
     }
 }
