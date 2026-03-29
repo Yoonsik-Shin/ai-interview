@@ -20,7 +20,7 @@ COPY --from=proto . /proto
 
 # 의존성 다운로드 (소스 코드 변경 없이도 캐시 활용)
 # BuildKit 캐시 마운트로 Gradle 캐시 최적화
-RUN --mount=type=cache,target=/app/.gradle \
+RUN --mount=type=cache,id=gradle-cache-$MODULE_NAME,target=/app/.gradle \
     gradle dependencies --no-daemon || true
 
 # 소스 코드 복사 (proto 파일 포함)
@@ -33,7 +33,7 @@ COPY $MODULE_NAME ./$MODULE_NAME
 # Gradle을 사용하여 실행 가능한 JAR 파일 빌드 (테스트 제외, 데몬 모드 비활성화)
 # 빌드 프로파일에 따라 적절한 의존성만 포함됨
 # BuildKit 캐시 마운트로 빌드 캐시 재사용
-RUN --mount=type=cache,target=/app/.gradle \
+RUN --mount=type=cache,id=gradle-build-$MODULE_NAME,target=/app/.gradle \
     gradle clean :$MODULE_NAME:bootJar -x test --no-daemon -PbuildProfile=${BUILD_PROFILE} && \
     find /app/$MODULE_NAME/build/libs -name "*.jar" -not -name "*-plain.jar" -exec cp {} /app/app.jar \;
 

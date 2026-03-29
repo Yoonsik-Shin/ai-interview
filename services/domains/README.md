@@ -169,7 +169,7 @@ me.unbrdn.core.{domain}
    - BFF -> Core (gRPC): 면접 생성 및 세션 초기화
    - Socket -> Core (Redis Stream): 실시간 발화 내역 처리
    - Core -> LLM (gRPC Stream): 질문 생성 요청 및 스트리밍 결과 수신
-   - Core -> TTS (Redis Queue): 생성된 문장 단위의 음성 변환 요청 (`tts:sentence:queue`)
+   - Core -> TTS (Redis Queue): 생성된 문장 단위의 음성 변환 요청 (`interview:sentence:queue:tts`)
 
 2. **Document Pipeline**:
    - Resume Upload -> Core -> Kafka Event (`resume.uploaded`)
