@@ -23,7 +23,7 @@ data:
   REDIS_SENTINEL_NAME: "mymaster"
 
   # Track 2: LangGraph Checkpoint (대화 히스토리, 에이전트 메모리)
-  REDIS_TRACK2_URL: "redis://redis-track2.unbrdn.svc.cluster.local:6379/0"
+  REDIS_TRACK2_URL: "redis://redis-track2-master.unbrdn.svc.cluster.local:6379/0"
   
   # External Services
   RESUME_SERVICE_HOST: "resume"
