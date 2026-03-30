@@ -482,3 +482,28 @@ AI의 안내 음성(리트라이 안내 등)이 종료된 후, 약 1.5초의 자
 
 - **시스템 원자성**: 백엔드의 Redis 상태와 메모리 객체 간의 불일치를 해결하여 잘못된 정보 전송 차단.
 - **UI 견고성**: 서버에서 예기치 않게 도착할 수 있는 지연된 완료 신호로부터 UI 상태를 이중으로 보호.
+
+---
+
+## 27. Redis 트랙별 서비스 명칭 및 DNS 표준화 (2026-03-30)
+
+### 배경
+
+ArgoCD 배포 후 LLM 서비스에서 Redis Track 2로의 연결이 `Name or service not known` 에러로 실패하는 현상이 발생했습니다. 이는 Helm 차트의 아키텍처 설정에 따라 생성되는 K8s 서비스 명칭이 상이하기 때문입니다.
+
+### 원인 분석
+
+1.  **Bitnami Redis Chart의 네이밍 규칙**:
+    - `architecture: standalone`: 기본적으로 `<fullnameOverride>-master` 형태의 서비스를 생성합니다. (Sentinel 미사용 시)
+    - `architecture: replication`: Sentinel 사용 시 `<fullnameOverride>` 명칭의 서바이스를 통해 Master/Replica를 관리합니다.
+2.  **설정 불일치**: Track 2는 `standalone` 모드임에도 불구하고 ConfigMap에서 `-master` 접미사가 누락된 채로 호스트네임이 설정되어 있었습니다.
+
+### 결정 사항
+
+- **서비스 명칭 명시적 지정**: 모든 Redis 연결 URL 설정 시, 해당 트랙의 `architecture` 설정을 확인하고 실제 생성되는 K8s 서비스 명칭(예: `redis-track2-master`)을 명시적으로 사용합니다.
+- **ConfigMap 동기화**: `common/configmap.yaml`과 `prod/configmap.yaml` 간의 설정을 동기화하여 환경별 누락이 없도록 관리합니다.
+
+### 기대 효과
+
+- DNS 해석 오류로 인한 서비스 기동 실패 방지.
+- 인프라 설정과 애플리케이션 설정 간의 가시성 확보.

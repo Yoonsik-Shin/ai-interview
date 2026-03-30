@@ -11,6 +11,10 @@
   - **[Core] 리트라이 상태 발행 강제**: `RetrySelfIntroInteractor`에서 리트라이 처리 후 `turn_state` 이벤트를 명시적 발행.
   - **[FE] UI 초기화**: `onRetryAnswer` 수신 시 `timeLeft` 타이머(90초), STT 히스토리 및 자막 초기화.
 
+- **LLM 서비스 Redis Track 2 (LangGraph Checkpoint) 연결 오류 수정**:
+  - **[Infra] 서비스 명칭 불일치 해결**: Bitnami Redis 차트의 `standalone` 아키텍처에서 생성되는 서비스 명칭(`-master` 접미사)과 `llm-config` ConfigMap의 설정 불일치 문제를 해결함.
+  - **[K8s] 프로덕션 설정 업데이트**: `k8s/apps/llm/prod/configmap.yaml`의 `REDIS_TRACK2_URL`을 `redis-track2-master.unbrdn.svc.cluster.local`로 수정하여 DNS 해석 오류(`gaierror -2`)를 해결함.
+
 - **인터뷰 스테이지 및 녹음 상태 정합성 정밀 강화 (근본 원인 해결)**:
     - **실효 상태(Effective State) 도입**: 서버 상태와 로컬 재생 상태(`pendingAiPlayback`, `ttsPlaying`)를 결합한 가상 상태를 UI에 적용하여 "Listening..." 오표기 및 불필요한 입력 활성화 완전 차단.
     - **Stale Closure 근본 해결**: `playNextTts` 스케줄러 내부에서 `Ref`(`pendingAiPlaybackRef.current`)를 직접 참조하도록 수정하여 비동기 타이밍 이슈로 인한 `IDLE` 강제 전이 및 녹음 교착 상태 해결.
